@@ -1,0 +1,202 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "AEVENT.csv",
+  "target_domain": "AE",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Direct mapping of study identifier"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "Set to constant 'AE'",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation for Adverse Events"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + subject_id",
+      "derivation_rule": "Concatenate STUDY, site identifier, and subject ID with hyphens",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier construction - subject ID component needs to be derived from available data"
+    },
+    {
+      "source_column": "AESEQ",
+      "target_variable": "AESEQ",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Direct mapping of adverse event sequence number"
+    },
+    {
+      "source_column": "AECOD",
+      "target_variable": "AETERM",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Reported term for the adverse event"
+    },
+    {
+      "source_column": "AECOD",
+      "target_variable": "AEDECOD",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Dictionary-derived term - using same as reported term"
+    },
+    {
+      "source_column": "AEHTT",
+      "target_variable": "AEBODSYS",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Body system or organ class from source AEHTT"
+    },
+    {
+      "source_column": "AESTDT",
+      "target_variable": "AESTDTC",
+      "transformation": "Convert numeric date format to ISO 8601 (YYYY-MM-DD)",
+      "derivation_rule": "Parse YYYYMMDD format and convert to ISO 8601",
+      "controlled_terminology": null,
+      "comments": "Start date/time of adverse event in ISO format"
+    },
+    {
+      "source_column": "AEENDT",
+      "target_variable": "AEENDTC",
+      "transformation": "Convert numeric date format to ISO 8601 (YYYY-MM-DD)",
+      "derivation_rule": "Parse YYYYMMDD format and convert to ISO 8601, handle partial dates",
+      "controlled_terminology": null,
+      "comments": "End date/time of adverse event in ISO format"
+    },
+    {
+      "source_column": "AESER",
+      "target_variable": "AESER",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Serious event flag"
+    },
+    {
+      "source_column": "AESEV",
+      "target_variable": "AESEV",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Severity/intensity of adverse event"
+    },
+    {
+      "source_column": "AEREL",
+      "target_variable": "AEREL",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Causality or relationship to treatment"
+    },
+    {
+      "source_column": "AEACT",
+      "target_variable": "AEACN",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Action taken with regard to treatment"
+    },
+    {
+      "source_column": "AEOUTC",
+      "target_variable": "AEOUT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Outcome of adverse event"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESCONG",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Congenital anomaly or birth defect - not available in source"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESDISAB",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Persistent or significant disability/incapacity - not available in source"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESDTH",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Results in death - not available in source"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESHOSP",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Requires or prolongs hospitalization - not available in source"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESLIFE",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Life threatening - not available in source"
+    },
+    {
+      "source_column": null,
+      "target_variable": "AESMIE",
+      "transformation": null,
+      "derivation_rule": "Derive from available serious event criteria if present",
+      "controlled_terminology": null,
+      "comments": "Other medically important serious event - not available in source"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "AESEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY AEDTC)"
+  },
+  "controlled_terminologies": {
+    "AESER": [
+      "Y",
+      "N"
+    ],
+    "AESEV": [
+      "MILD",
+      "MODERATE",
+      "SEVERE"
+    ],
+    "AEREL": [
+      "NOT RELATED",
+      "UNLIKELY RELATED",
+      "POSSIBLY RELATED",
+      "RELATED",
+      "PROBABLY RELATED",
+      "DEFINITELY RELATED"
+    ],
+    "AEOUT": [
+      "RECOVERED/RESOLVED",
+      "RECOVERING/RESOLVING",
+      "NOT RECOVERED/NOT RESOLVED",
+      "RECOVERED/RESOLVED WITH SEQUELAE",
+      "FATAL",
+      "UNKNOWN"
+    ]
+  },
+  "created_at": "2026-01-20T15:28:32.246653",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for AEVENT.csv to SDTM AE"
+}

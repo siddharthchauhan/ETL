@@ -1,0 +1,434 @@
+{
+  "results": [
+    {
+      "is_valid": false,
+      "domain": "LB",
+      "total_records": 3387,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'LBTESTCD' is missing",
+          "domain": "LB",
+          "variable": "LBTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'LBTEST' is missing",
+          "domain": "LB",
+          "variable": "LBTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "PE",
+      "total_records": 2169,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PETESTCD' is missing",
+          "domain": "PE",
+          "variable": "PETESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PETEST' is missing",
+          "domain": "PE",
+          "variable": "PETEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "AE",
+      "total_records": 550,
+      "error_count": 3,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0030",
+          "severity": "error",
+          "message": "6 records have invalid ISO 8601 dates in AESTDTC",
+          "domain": "AE",
+          "variable": "AESTDTC",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0030",
+          "severity": "error",
+          "message": "2 records have invalid ISO 8601 dates in AEENDTC",
+          "domain": "AE",
+          "variable": "AEENDTC",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0031",
+          "severity": "error",
+          "message": "4 records have AESTDTC after AEENDTC",
+          "domain": "AE",
+          "variable": "AESTDTC/AEENDTC",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "CM",
+      "total_records": 25,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'CMTRT' is missing",
+          "domain": "CM",
+          "variable": "CMTRT",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "SUPPAE",
+      "total_records": 8627,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": false,
+      "domain": "SUPPCM",
+      "error": "Error tokenizing data. C error: Expected 9 fields in line 1449, saw 16\n"
+    },
+    {
+      "is_valid": true,
+      "domain": "VS",
+      "total_records": 2184,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": false,
+      "domain": "SUPPMH",
+      "error": "Error tokenizing data. C error: Expected 9 fields in line 1675, saw 12\n"
+    },
+    {
+      "is_valid": false,
+      "domain": "EX",
+      "total_records": 271,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'EXTRT' is missing",
+          "domain": "EX",
+          "variable": "EXTRT",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "CO",
+      "total_records": 172,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'COVAL' is missing",
+          "domain": "CO",
+          "variable": "COVAL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "MH",
+      "total_records": 109,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'MHTERM' is missing",
+          "domain": "MH",
+          "variable": "MHTERM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "IE",
+      "total_records": 16,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'IETEST' is missing",
+          "domain": "IE",
+          "variable": "IETEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "TR",
+      "total_records": 145,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'TRTESTCD' is missing",
+          "domain": "TR",
+          "variable": "TRTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'TRTEST' is missing",
+          "domain": "TR",
+          "variable": "TRTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "TU",
+      "total_records": 95,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'TUTESTCD' is missing",
+          "domain": "TU",
+          "variable": "TUTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'TUTEST' is missing",
+          "domain": "TU",
+          "variable": "TUTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "QS",
+      "total_records": 5,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'QSTESTCD' is missing",
+          "domain": "QS",
+          "variable": "QSTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'QSTEST' is missing",
+          "domain": "QS",
+          "variable": "QSTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "PC",
+      "total_records": 16,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PCTESTCD' is missing",
+          "domain": "PC",
+          "variable": "PCTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PCTEST' is missing",
+          "domain": "PC",
+          "variable": "PCTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "DM",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": false,
+      "domain": "EG",
+      "total_records": 60,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'EGTESTCD' is missing",
+          "domain": "EG",
+          "variable": "EGTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'EGTEST' is missing",
+          "domain": "EG",
+          "variable": "EGTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "RS",
+      "total_records": 28,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'RSTESTCD' is missing",
+          "domain": "RS",
+          "variable": "RSTESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'RSTEST' is missing",
+          "domain": "RS",
+          "variable": "RSTEST",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "DS",
+      "total_records": 4,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'DSTERM' is missing",
+          "domain": "DS",
+          "variable": "DSTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'DSDECOD' is missing",
+          "domain": "DS",
+          "variable": "DSDECOD",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "TA",
+      "total_records": 16,
+      "error_count": 2,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'ARMCD' is completely empty",
+          "domain": "TA",
+          "variable": "ARMCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'ARM' is completely empty",
+          "domain": "TA",
+          "variable": "ARM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    }
+  ]
+}

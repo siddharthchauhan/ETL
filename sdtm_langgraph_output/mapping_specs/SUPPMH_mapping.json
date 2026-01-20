@@ -1,0 +1,184 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "SURGHXC.csv",
+  "target_domain": "SUPPMH",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": "Direct mapping",
+      "controlled_terminology": null,
+      "comments": "Study identifier"
+    },
+    {
+      "source_column": "STUDY",
+      "target_variable": "RDOMAIN",
+      "transformation": "Set to 'MH'",
+      "derivation_rule": "Constant value 'MH' since this supplements the MH domain",
+      "controlled_terminology": null,
+      "comments": "Related domain is MH (Medical History)"
+    },
+    {
+      "source_column": "PT",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
+      "derivation_rule": "Concatenate STUDY, INVSITE, and PT with hyphens",
+      "controlled_terminology": null,
+      "comments": "Create unique subject identifier from available components"
+    },
+    {
+      "source_column": "REPEATSN",
+      "target_variable": "IDVAR",
+      "transformation": "Set to 'MHSEQ'",
+      "derivation_rule": "Constant value 'MHSEQ' to identify the sequence variable in parent domain",
+      "controlled_terminology": null,
+      "comments": "Identifying variable name in parent MH domain"
+    },
+    {
+      "source_column": "REPEATSN",
+      "target_variable": "IDVARVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": "Convert numeric REPEATSN to character string",
+      "controlled_terminology": null,
+      "comments": "Value of the identifying variable (MHSEQ) in parent domain"
+    },
+    {
+      "source_column": "HLGTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'HLGTTERM'",
+      "derivation_rule": "Qualifier variable name for HLT term",
+      "controlled_terminology": null,
+      "comments": "MedDRA High Level Group Term as supplemental qualifier"
+    },
+    {
+      "source_column": "HLGTTERM",
+      "target_variable": "QVAL",
+      "transformation": null,
+      "derivation_rule": "Direct mapping of HLGTTERM value",
+      "controlled_terminology": null,
+      "comments": "Value of the HLT term qualifier"
+    },
+    {
+      "source_column": "HLGTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'HLGTCODE'",
+      "derivation_rule": "Qualifier variable name for HLT code",
+      "controlled_terminology": null,
+      "comments": "MedDRA High Level Group Code as supplemental qualifier"
+    },
+    {
+      "source_column": "HLGTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": "Convert numeric code to character string",
+      "controlled_terminology": null,
+      "comments": "Value of the HLT code qualifier"
+    },
+    {
+      "source_column": "HLTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'HLTTERM'",
+      "derivation_rule": "Qualifier variable name for HLT term",
+      "controlled_terminology": null,
+      "comments": "MedDRA High Level Term as supplemental qualifier"
+    },
+    {
+      "source_column": "HLTTERM",
+      "target_variable": "QVAL",
+      "transformation": null,
+      "derivation_rule": "Direct mapping of HLTTERM value",
+      "controlled_terminology": null,
+      "comments": "Value of the HLT term qualifier"
+    },
+    {
+      "source_column": "HLTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'HLTCODE'",
+      "derivation_rule": "Qualifier variable name for HLT code",
+      "controlled_terminology": null,
+      "comments": "MedDRA High Level Term Code as supplemental qualifier"
+    },
+    {
+      "source_column": "HLTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": "Convert numeric code to character string",
+      "controlled_terminology": null,
+      "comments": "Value of the HLT code qualifier"
+    },
+    {
+      "source_column": "LLTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'LLTTERM'",
+      "derivation_rule": "Qualifier variable name for LLT term",
+      "controlled_terminology": null,
+      "comments": "MedDRA Lowest Level Term as supplemental qualifier"
+    },
+    {
+      "source_column": "LLTTERM",
+      "target_variable": "QVAL",
+      "transformation": null,
+      "derivation_rule": "Direct mapping of LLTTERM value",
+      "controlled_terminology": null,
+      "comments": "Value of the LLT term qualifier"
+    },
+    {
+      "source_column": "LLTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'LLTCODE'",
+      "derivation_rule": "Qualifier variable name for LLT code",
+      "controlled_terminology": null,
+      "comments": "MedDRA Lowest Level Term Code as supplemental qualifier"
+    },
+    {
+      "source_column": "LLTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": "Convert numeric code to character string",
+      "controlled_terminology": null,
+      "comments": "Value of the LLT code qualifier"
+    },
+    {
+      "source_column": "SOCTERM",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'SOCTERM'",
+      "derivation_rule": "Qualifier variable name for SOC term",
+      "controlled_terminology": null,
+      "comments": "MedDRA System Organ Class Term as supplemental qualifier"
+    },
+    {
+      "source_column": "SOCTERM",
+      "target_variable": "QVAL",
+      "transformation": null,
+      "derivation_rule": "Direct mapping of SOCTERM value",
+      "controlled_terminology": null,
+      "comments": "Value of the SOC term qualifier"
+    },
+    {
+      "source_column": "SOCCODE",
+      "target_variable": "QNAM",
+      "transformation": "Set to 'SOCCODE'",
+      "derivation_rule": "Qualifier variable name for SOC code",
+      "controlled_terminology": null,
+      "comments": "MedDRA System Organ Class Code as supplemental qualifier"
+    },
+    {
+      "source_column": "SOCCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": "Convert numeric code to character string",
+      "controlled_terminology": null,
+      "comments": "Value of the SOC code qualifier"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "SUPPMHSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY SUPPMHDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:29:42.053710",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for SURGHXC.csv to SDTM SUPPMH"
+}

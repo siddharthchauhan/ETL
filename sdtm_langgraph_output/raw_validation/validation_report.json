@@ -1,0 +1,1356 @@
+{
+  "results": [
+    {
+      "is_valid": true,
+      "domain": "CHEMLABD.csv",
+      "total_records": 3387,
+      "error_count": 0,
+      "warning_count": 4,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 87.7% missing values (2971/3387)",
+          "domain": "CHEMLABD.csv",
+          "variable": "AGEU",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 87.7% missing values (2971/3387)",
+          "domain": "CHEMLABD.csv",
+          "variable": "AGEL",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 98.2% missing values (3326/3387)",
+          "domain": "CHEMLABD.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.9% missing values (3385/3387)",
+          "domain": "CHEMLABD.csv",
+          "variable": "SYMBOL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "HEMLABD.csv",
+      "total_records": 1757,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 70.6% missing values (1241/1757)",
+          "domain": "HEMLABD.csv",
+          "variable": "LUNIT2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 98.2% missing values (1726/1757)",
+          "domain": "HEMLABD.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.7% missing values (1751/1757)",
+          "domain": "HEMLABD.csv",
+          "variable": "LABQSN",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CHEMLAB.csv",
+      "total_records": 3326,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "PHYSEXAM.csv",
+      "total_records": 2169,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 91.2% missing values (1978/2169)",
+          "domain": "PHYSEXAM.csv",
+          "variable": "PEFDG",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 89.5% missing values (1941/2169)",
+          "domain": "PHYSEXAM.csv",
+          "variable": "PETXT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 98.9% missing values (2146/2169)",
+          "domain": "PHYSEXAM.csv",
+          "variable": "PEANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "AEVENT.csv",
+      "total_records": 550,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW006",
+          "severity": "warning",
+          "message": "Found 275 subject IDs with unexpected format",
+          "domain": "AEVENT.csv",
+          "variable": "PT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 100.0% missing values (550/550)",
+          "domain": "AEVENT.csv",
+          "variable": "AEHGT1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 100.0% missing values (550/550)",
+          "domain": "AEVENT.csv",
+          "variable": "AEANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "HEMLAB.csv",
+      "total_records": 1726,
+      "error_count": 0,
+      "warning_count": 2,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 70.1% missing values (1210/1726)",
+          "domain": "HEMLAB.csv",
+          "variable": "LUNIT2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.7% missing values (1720/1726)",
+          "domain": "HEMLAB.csv",
+          "variable": "LABQSN",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CONMEDS.csv",
+      "total_records": 302,
+      "error_count": 0,
+      "warning_count": 5,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.3% missing values (173/302)",
+          "domain": "CONMEDS.csv",
+          "variable": "MDSTT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.3% missing values (173/302)",
+          "domain": "CONMEDS.csv",
+          "variable": "MDSTC",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 76.5% missing values (231/302)",
+          "domain": "CONMEDS.csv",
+          "variable": "MDQSN2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.3% missing values (300/302)",
+          "domain": "CONMEDS.csv",
+          "variable": "MDQSN1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.0% missing values (299/302)",
+          "domain": "CONMEDS.csv",
+          "variable": "MDQSN3",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "AEVENTC.csv",
+      "total_records": 276,
+      "error_count": 6,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Vomiting",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Vomiting"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Crackles",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Crackles"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Leg pain",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Leg pain"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Insomnia",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Insomnia"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Leg pain",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Leg pain"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Found 15 total invalid dates in column MODTERM",
+          "domain": "AEVENTC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CONMEDSC.csv",
+      "total_records": 302,
+      "error_count": 0,
+      "warning_count": 6,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 76.5% missing values (231/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "MDQSN2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 95.4% missing values (288/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "ACTINGDT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.3% missing values (300/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "PRFTERM1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.3% missing values (300/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "PRFTERM2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.3% missing values (300/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "MDQSN1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.0% missing values (299/302)",
+          "domain": "CONMEDSC.csv",
+          "variable": "MDQSN3",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "URINLAB.csv",
+      "total_records": 930,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 66.7% missing values (620/930)",
+          "domain": "URINLAB.csv",
+          "variable": "LVALUE3",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "VITALS.csv",
+      "total_records": 536,
+      "error_count": 0,
+      "warning_count": 4,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 97.0% missing values (520/536)",
+          "domain": "VITALS.csv",
+          "variable": "GNNUM3",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 97.0% missing values (520/536)",
+          "domain": "VITALS.csv",
+          "variable": "GNNUM2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 97.0% missing values (520/536)",
+          "domain": "VITALS.csv",
+          "variable": "GNNUM1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 80.6% missing values (432/536)",
+          "domain": "VITALS.csv",
+          "variable": "GNANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "GMEDHXC.csv",
+      "total_records": 230,
+      "error_count": 1,
+      "warning_count": 14,
+      "issues": [
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Diarrhea",
+          "domain": "GMEDHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Diarrhea"
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 90.4% missing values (208/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "MHQSN",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "HLGTTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "LLTCODE",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "MHTEXT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "HLGTCODE",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "HLTTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "HLTCODE",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "LLTTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 68.3% missing values (157/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "MHONG",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "SOCCODE",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "SOCTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "PTCODE",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 73.5% missing values (169/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.4% missing values (132/230)",
+          "domain": "GMEDHXC.csv",
+          "variable": "PTTERM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CAMED19.csv",
+      "total_records": 138,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 81.2% missing values (112/138)",
+          "domain": "CAMED19.csv",
+          "variable": "MDSTT",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "DOSE.csv",
+      "total_records": 271,
+      "error_count": 0,
+      "warning_count": 2,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 94.1% missing values (255/271)",
+          "domain": "DOSE.csv",
+          "variable": "DSQSN8",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 97.0% missing values (263/271)",
+          "domain": "DOSE.csv",
+          "variable": "DSQS4",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "LABRANG.csv",
+      "total_records": 393,
+      "error_count": 1,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW001",
+          "severity": "error",
+          "message": "Required field 'PT' is missing from dataset",
+          "domain": "LABRANG.csv",
+          "variable": "PT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 94.1% missing values (370/393)",
+          "domain": "LABRANG.csv",
+          "variable": "AGEU",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 94.1% missing values (370/393)",
+          "domain": "LABRANG.csv",
+          "variable": "AGEL",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.5% missing values (391/393)",
+          "domain": "LABRANG.csv",
+          "variable": "SYMBOL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CAMED19C.csv",
+      "total_records": 141,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "CHEMSAMP.csv",
+      "total_records": 353,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 82.7% missing values (292/353)",
+          "domain": "CHEMSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "COMGEN.csv",
+      "total_records": 172,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": false,
+      "domain": "DISHXC.csv",
+      "total_records": 109,
+      "error_count": 4,
+      "warning_count": 5,
+      "issues": [
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Diarrhea",
+          "domain": "DISHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Diarrhea"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Vomiting",
+          "domain": "DISHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Vomiting"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Diarrhea",
+          "domain": "DISHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Diarrhea"
+        },
+        {
+          "rule_id": "RAW003",
+          "severity": "error",
+          "message": "Invalid date value: Vomiting",
+          "domain": "DISHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": "Vomiting"
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHXC.csv",
+          "variable": "MHQSN4",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHXC.csv",
+          "variable": "MHQSN3",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHXC.csv",
+          "variable": "MHQSN5",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 55.0% missing values (60/109)",
+          "domain": "DISHXC.csv",
+          "variable": "MODTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 84.4% missing values (92/109)",
+          "domain": "DISHXC.csv",
+          "variable": "MHANY",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "SURGHXC.csv",
+      "total_records": 81,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "GMEDHX.csv",
+      "total_records": 229,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 57.6% missing values (132/229)",
+          "domain": "GMEDHX.csv",
+          "variable": "MHTEXT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 68.6% missing values (157/229)",
+          "domain": "GMEDHX.csv",
+          "variable": "MHONG",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 90.4% missing values (207/229)",
+          "domain": "GMEDHX.csv",
+          "variable": "MHQSN",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "INEXCRT.csv",
+      "total_records": 288,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "HEMSAMP.csv",
+      "total_records": 203,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 84.7% missing values (172/203)",
+          "domain": "HEMSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "URINSAMP.csv",
+      "total_records": 200,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 77.5% missing values (155/200)",
+          "domain": "URINSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "TARTUMR.csv",
+      "total_records": 145,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 76.6% missing values (111/145)",
+          "domain": "TARTUMR.csv",
+          "variable": "TMSUM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 91.0% missing values (132/145)",
+          "domain": "TARTUMR.csv",
+          "variable": "TMLOCC",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 99.3% missing values (144/145)",
+          "domain": "TARTUMR.csv",
+          "variable": "TMQSN2",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "DISHX.csv",
+      "total_records": 109,
+      "error_count": 0,
+      "warning_count": 4,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHX.csv",
+          "variable": "MHQSN4",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHX.csv",
+          "variable": "MHQSN3",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.3% missing values (93/109)",
+          "domain": "DISHX.csv",
+          "variable": "MHQSN5",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 84.4% missing values (92/109)",
+          "domain": "DISHX.csv",
+          "variable": "MHANY",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "NONTUMR.csv",
+      "total_records": 95,
+      "error_count": 0,
+      "warning_count": 2,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 64.2% missing values (61/95)",
+          "domain": "NONTUMR.csv",
+          "variable": "TMLOCC",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 78.9% missing values (75/95)",
+          "domain": "NONTUMR.csv",
+          "variable": "TMMTDC",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "SURGHX.csv",
+      "total_records": 68,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "QSQS.csv",
+      "total_records": 100,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "BIOLAB.csv",
+      "total_records": 68,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "BIOSAMP.csv",
+      "total_records": 60,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 63.3% missing values (38/60)",
+          "domain": "BIOSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "ECOGSAMP.csv",
+      "total_records": 60,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 85.0% missing values (51/60)",
+          "domain": "ECOGSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "PATICDO3.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 62.5% missing values (10/16)",
+          "domain": "PATICDO3.csv",
+          "variable": "FLAG",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "ECG.csv",
+      "total_records": 60,
+      "error_count": 0,
+      "warning_count": 2,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 65.0% missing values (39/60)",
+          "domain": "ECG.csv",
+          "variable": "ECGDT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 65.0% missing values (39/60)",
+          "domain": "ECG.csv",
+          "variable": "ECGFDG",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "RADMEDS.csv",
+      "total_records": 25,
+      "error_count": 0,
+      "warning_count": 5,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 68.0% missing values (17/25)",
+          "domain": "RADMEDS.csv",
+          "variable": "MDANYL",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 52.0% missing values (13/25)",
+          "domain": "RADMEDS.csv",
+          "variable": "MDUNIT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 56.0% missing values (14/25)",
+          "domain": "RADMEDS.csv",
+          "variable": "MDQSN2",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 56.0% missing values (14/25)",
+          "domain": "RADMEDS.csv",
+          "variable": "MDQSN3",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 52.0% missing values (13/25)",
+          "domain": "RADMEDS.csv",
+          "variable": "DSN",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "RESP.csv",
+      "total_records": 28,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 92.9% missing values (26/28)",
+          "domain": "RESP.csv",
+          "variable": "TMDT2",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "XRAYSAMP.csv",
+      "total_records": 32,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (30/32)",
+          "domain": "XRAYSAMP.csv",
+          "variable": "SDT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (30/32)",
+          "domain": "XRAYSAMP.csv",
+          "variable": "SCOM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (30/32)",
+          "domain": "XRAYSAMP.csv",
+          "variable": "SVALC",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "CMPL.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "PRGSAMP.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 87.5% missing values (14/16)",
+          "domain": "PRGSAMP.csv",
+          "variable": "SDT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 87.5% missing values (14/16)",
+          "domain": "PRGSAMP.csv",
+          "variable": "SMQSN1",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 87.5% missing values (14/16)",
+          "domain": "PRGSAMP.csv",
+          "variable": "SANYL",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "DEMO.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "INV.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "ELIG.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 1,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (15/16)",
+          "domain": "ELIG.csv",
+          "variable": "ELCOM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "SOBSAMP.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "GENOSAMP.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 3,
+      "issues": [
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (15/16)",
+          "domain": "GENOSAMP.csv",
+          "variable": "SDT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (15/16)",
+          "domain": "GENOSAMP.csv",
+          "variable": "SMQSN",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "RAW007",
+          "severity": "warning",
+          "message": "Column has 93.8% missing values (15/16)",
+          "domain": "GENOSAMP.csv",
+          "variable": "STM",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": true,
+      "domain": "PKCRF.csv",
+      "total_records": 16,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "DEATHGEN.csv",
+      "total_records": 4,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "QS.csv",
+      "total_records": 5,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    },
+    {
+      "is_valid": true,
+      "domain": "GENOLAB.csv",
+      "total_records": 4,
+      "error_count": 0,
+      "warning_count": 0,
+      "issues": []
+    }
+  ]
+}

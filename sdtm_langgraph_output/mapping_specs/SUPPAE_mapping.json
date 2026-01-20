@@ -1,0 +1,160 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "AEVENTC.csv",
+  "target_domain": "SUPPAE",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": "Direct mapping",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Study identifier"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": "Constant value 'SUPPAE'",
+      "derivation_rule": "Set to 'SUPPAE' for all records",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation for supplemental adverse events"
+    },
+    {
+      "source_column": "STUDY, INVSITE, PT",
+      "target_variable": "USUBJID",
+      "transformation": "Concatenation",
+      "derivation_rule": "STUDY + '-' + INVSITE + '-' + PT",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier derived from study, site, and patient ID"
+    },
+    {
+      "source_column": "AESEQ",
+      "target_variable": "IDVAR",
+      "transformation": "Direct mapping",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Related sequence number from parent AE domain"
+    },
+    {
+      "source_column": null,
+      "target_variable": "IDVARVAL",
+      "transformation": "Direct mapping from AESEQ",
+      "derivation_rule": "Convert AESEQ to character",
+      "controlled_terminology": null,
+      "comments": "Value of the related sequence number"
+    },
+    {
+      "source_column": "HLGTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'HLGTTERM'",
+      "derivation_rule": "Set QNAM to 'HLGTTERM' when QVAL is HLGTTERM value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for High Level Group Term"
+    },
+    {
+      "source_column": "HLGTTERM",
+      "target_variable": "QVAL",
+      "transformation": "Direct mapping",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "High Level Group Term value"
+    },
+    {
+      "source_column": "HLGTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'HLGTCODE'",
+      "derivation_rule": "Set QNAM to 'HLGTCODE' when QVAL is HLGTCODE value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for High Level Group Term Code"
+    },
+    {
+      "source_column": "HLGTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "High Level Group Term Code value"
+    },
+    {
+      "source_column": "HLTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'HLTTERM'",
+      "derivation_rule": "Set QNAM to 'HLTTERM' when QVAL is HLTTERM value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for High Level Term"
+    },
+    {
+      "source_column": "HLTTERM",
+      "target_variable": "QVAL",
+      "transformation": "Direct mapping",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "High Level Term value"
+    },
+    {
+      "source_column": "HLTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'HLTCODE'",
+      "derivation_rule": "Set QNAM to 'HLTCODE' when QVAL is HLTCODE value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for High Level Term Code"
+    },
+    {
+      "source_column": "HLTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "High Level Term Code value"
+    },
+    {
+      "source_column": "LLTTERM",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'LLTTERM'",
+      "derivation_rule": "Set QNAM to 'LLTTERM' when QVAL is LLTTERM value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for Lowest Level Term"
+    },
+    {
+      "source_column": "LLTTERM",
+      "target_variable": "QVAL",
+      "transformation": "Direct mapping",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Lowest Level Term value"
+    },
+    {
+      "source_column": "LLTCODE",
+      "target_variable": "QNAM",
+      "transformation": "Constant 'LLTCODE'",
+      "derivation_rule": "Set QNAM to 'LLTCODE' when QVAL is LLTCODE value",
+      "controlled_terminology": null,
+      "comments": "Qualifier variable name for Lowest Level Term Code"
+    },
+    {
+      "source_column": "LLTCODE",
+      "target_variable": "QVAL",
+      "transformation": "Convert to character",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Lowest Level Term Code value"
+    },
+    {
+      "source_column": null,
+      "target_variable": "QORIG",
+      "transformation": "Constant 'CRF'",
+      "derivation_rule": "Set to 'CRF' for all supplemental qualifiers",
+      "controlled_terminology": null,
+      "comments": "Origin of qualifier data"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "SUPPAESEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY SUPPAEDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:28:46.655028",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for AEVENTC.csv to SDTM SUPPAE"
+}

@@ -1,0 +1,96 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "XRAYSAMP.csv",
+  "target_domain": "PE",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": "Direct mapping",
+      "controlled_terminology": null,
+      "comments": "Study identifier maps directly to STUDYID"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "Set to 'PE'",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation for Physical Examination"
+    },
+    {
+      "source_column": "PT",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
+      "derivation_rule": "Concatenate study, site, and patient identifiers",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier constructed from available components"
+    },
+    {
+      "source_column": null,
+      "target_variable": "PESEQ",
+      "transformation": null,
+      "derivation_rule": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY VISIT, REPEATSN)",
+      "controlled_terminology": null,
+      "comments": "Sequence number per subject ordered by visit and repeat"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "PETESTCD",
+      "transformation": null,
+      "derivation_rule": "Direct mapping",
+      "controlled_terminology": null,
+      "comments": "Test code from procedure name"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "PETEST",
+      "transformation": "Decode DCMNAME to descriptive text",
+      "derivation_rule": "Convert 'SM_XRAY' to 'Skeletal Muscle X-Ray'",
+      "controlled_terminology": null,
+      "comments": "Descriptive test name derived from test code"
+    },
+    {
+      "source_column": "SANYL",
+      "target_variable": "PEORRES",
+      "transformation": null,
+      "derivation_rule": "Direct mapping",
+      "controlled_terminology": null,
+      "comments": "Original result as collected"
+    },
+    {
+      "source_column": "SANYL",
+      "target_variable": "PESTRESC",
+      "transformation": null,
+      "derivation_rule": "Direct mapping",
+      "controlled_terminology": null,
+      "comments": "Standardized result, same as original in this case"
+    },
+    {
+      "source_column": null,
+      "target_variable": "PELOC",
+      "transformation": null,
+      "derivation_rule": "Derive from DCMNAME if location-specific",
+      "controlled_terminology": null,
+      "comments": "Location of examination, may be derived from test type"
+    },
+    {
+      "source_column": "SDT",
+      "target_variable": "PEDTC",
+      "transformation": "Convert YYYYMMDD to ISO 8601 format",
+      "derivation_rule": "FORMAT(SDT, 'YYYY-MM-DD') when SDT is not null",
+      "controlled_terminology": null,
+      "comments": "Convert numeric date to ISO 8601 format for examination date"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "PESEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY PEDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:30:45.083039",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for XRAYSAMP.csv to SDTM PE"
+}

@@ -1,0 +1,96 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "RESP.csv",
+  "target_domain": "RS",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Direct mapping of study identifier"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": "Constant value 'RS'",
+      "derivation_rule": "Set to 'RS' for all records",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation for Response domain"
+    },
+    {
+      "source_column": "PT",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
+      "derivation_rule": "Concatenate STUDY, site identifier, and patient identifier with hyphens",
+      "controlled_terminology": null,
+      "comments": "Create unique subject identifier from available components"
+    },
+    {
+      "source_column": null,
+      "target_variable": "RSSEQ",
+      "transformation": "Sequential numbering per subject",
+      "derivation_rule": "Generate sequence number for each record per USUBJID",
+      "controlled_terminology": null,
+      "comments": "Sequence number for response records within subject"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "RSTESTCD",
+      "transformation": "Map 'TM_ASSESS_RESP' to standard code",
+      "derivation_rule": "Convert to standardized test code (e.g., 'TUMRESP')",
+      "controlled_terminology": null,
+      "comments": "Test code for tumor response assessment"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "RSTEST",
+      "transformation": "Map 'TM_ASSESS_RESP' to descriptive text",
+      "derivation_rule": "Convert to standardized test description (e.g., 'Tumor Response')",
+      "controlled_terminology": null,
+      "comments": "Test description for tumor response assessment"
+    },
+    {
+      "source_column": "CPEVENT",
+      "target_variable": "RSCAT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Category indicating the assessment timepoint (e.g., 'END OF CYCLE 1')"
+    },
+    {
+      "source_column": "TMRSPO",
+      "target_variable": "RSORRES",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Original response result as collected"
+    },
+    {
+      "source_column": "TMRSPN",
+      "target_variable": "RSSTRESC",
+      "transformation": "Map to standard controlled terminology",
+      "derivation_rule": "Use TMRSPN if present, otherwise map TMRSPO to standard values (PD, SD, PR, CR)",
+      "controlled_terminology": null,
+      "comments": "Standardized response result using controlled terminology"
+    },
+    {
+      "source_column": "TMDT1",
+      "target_variable": "RSDTC",
+      "transformation": "Convert YYYYMMDD numeric to ISO 8601 format",
+      "derivation_rule": "Transform numeric date (20081009) to ISO format (2008-10-09)",
+      "controlled_terminology": null,
+      "comments": "Date of response assessment in ISO 8601 format"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "RSSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY RSDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:30:42.222446",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for RESP.csv to SDTM RS"
+}

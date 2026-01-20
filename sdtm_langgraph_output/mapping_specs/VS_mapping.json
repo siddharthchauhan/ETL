@@ -1,0 +1,114 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "VITALS.csv",
+  "target_domain": "VS",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Direct mapping of study identifier"
+    },
+    {
+      "source_column": "PT",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
+      "derivation_rule": "Concatenate study, site, and patient identifiers",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier constructed from available components"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "USUBJID",
+      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
+      "derivation_rule": "Used as part of USUBJID concatenation",
+      "controlled_terminology": null,
+      "comments": "Site identifier component for USUBJID"
+    },
+    {
+      "source_column": "VTBPS2",
+      "target_variable": "VSORRES",
+      "transformation": "Convert to character",
+      "derivation_rule": "Map vital signs measurements to result as collected",
+      "controlled_terminology": null,
+      "comments": "Systolic blood pressure measurement"
+    },
+    {
+      "source_column": "VTBPD2",
+      "target_variable": "VSORRES",
+      "transformation": "Convert to character",
+      "derivation_rule": "Map vital signs measurements to result as collected",
+      "controlled_terminology": null,
+      "comments": "Diastolic blood pressure measurement"
+    },
+    {
+      "source_column": "VTTMP",
+      "target_variable": "VSORRES",
+      "transformation": "Convert to character",
+      "derivation_rule": "Map vital signs measurements to result as collected",
+      "controlled_terminology": null,
+      "comments": "Temperature measurement"
+    },
+    {
+      "source_column": "VTPLS2",
+      "target_variable": "VSORRES",
+      "transformation": "Convert to character",
+      "derivation_rule": "Map vital signs measurements to result as collected",
+      "controlled_terminology": null,
+      "comments": "Pulse measurement"
+    },
+    {
+      "source_column": "VTRRT2",
+      "target_variable": "VSORRES",
+      "transformation": "Convert to character",
+      "derivation_rule": "Map vital signs measurements to result as collected",
+      "controlled_terminology": null,
+      "comments": "Respiratory rate measurement"
+    },
+    {
+      "source_column": "VTDT",
+      "target_variable": "VSDTC",
+      "transformation": "Convert YYYYMMDD numeric to ISO 8601 format YYYY-MM-DD",
+      "derivation_rule": "Parse numeric date format and convert to ISO 8601",
+      "controlled_terminology": null,
+      "comments": "Vital signs collection date"
+    },
+    {
+      "source_column": "VTTM",
+      "target_variable": "VSDTC",
+      "transformation": "Append time to date in ISO 8601 format",
+      "derivation_rule": "Combine with VTDT for complete datetime",
+      "controlled_terminology": null,
+      "comments": "Vital signs collection time"
+    },
+    {
+      "source_column": "VISIT",
+      "target_variable": "VSTPT",
+      "transformation": null,
+      "derivation_rule": "Map visit information to time point",
+      "controlled_terminology": null,
+      "comments": "Visit or time point description"
+    },
+    {
+      "source_column": "VTTP2",
+      "target_variable": "VSTPTNUM",
+      "transformation": null,
+      "derivation_rule": "Numeric time point reference",
+      "controlled_terminology": null,
+      "comments": "Numeric time point for vital signs collection"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "VSSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY VSDTC)",
+    "VSSTRESC": "VSORRES converted to standard format",
+    "VSSTRESN": "Numeric conversion of VSSTRESC"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:28:58.388552",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for VITALS.csv to SDTM VS"
+}

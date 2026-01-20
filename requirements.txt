@@ -1,0 +1,90 @@
+# ETL Orchestration Requirements
+# Stack: Airflow + LangGraph + Neo4j + AWS S3 + Claude Sonnet 4.5
+# Generated: January 2026
+# Compatible with Python 3.10-3.13
+
+# ===========================================
+# Apache Airflow 3.1.6 (Orchestration)
+# ===========================================
+apache-airflow==3.1.6
+apache-airflow-providers-amazon==9.0.0
+apache-airflow-providers-neo4j==4.0.0
+apache-airflow-providers-http==5.0.0
+
+# ===========================================
+# LangGraph 1.0.6 (Agentic Framework)
+# ===========================================
+langgraph==1.0.6
+langchain==0.3.0
+langchain-anthropic==0.3.0
+
+# ===========================================
+# Anthropic Claude (LLM)
+# ===========================================
+anthropic==0.43.0
+
+# ===========================================
+# Neo4j (Graph Database)
+# ===========================================
+neo4j==5.27.0
+neomodel==5.4.0
+
+# ===========================================
+# AWS SDK
+# ===========================================
+boto3==1.36.0
+botocore==1.36.0
+s3fs==2024.12.0
+
+# ===========================================
+# Data Processing
+# ===========================================
+pandas>=2.2.0
+polars>=1.0.0
+pyarrow>=17.0.0
+orjson>=3.10.0
+
+# ===========================================
+# File Processing
+# ===========================================
+zipfile-deflate64>=0.2.0
+python-magic>=0.4.27
+chardet>=5.2.0
+
+# ===========================================
+# Data Validation
+# ===========================================
+pydantic>=2.9.0
+pandera>=0.20.0
+
+# ===========================================
+# Async Support
+# ===========================================
+aiohttp>=3.10.0
+aiofiles>=24.1.0
+
+# ===========================================
+# Configuration & Environment
+# ===========================================
+python-dotenv>=1.0.0
+pyyaml>=6.0.2
+
+# ===========================================
+# Monitoring & Logging
+# ===========================================
+structlog>=24.0.0
+prometheus-client>=0.21.0
+rich>=13.0.0              # Rich terminal formatting for chat agent
+
+# ===========================================
+# Knowledge Retrieval (SDTM Guidelines)
+# ===========================================
+tavily-python>=0.3.0      # Web search for CDISC/FDA guidelines
+pinecone>=3.0.0           # Vector DB for SDTM documentation
+
+# ===========================================
+# Testing
+# ===========================================
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+moto>=5.0.0  # AWS mocking

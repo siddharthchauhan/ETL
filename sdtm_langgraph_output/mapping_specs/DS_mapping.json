@@ -1,0 +1,80 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "DEATHGEN.csv",
+  "target_domain": "DS",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Direct mapping of study identifier"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": "Constant value 'DS'",
+      "derivation_rule": "Set to 'DS'",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation for Disposition domain"
+    },
+    {
+      "source_column": "STUDY,INVSITE,PT",
+      "target_variable": "USUBJID",
+      "transformation": "Concatenate with hyphens",
+      "derivation_rule": "STUDY + '-' + INVSITE + '-' + PT",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier constructed from study, site, and patient ID"
+    },
+    {
+      "source_column": "REPEATSN",
+      "target_variable": "DSSEQ",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Sequence number for disposition records"
+    },
+    {
+      "source_column": "CPEVENT",
+      "target_variable": "DSTERM",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Disposition term - OFF-STUDY indicates subject disposition"
+    },
+    {
+      "source_column": "CPEVENT",
+      "target_variable": "DSDECOD",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Decoded disposition term, same as DSTERM"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "DSCAT",
+      "transformation": "Extract category from form name",
+      "derivation_rule": "Extract 'DEATH' from 'GN_DEATH'",
+      "controlled_terminology": null,
+      "comments": "Disposition category derived from data collection form name"
+    },
+    {
+      "source_column": "GNDT",
+      "target_variable": "DSSTDTC",
+      "transformation": "Convert to ISO 8601 format",
+      "derivation_rule": "Format date as YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS",
+      "controlled_terminology": null,
+      "comments": "Start date/time of disposition event"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "DSSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY DSDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:31:17.585355",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for DEATHGEN.csv to SDTM DS"
+}

@@ -1,0 +1,72 @@
+{
+  "study_id": "MAXIS-08",
+  "source_domain": "PKCRF.csv",
+  "target_domain": "PC",
+  "column_mappings": [
+    {
+      "source_column": "STUDY",
+      "target_variable": "STUDYID",
+      "transformation": null,
+      "derivation_rule": "STUDY",
+      "controlled_terminology": null,
+      "comments": "Direct mapping of study identifier"
+    },
+    {
+      "source_column": null,
+      "target_variable": "DOMAIN",
+      "transformation": "constant",
+      "derivation_rule": "'PC'",
+      "controlled_terminology": null,
+      "comments": "Domain abbreviation constant for Pharmacokinetics Concentrations"
+    },
+    {
+      "source_column": "STUDY, PT",
+      "target_variable": "USUBJID",
+      "transformation": "concatenation",
+      "derivation_rule": "STUDY + '-' + PT",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier formed by concatenating study and patient identifiers"
+    },
+    {
+      "source_column": null,
+      "target_variable": "PCSEQ",
+      "transformation": "sequence",
+      "derivation_rule": "ROW_NUMBER() OVER (PARTITION BY STUDY, PT ORDER BY VISIT, SUBEVE, REPEATSN)",
+      "controlled_terminology": null,
+      "comments": "Sequential numbering of PC records per subject"
+    },
+    {
+      "source_column": "DCMNAME",
+      "target_variable": "PCTESTCD",
+      "transformation": null,
+      "derivation_rule": "DCMNAME",
+      "controlled_terminology": null,
+      "comments": "Test code mapped from domain case name - PK indicates pharmacokinetic test"
+    },
+    {
+      "source_column": "VISIT",
+      "target_variable": "VISITNUM",
+      "transformation": null,
+      "derivation_rule": "VISIT",
+      "controlled_terminology": null,
+      "comments": "Visit number for temporal sequence - value 999 typically indicates unscheduled visit"
+    },
+    {
+      "source_column": "CPEVENT",
+      "target_variable": "VISIT",
+      "transformation": null,
+      "derivation_rule": "CPEVENT",
+      "controlled_terminology": null,
+      "comments": "Visit description - NON-VISIT indicates sample collected outside scheduled visit"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "PCSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY PCDTC)"
+  },
+  "controlled_terminologies": {},
+  "created_at": "2026-01-20T15:31:14.646139",
+  "created_by": "SDTM Pipeline",
+  "version": "1.0",
+  "comments": "Auto-generated mapping for PKCRF.csv to SDTM PC"
+}
