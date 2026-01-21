@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM SUPPAE domain from source data
 * Study:      MAXIS-08
 * Source:     AEVENTC.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,9 @@ data suppae_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -47,74 +49,26 @@ data suppae_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
-    /* TODO: Apply transformation: Direct mapping */
 
-    /* DOMAIN: Domain abbreviation for supplemental adverse events */
-    DOMAIN = Set to 'SUPPAE' for all records;
+    /* SUPPAEVISIT from VISIT */
+    SUPPAEVISIT = VISIT;
 
-    /* USUBJID from STUDY, INVSITE, PT */
-    USUBJID = STUDY, INVSITE, PT;
-    /* TODO: Apply transformation: Concatenation */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* IDVAR from AESEQ */
-    IDVAR = AESEQ;
-    /* TODO: Apply transformation: Direct mapping */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'SUPPAE';
 
-    /* IDVARVAL: Value of the related sequence number */
-    /* Derivation: Convert AESEQ to character */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* QNAM from HLGTTERM */
-    QNAM = HLGTTERM;
-    /* TODO: Apply transformation: Constant 'HLGTTERM' */
-
-    /* QVAL from HLGTTERM */
-    QVAL = HLGTTERM;
-    /* TODO: Apply transformation: Direct mapping */
-
-    /* QNAM from HLGTCODE */
-    QNAM = HLGTCODE;
-    /* TODO: Apply transformation: Constant 'HLGTCODE' */
-
-    /* QVAL from HLGTCODE */
-    QVAL = HLGTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QNAM from HLTTERM */
-    QNAM = HLTTERM;
-    /* TODO: Apply transformation: Constant 'HLTTERM' */
-
-    /* QVAL from HLTTERM */
-    QVAL = HLTTERM;
-    /* TODO: Apply transformation: Direct mapping */
-
-    /* QNAM from HLTCODE */
-    QNAM = HLTCODE;
-    /* TODO: Apply transformation: Constant 'HLTCODE' */
-
-    /* QVAL from HLTCODE */
-    QVAL = HLTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QNAM from LLTTERM */
-    QNAM = LLTTERM;
-    /* TODO: Apply transformation: Constant 'LLTTERM' */
-
-    /* QVAL from LLTTERM */
-    QVAL = LLTTERM;
-    /* TODO: Apply transformation: Direct mapping */
-
-    /* QNAM from LLTCODE */
-    QNAM = LLTCODE;
-    /* TODO: Apply transformation: Constant 'LLTCODE' */
-
-    /* QVAL from LLTCODE */
-    QVAL = LLTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QORIG: Origin of qualifier data */
-    QORIG = Set to 'CRF' for all supplemental qualifiers;
+    /* SUPPAESEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

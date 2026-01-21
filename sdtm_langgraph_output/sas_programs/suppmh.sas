@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM SUPPMH domain from source data
 * Study:      MAXIS-08
 * Source:     SURGHXC.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,10 @@ data suppmh_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
+        DOMAIN $2
         USUBJID $40
     ;
 
@@ -46,84 +49,26 @@ data suppmh_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* RDOMAIN from STUDY */
-    RDOMAIN = STUDY;
-    /* TODO: Apply transformation: Set to 'MH' */
+    /* SUPPMHVISIT from VISIT */
+    SUPPMHVISIT = VISIT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* IDVAR from REPEATSN */
-    IDVAR = REPEATSN;
-    /* TODO: Apply transformation: Set to 'MHSEQ' */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'SUPPMH';
 
-    /* IDVARVAL from REPEATSN */
-    IDVARVAL = REPEATSN;
-    /* TODO: Apply transformation: Convert to character */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* QNAM from HLGTTERM */
-    QNAM = HLGTTERM;
-    /* TODO: Apply transformation: Set to 'HLGTTERM' */
-
-    /* QVAL from HLGTTERM */
-    QVAL = HLGTTERM;
-
-    /* QNAM from HLGTCODE */
-    QNAM = HLGTCODE;
-    /* TODO: Apply transformation: Set to 'HLGTCODE' */
-
-    /* QVAL from HLGTCODE */
-    QVAL = HLGTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QNAM from HLTTERM */
-    QNAM = HLTTERM;
-    /* TODO: Apply transformation: Set to 'HLTTERM' */
-
-    /* QVAL from HLTTERM */
-    QVAL = HLTTERM;
-
-    /* QNAM from HLTCODE */
-    QNAM = HLTCODE;
-    /* TODO: Apply transformation: Set to 'HLTCODE' */
-
-    /* QVAL from HLTCODE */
-    QVAL = HLTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QNAM from LLTTERM */
-    QNAM = LLTTERM;
-    /* TODO: Apply transformation: Set to 'LLTTERM' */
-
-    /* QVAL from LLTTERM */
-    QVAL = LLTTERM;
-
-    /* QNAM from LLTCODE */
-    QNAM = LLTCODE;
-    /* TODO: Apply transformation: Set to 'LLTCODE' */
-
-    /* QVAL from LLTCODE */
-    QVAL = LLTCODE;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* QNAM from SOCTERM */
-    QNAM = SOCTERM;
-    /* TODO: Apply transformation: Set to 'SOCTERM' */
-
-    /* QVAL from SOCTERM */
-    QVAL = SOCTERM;
-
-    /* QNAM from SOCCODE */
-    QNAM = SOCCODE;
-    /* TODO: Apply transformation: Set to 'SOCCODE' */
-
-    /* QVAL from SOCCODE */
-    QVAL = SOCCODE;
-    /* TODO: Apply transformation: Convert to character */
+    /* SUPPMHSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

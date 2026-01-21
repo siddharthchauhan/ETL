@@ -484,7 +484,7 @@ MATCH (n) RETURN labels(n)[0], count(n);
 | Component | Technology | Version |
 |-----------|------------|---------|
 | **Orchestration** | LangGraph | 0.2.x |
-| **LLM** | Claude (Anthropic) | claude-sonnet-4-20250514 |
+| **LLM** | Claude (Anthropic) | claude-sonnet-4-5-20250929 (configurable via ANTHROPIC_MODEL) |
 | **Observability** | LangSmith | - |
 | **Graph Database** | Neo4j | 5.27 |
 | **Cloud Storage** | AWS S3 | - |

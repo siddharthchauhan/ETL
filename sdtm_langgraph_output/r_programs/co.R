@@ -3,7 +3,7 @@
 #' Purpose:    Create SDTM CO domain from source data
 #' Study:      MAXIS-08
 #' Source:     COMGEN.csv
-#' Created:    2026-01-20
+#' Created:    2026-01-21
 #' Author:     SDTM Pipeline (Auto-generated)
 #' ============================================================================
 

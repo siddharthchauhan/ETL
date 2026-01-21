@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM RS domain from source data
 * Study:      MAXIS-08
 * Source:     RESP.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data rs_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,36 +52,23 @@ data rs_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Response domain */
-    DOMAIN = Set to 'RS' for all records;
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* RSVISIT from VISIT */
+    RSVISIT = VISIT;
 
-    /* RSSEQ: Sequence number for response records within subject */
-    /* Derivation: Generate sequence number for each record per USUBJID */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* RSTESTCD from DCMNAME */
-    RSTESTCD = DCMNAME;
-    /* TODO: Apply transformation: Map 'TM_ASSESS_RESP' to standard code */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'RS';
 
-    /* RSTEST from DCMNAME */
-    RSTEST = DCMNAME;
-    /* TODO: Apply transformation: Map 'TM_ASSESS_RESP' to descriptive text */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* RSCAT from CPEVENT */
-    RSCAT = CPEVENT;
-
-    /* RSORRES from TMRSPO */
-    RSORRES = TMRSPO;
-
-    /* RSSTRESC from TMRSPN */
-    RSSTRESC = upcase(strip(TMRSPN));
-    /* Apply controlled terminology mapping */
-
-    /* RSDTC from TMDT1 */
-    %convert_to_iso(invar=TMDT1, outvar=RSDTC);
+    /* RSSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

@@ -9,111 +9,66 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping of study identifier"
-    },
-    {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": null,
-      "derivation_rule": "Set to 'CM'",
-      "controlled_terminology": null,
-      "comments": "Standard domain code for concomitant medications"
+      "comments": "Common mapping"
     },
     {
       "source_column": "PT",
-      "target_variable": "USUBJID",
-      "transformation": "STUDY + '-' + PT",
-      "derivation_rule": "Concatenate STUDY and PT with hyphen",
-      "controlled_terminology": null,
-      "comments": "Create unique subject identifier from study and patient ID"
-    },
-    {
-      "source_column": "REPEATSN",
-      "target_variable": "CMSEQ",
+      "target_variable": "SUBJID",
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Use repeat sequence number as CM sequence"
-    },
-    {
-      "source_column": "MDANYL",
-      "target_variable": "CMTRT",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Medication treatment name from analysis field"
-    },
-    {
-      "source_column": "MDANYL",
-      "target_variable": "CMDECOD",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Decoded medication name, same as treatment name"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "CMCAT",
-      "transformation": "Remove 'MD_' prefix and replace underscores with spaces",
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Category derived from data collection form name"
-    },
-    {
-      "source_column": "MDANYL",
-      "target_variable": "CMOCCUR",
-      "transformation": "If MDANYL contains 'NO' then 'N', else 'Y'",
-      "derivation_rule": "Set based on presence of medication data",
-      "controlled_terminology": null,
-      "comments": "Occurrence flag based on medication analysis field"
-    },
-    {
-      "source_column": "MDSTDT",
-      "target_variable": "CMSTDTC",
-      "transformation": "Convert numeric date to ISO 8601 format (YYYY-MM-DD)",
-      "derivation_rule": "Parse date format and convert to standard format",
-      "controlled_terminology": null,
-      "comments": "Start date of concomitant medication"
-    },
-    {
-      "source_column": "MDEDDT",
-      "target_variable": "CMENDTC",
-      "transformation": "Convert numeric date to ISO 8601 format (YYYY-MM-DD)",
-      "derivation_rule": "Parse date format and convert to standard format",
-      "controlled_terminology": null,
-      "comments": "End date of concomitant medication"
-    },
-    {
-      "source_column": "MDIND",
-      "target_variable": "CMINDC",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Indication for medication use"
-    },
-    {
-      "source_column": "MDUNIT",
-      "target_variable": "CMDOSU",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Dose units for medication"
+      "comments": "Common mapping"
     },
     {
       "source_column": "VISIT",
-      "target_variable": "VISITNUM",
+      "target_variable": "CMVISIT",
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Visit number for reference"
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'CM'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived unique subject identifier"
+    },
+    {
+      "source_column": "",
+      "target_variable": "CMSEQ",
+      "transformation": null,
+      "derivation_rule": "Row number within USUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "CMSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY CMDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "CMSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY CMDTC)"
+    "DOMAIN": "'CM'",
+    "CMSTDY": "CMSTDTC - RFSTDTC + 1 (if CMSTDTC >= RFSTDTC) else CMSTDTC - RFSTDTC",
+    "CMENDY": "CMENDTC - RFSTDTC + 1 (if CMENDTC >= RFSTDTC) else CMENDTC - RFSTDTC"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:30:36.972387",
+  "created_at": "2026-01-21T00:19:48.380629",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for RADMEDS.csv to SDTM CM"

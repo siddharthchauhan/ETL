@@ -7,73 +7,66 @@
       "source_column": "STUDY",
       "target_variable": "STUDYID",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Study identifier maps directly to STUDYID"
-    },
-    {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": "Constant value 'MH'",
-      "derivation_rule": "Set to 'MH' for Medical History domain",
-      "controlled_terminology": null,
-      "comments": "Domain abbreviation is a constant for MH domain"
+      "comments": "Common mapping"
     },
     {
       "source_column": "PT",
-      "target_variable": "USUBJID",
-      "transformation": "Concatenate STUDY + '-' + PT",
-      "derivation_rule": "STUDY + '-' + PT to create unique subject identifier",
+      "target_variable": "SUBJID",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Create unique subject ID by combining study and patient ID"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "REPEATSN",
+      "source_column": "VISIT",
+      "target_variable": "MHVISIT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'MH'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived unique subject identifier"
+    },
+    {
+      "source_column": "",
       "target_variable": "MHSEQ",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "Sequence number for medical history records per subject"
-    },
-    {
-      "source_column": "MHFDG",
-      "target_variable": "MHTERM",
-      "transformation": null,
-      "derivation_rule": "Direct mapping when not null",
-      "controlled_terminology": null,
-      "comments": "Medical history term - primary field for MH findings"
-    },
-    {
-      "source_column": "MHQSN",
-      "target_variable": "MHDECOD",
-      "transformation": null,
-      "derivation_rule": "Direct mapping or use MHFDG if MHQSN is more appropriate as decoded term",
-      "controlled_terminology": null,
-      "comments": "Decoded medical history term - appears to contain procedure names"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "MHCAT",
-      "transformation": "Extract category from 'MH_SURGICAL_HX'",
-      "derivation_rule": "Map 'MH_SURGICAL_HX' to 'SURGICAL HISTORY'",
-      "controlled_terminology": null,
-      "comments": "Category derived from data collection module name"
-    },
-    {
-      "source_column": "MHDT",
-      "target_variable": "MHSTDTC",
-      "transformation": "Convert to ISO 8601 format (YYYY-MM-DD)",
-      "derivation_rule": "Format date to ISO 8601 standard",
-      "controlled_terminology": null,
-      "comments": "Start date of medical history event in ISO format"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "MHSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY MHDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "MHSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY MHDTC)"
+    "DOMAIN": "'MH'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:30:09.828193",
+  "created_at": "2026-01-21T00:19:42.074083",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for SURGHX.csv to SDTM MH"

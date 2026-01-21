@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM PC domain from source data
 * Study:      MAXIS-08
 * Source:     PKCRF.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data pc_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,24 +52,23 @@ data pc_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation constant for Pharmacokinetics Concentrations */
+    /* SUBJID from PT */
+    SUBJID = PT;
+
+    /* PCVISIT from VISIT */
+    PCVISIT = VISIT;
+
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
+
+    /* DOMAIN: Constant value */
     DOMAIN = 'PC';
 
-    /* USUBJID from STUDY, PT */
-    USUBJID = STUDY, PT;
-    /* TODO: Apply transformation: concatenation */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* PCSEQ: Sequential numbering of PC records per subject */
-    /* Derivation: ROW_NUMBER() OVER (PARTITION BY STUDY, PT ORDER BY VISIT, SUBEVE, REPEATSN) */
-
-    /* PCTESTCD from DCMNAME */
-    PCTESTCD = DCMNAME;
-
-    /* VISITNUM from VISIT */
-    VISITNUM = VISIT;
-
-    /* VISIT from CPEVENT */
-    VISIT = CPEVENT;
+    /* PCSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

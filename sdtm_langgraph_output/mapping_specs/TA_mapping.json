@@ -7,81 +7,66 @@
       "source_column": "STUDY",
       "target_variable": "STUDYID",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Study identifier maps directly to STUDYID"
-    },
-    {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": "Constant value 'TA'",
-      "derivation_rule": "Set DOMAIN = 'TA'",
-      "controlled_terminology": null,
-      "comments": "Domain abbreviation for Trial Arms domain"
+      "comments": "Common mapping"
     },
     {
       "source_column": "PT",
-      "target_variable": "ARMCD",
+      "target_variable": "SUBJID",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "PT appears to be patient/subject identifier which could represent arm code"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "ARM",
-      "transformation": null,
-      "derivation_rule": "Direct mapping or derive from ARMCD",
-      "controlled_terminology": null,
-      "comments": "Use DCMNAME as arm description or derive descriptive name from ARMCD"
-    },
-    {
-      "source_column": "REPEATSN",
-      "target_variable": "TASEQ",
-      "transformation": null,
-      "derivation_rule": "Direct mapping or sequential numbering",
-      "controlled_terminology": null,
-      "comments": "Use REPEATSN as sequence number or generate sequential numbers"
-    },
-    {
-      "source_column": "CPEVENT",
-      "target_variable": "ETCD",
-      "transformation": null,
-      "derivation_rule": "Map event code",
-      "controlled_terminology": null,
-      "comments": "CPEVENT could represent element code for trial design"
-    },
-    {
-      "source_column": "CPEVENT",
-      "target_variable": "ELEMENT",
-      "transformation": "Derive descriptive text from code",
-      "derivation_rule": "Convert CPEVENT to descriptive element name",
-      "controlled_terminology": null,
-      "comments": "Derive element description from CPEVENT code"
+      "comments": "Common mapping"
     },
     {
       "source_column": "VISIT",
-      "target_variable": "TABRANCH",
-      "transformation": "Convert to character",
-      "derivation_rule": "VISIT number could represent branch information",
+      "target_variable": "TAVISIT",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Visit number may indicate trial design branching"
+      "comments": "Common mapping"
     },
     {
-      "source_column": null,
-      "target_variable": "EPOCH",
-      "transformation": "Derive from visit or event information",
-      "derivation_rule": "Determine epoch based on visit/event context",
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Epoch needs to be derived from available visit/event data"
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'TA'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived unique subject identifier"
+    },
+    {
+      "source_column": "",
+      "target_variable": "TASEQ",
+      "transformation": null,
+      "derivation_rule": "Row number within USUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "TASEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY TADTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "TASEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY TADTC)"
+    "DOMAIN": "'TA'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:30:59.708706",
+  "created_at": "2026-01-21T00:20:00.047195",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for INV.csv to SDTM TA"

@@ -7,95 +7,70 @@
       "source_column": "STUDY",
       "target_variable": "STUDYID",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Study identifier maps directly to STUDYID"
+      "comments": "Common mapping"
     },
     {
-      "source_column": null,
+      "source_column": "PT",
+      "target_variable": "SUBJID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "VISIT",
+      "target_variable": "LBVISIT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
       "target_variable": "DOMAIN",
-      "transformation": "Constant value 'LB'",
-      "derivation_rule": "Set to 'LB' for all records",
+      "transformation": null,
+      "derivation_rule": "'LB'",
       "controlled_terminology": null,
-      "comments": "Domain abbreviation for Laboratory Test Results"
+      "comments": "Constant value"
     },
     {
-      "source_column": [
-        "STUDY",
-        "PT"
-      ],
+      "source_column": "",
       "target_variable": "USUBJID",
-      "transformation": "Concatenate STUDY + '-' + PT",
-      "derivation_rule": "STUDY + '-' + PT",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
       "controlled_terminology": null,
-      "comments": "Unique subject identifier formed from study and patient ID"
+      "comments": "Derived unique subject identifier"
     },
     {
-      "source_column": "REPEATSN",
+      "source_column": "",
       "target_variable": "LBSEQ",
       "transformation": null,
-      "derivation_rule": "Direct mapping",
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "Sequence number from REPEATSN"
-    },
-    {
-      "source_column": "LPARM",
-      "target_variable": "LBTESTCD",
-      "transformation": null,
-      "derivation_rule": "Direct mapping",
-      "controlled_terminology": null,
-      "comments": "Laboratory test code from LPARM (genotype alleles)"
-    },
-    {
-      "source_column": "LPARM",
-      "target_variable": "LBTEST",
-      "transformation": "Expand to full test name",
-      "derivation_rule": "Create descriptive test name from LPARM",
-      "controlled_terminology": null,
-      "comments": "Laboratory test name derived from genotype parameter"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "LBCAT",
-      "transformation": "Map 'LABS_GENOTYPING' to 'GENOTYPING'",
-      "derivation_rule": "Extract category from DCMNAME",
-      "controlled_terminology": null,
-      "comments": "Laboratory test category"
-    },
-    {
-      "source_column": "LVALC",
-      "target_variable": "LBORRES",
-      "transformation": null,
-      "derivation_rule": "Direct mapping",
-      "controlled_terminology": null,
-      "comments": "Original result as collected (DETECTED/NOT DETECTED)"
-    },
-    {
-      "source_column": "LVALC",
-      "target_variable": "LBSTRESC",
-      "transformation": null,
-      "derivation_rule": "Direct mapping",
-      "controlled_terminology": null,
-      "comments": "Standardized character result same as original for genotyping"
-    },
-    {
-      "source_column": "CPEVENT",
-      "target_variable": "LBBLFL",
-      "transformation": "If CPEVENT = 'BASELINE' then 'Y' else null",
-      "derivation_rule": "Set to 'Y' when CPEVENT is 'BASELINE'",
-      "controlled_terminology": null,
-      "comments": "Baseline flag indicator"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
-    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
     "LBSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY LBDTC)",
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "DOMAIN": "'LB'",
     "LBSTRESC": "LBORRES converted to standard format",
-    "LBSTRESN": "Numeric conversion of LBSTRESC",
-    "LBNRIND": "Derived from LBSTRESN and reference ranges"
+    "LBSTRESN": "Numeric conversion of LBSTRESC where applicable",
+    "LBNRIND": "Derived: 'NORMAL' if LBSTNRLO <= LBSTRESN <= LBSTNRHI, 'LOW' if < LBSTNRLO, 'HIGH' if > LBSTNRHI",
+    "LBBLFL": "'Y' for baseline records, null otherwise"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:31:26.120727",
+  "created_at": "2026-01-21T00:20:02.942862",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for GENOLAB.csv to SDTM LB"

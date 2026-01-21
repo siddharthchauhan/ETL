@@ -2,7 +2,7 @@
 #' Program:    driver.R
 #' Purpose:    Master driver for SDTM transformation pipeline
 #' Study:      MAXIS-08
-#' Created:    2026-01-20
+#' Created:    2026-01-21
 #' Author:     SDTM Pipeline (Auto-generated)
 #' ============================================================================
 
@@ -30,6 +30,7 @@ source("r_programs/lb.R")
 source("r_programs/vs.R")
 source("r_programs/suppmh.R")
 source("r_programs/cm.R")
+source("r_programs/ex.R")
 source("r_programs/lb.R")
 source("r_programs/suppcm.R")
 source("r_programs/lb.R")
@@ -46,6 +47,7 @@ source("r_programs/tu.R")
 source("r_programs/mh.R")
 source("r_programs/qs.R")
 source("r_programs/lb.R")
+source("r_programs/pc.R")
 source("r_programs/qs.R")
 source("r_programs/dm.R")
 source("r_programs/eg.R")

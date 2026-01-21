@@ -8,6 +8,8 @@ using Tavily (web search) and Pinecone (vector database).
 import os
 from typing import Dict, Any, List, Optional
 from functools import lru_cache
+from dotenv import load_dotenv
+load_dotenv()
 
 # Pinecone client
 try:
@@ -22,6 +24,13 @@ try:
     TAVILY_AVAILABLE = True
 except ImportError:
     TAVILY_AVAILABLE = False
+
+# OpenAI client for embeddings
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 from .config import get_tavily_config, get_pinecone_config
 
@@ -39,11 +48,25 @@ class SDTMKnowledgeRetriever:
     def __init__(self):
         self.pinecone_client = None
         self.tavily_client = None
+        self.openai_client = None
         self.indexes = {}
         self._initialize_clients()
 
     def _initialize_clients(self):
-        """Initialize Pinecone and Tavily clients."""
+        """Initialize Pinecone, OpenAI, and Tavily clients."""
+        # Initialize OpenAI for embeddings
+        if OPENAI_AVAILABLE:
+            try:
+                openai_key = os.getenv("OPENAI_API_KEY")
+                if openai_key and openai_key != "your_openai_api_key_here":
+                    self.openai_client = OpenAI(api_key=openai_key)
+                    print("  OpenAI embeddings initialized")
+                else:
+                    print("  WARNING: OPENAI_API_KEY not set, Pinecone queries will be limited")
+            except Exception as e:
+                print(f"  WARNING: OpenAI initialization failed: {e}")
+                self.openai_client = None
+
         # Initialize Pinecone
         if PINECONE_AVAILABLE:
             try:
@@ -68,6 +91,21 @@ class SDTMKnowledgeRetriever:
                 print(f"  WARNING: Tavily initialization failed: {e}")
                 self.tavily_client = None
 
+    def _get_embedding(self, text: str, model: str = None) -> List[float]:
+        """Generate embedding using OpenAI."""
+        if not self.openai_client:
+            return []
+        try:
+            embedding_model = model or os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+            response = self.openai_client.embeddings.create(
+                input=text,
+                model=embedding_model
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            print(f"  Embedding error: {e}")
+            return []
+
     def list_pinecone_indexes(self) -> List[str]:
         """List available Pinecone indexes."""
         return list(self.indexes.keys())
@@ -80,7 +118,7 @@ class SDTMKnowledgeRetriever:
         top_k: int = 5
     ) -> List[Dict[str, Any]]:
         """
-        Search Pinecone index for relevant documents using integrated inference.
+        Search Pinecone index for relevant documents using OpenAI embeddings.
 
         Args:
             query: Search query
@@ -97,36 +135,19 @@ class SDTMKnowledgeRetriever:
         try:
             index = self.pinecone_client.Index(index_name)
 
-            # Get index dimension for proper vector sizing
-            index_stats = index.describe_index_stats()
-            dimension = index_stats.dimension if hasattr(index_stats, 'dimension') else 3072
+            # Generate embedding using OpenAI
+            query_vector = self._get_embedding(query)
 
-            # Try using the integrated inference API for text-to-vector search
-            # This requires the index to be configured with an embedding model
-            try:
-                # Try query with integrated inference (newer Pinecone feature)
-                results = index.query(
-                    data=query,  # Use text directly with integrated inference
-                    top_k=top_k,
-                    namespace=namespace if namespace else None,
-                    include_metadata=True
-                )
-            except Exception:
-                # Fallback: Create a simple query vector for demonstration
-                # In production, use a proper embedding service
-                import hashlib
-                # Create a deterministic pseudo-embedding from query text
-                query_hash = hashlib.sha256(query.encode()).digest()
-                # Expand hash to match index dimension
-                base_vector = [float(b) / 255.0 - 0.5 for b in query_hash]
-                query_vector = (base_vector * (dimension // len(base_vector) + 1))[:dimension]
+            if not query_vector:
+                print(f"  WARNING: Could not generate embedding for query")
+                return []
 
-                results = index.query(
-                    vector=query_vector,
-                    top_k=top_k,
-                    namespace=namespace if namespace else None,
-                    include_metadata=True
-                )
+            results = index.query(
+                vector=query_vector,
+                top_k=top_k,
+                namespace=namespace if namespace else None,
+                include_metadata=True
+            )
 
             return [
                 {
@@ -402,9 +423,432 @@ class SDTMKnowledgeRetriever:
 
         return None
 
+    def get_mapping_specification(
+        self,
+        domain: str,
+        source_columns: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Get complete mapping specification for a domain from knowledge base.
 
-# Singleton instance
+        Args:
+            domain: Target SDTM domain code
+            source_columns: List of source column names
+
+        Returns:
+            Mapping specification with variable mappings and derivation rules
+        """
+        spec = {
+            "domain": domain,
+            "variable_mappings": [],
+            "derivation_rules": [],
+            "controlled_terminology": {},
+            "source": "pinecone"
+        }
+
+        if not self.pinecone_client or not self.openai_client:
+            spec["source"] = "default"
+            return spec
+
+        # Get domain specification from SDTM IG
+        if "sdtmig" in self.indexes:
+            results = self.search_pinecone(
+                query=f"SDTM {domain} domain variables required expected permissible specification",
+                index_name="sdtmig",
+                top_k=10
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta:
+                    spec["variable_mappings"].append({
+                        "variable": meta.get("variable", meta.get("name", "")),
+                        "label": meta.get("label", ""),
+                        "type": meta.get("type", ""),
+                        "core": meta.get("core", ""),
+                        "description": meta.get("description", meta.get("text", "")),
+                        "score": r.get("score", 0)
+                    })
+
+        # Get derivation rules from business rules
+        if "businessrules" in self.indexes:
+            results = self.search_pinecone(
+                query=f"SDTM {domain} domain derivation transformation calculation rule",
+                index_name="businessrules",
+                top_k=10
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta:
+                    spec["derivation_rules"].append({
+                        "rule_id": meta.get("rule_id", meta.get("id", "")),
+                        "variable": meta.get("variable", ""),
+                        "rule": meta.get("rule", meta.get("description", meta.get("text", ""))),
+                        "score": r.get("score", 0)
+                    })
+
+        # Get controlled terminology
+        if "sdtmct" in self.indexes:
+            results = self.search_pinecone(
+                query=f"SDTM {domain} controlled terminology codelist",
+                index_name="sdtmct",
+                top_k=10
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                codelist = meta.get("codelist", meta.get("name", ""))
+                if codelist and meta:
+                    spec["controlled_terminology"][codelist] = {
+                        "values": meta.get("values", meta.get("terms", [])),
+                        "description": meta.get("description", meta.get("text", ""))
+                    }
+
+        return spec
+
+    def get_validation_rules_for_domain(
+        self,
+        domain: str,
+        include_fda: bool = True,
+        include_p21: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Get comprehensive validation rules for a domain.
+
+        Args:
+            domain: SDTM domain code
+            include_fda: Include FDA validation rules
+            include_p21: Include Pinnacle 21 rules
+
+        Returns:
+            List of validation rules with details
+        """
+        rules = []
+
+        if not self.pinecone_client or not self.openai_client:
+            return rules
+
+        # Get from validationrules index
+        if "validationrules" in self.indexes:
+            query = f"SDTM {domain} domain validation rule check conformance"
+            results = self.search_pinecone(
+                query=query,
+                index_name="validationrules",
+                top_k=20
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta:
+                    rules.append({
+                        "rule_id": meta.get("rule_id", meta.get("id", f"VR-{len(rules)+1}")),
+                        "category": meta.get("category", "validation"),
+                        "severity": meta.get("severity", "error"),
+                        "message": meta.get("message", meta.get("description", meta.get("text", ""))),
+                        "check": meta.get("check", ""),
+                        "source": "validationrules",
+                        "score": r.get("score", 0)
+                    })
+
+        # Get from businessrules index
+        if "businessrules" in self.indexes:
+            query = f"SDTM {domain} domain FDA Pinnacle 21 conformance rule"
+            results = self.search_pinecone(
+                query=query,
+                index_name="businessrules",
+                top_k=20
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta:
+                    rules.append({
+                        "rule_id": meta.get("rule_id", meta.get("id", f"BR-{len(rules)+1}")),
+                        "category": meta.get("category", "business"),
+                        "severity": meta.get("severity", "warning"),
+                        "message": meta.get("message", meta.get("description", meta.get("text", ""))),
+                        "check": meta.get("check", meta.get("rule", "")),
+                        "source": "businessrules",
+                        "score": r.get("score", 0)
+                    })
+
+        # Sort by score and deduplicate
+        rules.sort(key=lambda x: x.get("score", 0), reverse=True)
+        return rules[:30]
+
+    def get_sdtm_generation_guidance(
+        self,
+        domain: str,
+        source_data_description: str
+    ) -> Dict[str, Any]:
+        """
+        Get guidance for generating SDTM dataset from source data.
+
+        Args:
+            domain: Target SDTM domain
+            source_data_description: Description of source data structure
+
+        Returns:
+            Guidance including transformation steps, required variables, and examples
+        """
+        guidance = {
+            "domain": domain,
+            "required_variables": [],
+            "expected_variables": [],
+            "transformation_steps": [],
+            "examples": [],
+            "source": "pinecone"
+        }
+
+        if not self.pinecone_client or not self.openai_client:
+            guidance["source"] = "default"
+            return guidance
+
+        # Get required/expected variables from SDTM IG
+        if "sdtmig" in self.indexes:
+            results = self.search_pinecone(
+                query=f"SDTM {domain} domain required expected permissible variables",
+                index_name="sdtmig",
+                top_k=15
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                core = meta.get("core", "").upper()
+                var_info = {
+                    "variable": meta.get("variable", meta.get("name", "")),
+                    "label": meta.get("label", ""),
+                    "type": meta.get("type", ""),
+                    "description": meta.get("description", meta.get("text", ""))
+                }
+                if core == "REQ" or "required" in str(meta).lower():
+                    guidance["required_variables"].append(var_info)
+                else:
+                    guidance["expected_variables"].append(var_info)
+
+        # Get transformation guidance from business rules
+        if "businessrules" in self.indexes:
+            query = f"SDTM {domain} transformation derivation algorithm from {source_data_description}"
+            results = self.search_pinecone(
+                query=query,
+                index_name="businessrules",
+                top_k=10
+            )
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta:
+                    guidance["transformation_steps"].append({
+                        "step": meta.get("rule", meta.get("description", meta.get("text", ""))),
+                        "variable": meta.get("variable", ""),
+                        "source": meta.get("source_variable", "")
+                    })
+
+        return guidance
+
+    def search_all_indexes(
+        self,
+        query: str,
+        top_k_per_index: int = 5
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Search all available Pinecone indexes for a query.
+
+        Args:
+            query: Search query
+            top_k_per_index: Results per index
+
+        Returns:
+            Dictionary with results from each index
+        """
+        all_results = {}
+
+        if not self.pinecone_client or not self.openai_client:
+            return all_results
+
+        for index_name in self.indexes:
+            results = self.search_pinecone(
+                query=query,
+                index_name=index_name,
+                top_k=top_k_per_index
+            )
+            if results:
+                all_results[index_name] = results
+
+        return all_results
+
+
+# Import hybrid search components
+try:
+    from .hybrid_search import (
+        HybridRetriever,
+        HistoricalMappingRetriever,
+        get_hybrid_retriever,
+        get_historical_mapping_retriever,
+        SearchResult
+    )
+    HYBRID_SEARCH_AVAILABLE = True
+except ImportError:
+    HYBRID_SEARCH_AVAILABLE = False
+
+
+class SDTMKnowledgeRetrieverExtended(SDTMKnowledgeRetriever):
+    """
+    Extended knowledge retriever with hybrid search capabilities.
+
+    Adds BM25 + Semantic hybrid search for improved retrieval accuracy.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.hybrid_retriever = None
+        self.historical_retriever = None
+        self._init_hybrid_search()
+
+    def _init_hybrid_search(self):
+        """Initialize hybrid search components."""
+        if HYBRID_SEARCH_AVAILABLE:
+            try:
+                self.hybrid_retriever = get_hybrid_retriever()
+                self.historical_retriever = get_historical_mapping_retriever()
+                print("  Hybrid search (BM25 + Semantic) enabled")
+            except Exception as e:
+                print(f"  WARNING: Hybrid search initialization failed: {e}")
+
+    def hybrid_search(
+        self,
+        query: str,
+        index_name: str = "sdtmig",
+        top_k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Perform hybrid search combining BM25 and semantic retrieval.
+
+        Args:
+            query: Search query
+            index_name: Name of the index to search
+            top_k: Number of results to return
+
+        Returns:
+            List of search results with combined scores
+        """
+        if not self.hybrid_retriever:
+            # Fall back to semantic-only search
+            return self.search_pinecone(query, index_name, top_k=top_k)
+
+        try:
+            results = self.hybrid_retriever.search(query, index_name, top_k)
+            return [
+                {
+                    "id": r.id,
+                    "score": r.score,
+                    "source": r.source,
+                    "metadata": r.metadata
+                }
+                for r in results
+            ]
+        except Exception as e:
+            print(f"  Hybrid search error: {e}")
+            return self.search_pinecone(query, index_name, top_k=top_k)
+
+    def search_historical_mappings(
+        self,
+        source_columns: List[str],
+        target_domain: str,
+        top_k: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for historical mapping patterns.
+
+        Args:
+            source_columns: Source column names
+            target_domain: Target SDTM domain
+            top_k: Number of results
+
+        Returns:
+            List of similar historical mappings
+        """
+        if not self.historical_retriever:
+            return []
+
+        try:
+            return self.historical_retriever.search_similar_mappings(
+                source_columns, target_domain, top_k
+            )
+        except Exception as e:
+            print(f"  Historical mapping search error: {e}")
+            return []
+
+    def get_sdtm_variable_definition_hybrid(
+        self,
+        domain: str,
+        variable: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get SDTM variable definition using hybrid search.
+
+        Args:
+            domain: SDTM domain code
+            variable: Variable name
+
+        Returns:
+            Variable definition with enhanced retrieval
+        """
+        query = f"SDTM {domain} domain {variable} variable definition type core"
+
+        # Try hybrid search first
+        results = self.hybrid_search(query, "sdtmig", top_k=5)
+        if results:
+            # Return best match
+            return results[0].get("metadata", {})
+
+        # Fall back to original method
+        return self.get_sdtm_variable_definition(domain, variable)
+
+    def get_validation_rules_hybrid(
+        self,
+        domain: str,
+        rule_type: str = "all"
+    ) -> List[Dict[str, Any]]:
+        """
+        Get validation rules using hybrid search.
+
+        Args:
+            domain: SDTM domain code
+            rule_type: Type of rules ("FDA", "P21", "CDISC", "all")
+
+        Returns:
+            List of validation rules
+        """
+        query = f"SDTM {domain} domain validation rule"
+        if rule_type != "all":
+            query = f"{rule_type} {query}"
+
+        # Search multiple indexes with hybrid retrieval
+        all_results = []
+
+        for index_name in ["validationrules", "businessrules"]:
+            results = self.hybrid_search(query, index_name, top_k=15)
+            for r in results:
+                all_results.append({
+                    "rule_id": r.get("metadata", {}).get("rule_id", r.get("id")),
+                    "category": r.get("metadata", {}).get("category", "validation"),
+                    "severity": r.get("metadata", {}).get("severity", "warning"),
+                    "message": r.get("metadata", {}).get("message",
+                              r.get("metadata", {}).get("description", "")),
+                    "score": r.get("score", 0),
+                    "source": index_name
+                })
+
+        # Deduplicate and sort by score
+        seen_ids = set()
+        unique_results = []
+        for r in sorted(all_results, key=lambda x: x.get("score", 0), reverse=True):
+            rule_id = r.get("rule_id")
+            if rule_id and rule_id not in seen_ids:
+                seen_ids.add(rule_id)
+                unique_results.append(r)
+
+        return unique_results[:30]
+
+
+# Singleton instances
 _knowledge_retriever = None
+_extended_retriever = None
 
 
 def get_knowledge_retriever() -> SDTMKnowledgeRetriever:
@@ -414,3 +858,12 @@ def get_knowledge_retriever() -> SDTMKnowledgeRetriever:
         print("\nInitializing SDTM Knowledge Retriever...")
         _knowledge_retriever = SDTMKnowledgeRetriever()
     return _knowledge_retriever
+
+
+def get_extended_knowledge_retriever() -> SDTMKnowledgeRetrieverExtended:
+    """Get or create the extended knowledge retriever with hybrid search."""
+    global _extended_retriever
+    if _extended_retriever is None:
+        print("\nInitializing Extended SDTM Knowledge Retriever...")
+        _extended_retriever = SDTMKnowledgeRetrieverExtended()
+    return _extended_retriever

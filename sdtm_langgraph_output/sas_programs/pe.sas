@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM PE domain from source data
 * Study:      MAXIS-08
 * Source:     XRAYSAMP.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data pe_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,34 +52,23 @@ data pe_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Physical Examination */
-    DOMAIN = Set to 'PE';
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* PEVISIT from VISIT */
+    PEVISIT = VISIT;
 
-    /* PESEQ: Sequence number per subject ordered by visit and repeat */
-    /* Derivation: ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY VISIT, REPEATSN) */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* PETESTCD from DCMNAME */
-    PETESTCD = DCMNAME;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'PE';
 
-    /* PETEST from DCMNAME */
-    PETEST = DCMNAME;
-    /* TODO: Apply transformation: Decode DCMNAME to descriptive text */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* PEORRES from SANYL */
-    PEORRES = SANYL;
-
-    /* PESTRESC from SANYL */
-    PESTRESC = SANYL;
-
-    /* PELOC: Location of examination, may be derived from test type */
-    /* Derivation: Derive from DCMNAME if location-specific */
-
-    /* PEDTC from SDT */
-    %convert_to_iso(invar=SDT, outvar=PEDTC);
+    /* PESEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

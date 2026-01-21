@@ -1,11 +1,11 @@
 {
   "study_id": "MAXIS-08",
   "status": "success",
-  "generated_at": "2026-01-20T15:31:38.481877",
+  "generated_at": "2026-01-21T00:20:16.930507",
   "summary": {
     "sdtm_domains_created": 48,
-    "total_sdtm_records": 17895,
-    "sdtm_validation_errors": 28,
+    "total_sdtm_records": 20653,
+    "sdtm_validation_errors": 26,
     "submission_ready": false,
     "neo4j_loaded": false,
     "s3_uploaded": true
@@ -14,212 +14,222 @@
     {
       "domain": "LB",
       "source": "CHEMLABD.csv",
-      "mappings": 17
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "HEMLABD.csv",
-      "mappings": 18
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "CHEMLAB.csv",
-      "mappings": 15
+      "mappings": 7
     },
     {
       "domain": "PE",
       "source": "PHYSEXAM.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "AE",
       "source": "AEVENT.csv",
-      "mappings": 20
+      "mappings": 11
     },
     {
       "domain": "LB",
       "source": "HEMLAB.csv",
-      "mappings": 14
+      "mappings": 7
     },
     {
       "domain": "CM",
       "source": "CONMEDS.csv",
-      "mappings": 16
+      "mappings": 7
     },
     {
       "domain": "SUPPAE",
       "source": "AEVENTC.csv",
-      "mappings": 18
+      "mappings": 7
     },
     {
       "domain": "SUPPCM",
       "source": "CONMEDSC.csv",
-      "mappings": 15
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "URINLAB.csv",
-      "mappings": 14
+      "mappings": 7
     },
     {
       "domain": "VS",
       "source": "VITALS.csv",
-      "mappings": 12
+      "mappings": 7
     },
     {
       "domain": "SUPPMH",
       "source": "GMEDHXC.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "CM",
       "source": "CAMED19.csv",
-      "mappings": 11
+      "mappings": 7
+    },
+    {
+      "domain": "EX",
+      "source": "DOSE.csv",
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "LABRANG.csv",
-      "mappings": 12
+      "mappings": 4
     },
     {
       "domain": "SUPPCM",
       "source": "CAMED19C.csv",
-      "mappings": 14
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "CHEMSAMP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "CO",
       "source": "COMGEN.csv",
-      "mappings": 9
+      "mappings": 7
     },
     {
       "domain": "SUPPMH",
       "source": "DISHXC.csv",
-      "mappings": 17
+      "mappings": 7
     },
     {
       "domain": "SUPPMH",
       "source": "SURGHXC.csv",
-      "mappings": 21
+      "mappings": 7
     },
     {
       "domain": "MH",
       "source": "GMEDHX.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "IE",
       "source": "INEXCRT.csv",
-      "mappings": 9
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "HEMSAMP.csv",
-      "mappings": 8
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "URINSAMP.csv",
-      "mappings": 9
+      "mappings": 7
     },
     {
       "domain": "TR",
       "source": "TARTUMR.csv",
-      "mappings": 11
+      "mappings": 7
     },
     {
       "domain": "MH",
       "source": "DISHX.csv",
-      "mappings": 11
+      "mappings": 7
     },
     {
       "domain": "TU",
       "source": "NONTUMR.csv",
-      "mappings": 11
+      "mappings": 7
     },
     {
       "domain": "MH",
       "source": "SURGHX.csv",
-      "mappings": 8
+      "mappings": 7
     },
     {
       "domain": "QS",
       "source": "QSQS.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "BIOLAB.csv",
-      "mappings": 13
+      "mappings": 7
+    },
+    {
+      "domain": "PC",
+      "source": "BIOSAMP.csv",
+      "mappings": 7
     },
     {
       "domain": "QS",
       "source": "ECOGSAMP.csv",
-      "mappings": 11
+      "mappings": 7
     },
     {
       "domain": "DM",
       "source": "PATICDO3.csv",
-      "mappings": 5
+      "mappings": 4
     },
     {
       "domain": "EG",
       "source": "ECG.csv",
-      "mappings": 11
+      "mappings": 7
     },
     {
       "domain": "CM",
       "source": "RADMEDS.csv",
-      "mappings": 13
+      "mappings": 7
     },
     {
       "domain": "RS",
       "source": "RESP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "PE",
       "source": "XRAYSAMP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "DS",
       "source": "CMPL.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "PC",
       "source": "PRGSAMP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "DM",
       "source": "DEMO.csv",
-      "mappings": 10
+      "mappings": 9
     },
     {
       "domain": "TA",
       "source": "INV.csv",
-      "mappings": 9
+      "mappings": 7
     },
     {
       "domain": "IE",
       "source": "ELIG.csv",
-      "mappings": 9
+      "mappings": 7
     },
     {
       "domain": "PC",
       "source": "SOBSAMP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "GENOSAMP.csv",
-      "mappings": 10
+      "mappings": 7
     },
     {
       "domain": "PC",
@@ -229,18 +239,18 @@
     {
       "domain": "DS",
       "source": "DEATHGEN.csv",
-      "mappings": 8
+      "mappings": 7
     },
     {
       "domain": "QS",
       "source": "QS.csv",
-      "mappings": 8
+      "mappings": 7
     },
     {
       "domain": "LB",
       "source": "GENOLAB.csv",
-      "mappings": 10
+      "mappings": 7
     }
   ],
-  "output_directory": "./sdtm_langgraph_output"
+  "output_directory": "/Users/siddharthchauhan/Work/Projects/ETL/sdtm_langgraph_output"
 }

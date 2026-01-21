@@ -846,8 +846,11 @@ async def load_to_neo4j_node(state: SDTMPipelineState, config: RunnableConfig) -
         for domain, filepath in sdtm_data_paths.items():
             print(f"  Loading {domain} to Neo4j...")
 
+            def read_csv_safe(path):
+                return pd.read_csv(path, on_bad_lines='skip')
+
             df = await asyncio.get_event_loop().run_in_executor(
-                None, pd.read_csv, filepath
+                None, read_csv_safe, filepath
             )
 
             # Add domain label and clean records

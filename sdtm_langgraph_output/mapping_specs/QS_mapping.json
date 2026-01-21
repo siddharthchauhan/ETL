@@ -9,71 +9,64 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping of study identifier"
+      "comments": "Common mapping"
     },
     {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": null,
-      "derivation_rule": "Constant value 'QS'",
-      "controlled_terminology": null,
-      "comments": "Domain abbreviation for Questionnaires domain"
-    },
-    {
-      "source_column": "STUDY, INVSITE, PT",
-      "target_variable": "USUBJID",
-      "transformation": "Concatenate with hyphens",
-      "derivation_rule": "STUDY + '-' + INVSITE + '-' + PT",
-      "controlled_terminology": null,
-      "comments": "Unique subject identifier derived from study, site, and patient number"
-    },
-    {
-      "source_column": null,
-      "target_variable": "QSSEQ",
-      "transformation": null,
-      "derivation_rule": "Row number per USUBJID",
-      "controlled_terminology": null,
-      "comments": "Sequence number for questionnaire records per subject"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "QSCAT",
-      "transformation": "Remove 'QS_' prefix",
-      "derivation_rule": "substring(DCMNAME, 4)",
-      "controlled_terminology": null,
-      "comments": "Questionnaire category derived from data collection module name"
-    },
-    {
-      "source_column": "VISIT",
-      "target_variable": "VISITNUM",
+      "source_column": "PT",
+      "target_variable": "SUBJID",
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Visit number for linking to other domains"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "VISDT",
-      "target_variable": "QSDTC",
-      "transformation": "Convert YYYYMMDD to ISO 8601",
-      "derivation_rule": "Format as YYYY-MM-DD",
+      "source_column": "VISIT",
+      "target_variable": "QSVISIT",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Visit date converted to ISO 8601 format for questionnaire date"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "SUBEVE",
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'QS'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived unique subject identifier"
+    },
+    {
+      "source_column": "",
       "target_variable": "QSSEQ",
-      "transformation": "Use as part of sequence logic",
-      "derivation_rule": "Incorporate SUBEVE in sequence numbering",
+      "transformation": null,
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "Sub-event number to be used in sequence determination"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "QSSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY QSDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "QSSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY QSDTC)"
+    "DOMAIN": "'QS'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:31:21.849912",
+  "created_at": "2026-01-21T00:20:03.187799",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for QS.csv to SDTM QS"

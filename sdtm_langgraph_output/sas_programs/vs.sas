@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM VS domain from source data
 * Study:      MAXIS-08
 * Source:     VITALS.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,16 +33,12 @@ data vs_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
+        DOMAIN $2
         USUBJID $40
-        USUBJID $40
-        VSORRES $20
-        VSORRES $20
-        VSORRES $20
-        VSORRES $20
-        VSORRES $20
-        VSDTC $20
-        VSDTC $20
+        VSSEQ 8
     ;
 
     set vs_raw;
@@ -54,48 +50,26 @@ data vs_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* VSVISIT from VISIT */
+    VSVISIT = VISIT;
 
-    /* USUBJID from INVSITE */
-    USUBJID = INVSITE;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* VSORRES from VTBPS2 */
-    VSORRES = VTBPS2;
-    /* TODO: Apply transformation: Convert to character */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'VS';
 
-    /* VSORRES from VTBPD2 */
-    VSORRES = VTBPD2;
-    /* TODO: Apply transformation: Convert to character */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* VSORRES from VTTMP */
-    VSORRES = VTTMP;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* VSORRES from VTPLS2 */
-    VSORRES = VTPLS2;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* VSORRES from VTRRT2 */
-    VSORRES = VTRRT2;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* VSDTC from VTDT */
-    %convert_to_iso(invar=VTDT, outvar=VSDTC);
-
-    /* VSDTC from VTTM */
-    %convert_to_iso(invar=VTTM, outvar=VSDTC);
-
-    /* VSTPT from VISIT */
-    VSTPT = VISIT;
-
-    /* VSTPTNUM from VTTP2 */
-    VSTPTNUM = VTTP2;
+    /* VSSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

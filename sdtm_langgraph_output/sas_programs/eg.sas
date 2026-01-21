@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM EG domain from source data
 * Study:      MAXIS-08
 * Source:     ECG.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data eg_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,38 +52,23 @@ data eg_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain constant for EG domain */
-    DOMAIN = Set to 'EG' for all records;
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from STUDY + PT */
-    USUBJID = STUDY + PT;
-    /* TODO: Apply transformation: concatenate with '-' */
+    /* EGVISIT from VISIT */
+    EGVISIT = VISIT;
 
-    /* EGSEQ: Sequential numbering of EG records per subject */
-    /* Derivation: Row number per USUBJID */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* EGTESTCD from DCMNAME */
-    EGTESTCD = DCMNAME;
-    /* TODO: Apply transformation: standardize to test code */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'EG';
 
-    /* EGTEST from DCMNAME */
-    EGTEST = DCMNAME;
-    /* TODO: Apply transformation: expand to full test name */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* EGORRES from ECGANY */
-    EGORRES = ECGANY;
-
-    /* EGSTRESC from ECGANY */
-    EGSTRESC = ECGANY;
-
-    /* EGDTC from ECGDT */
-    %convert_to_iso(invar=ECGDT, outvar=EGDTC);
-
-    /* VISIT from CPEVENT */
-    VISIT = CPEVENT;
-
-    /* VISITNUM from VISIT */
-    VISITNUM = VISIT;
+    /* EGSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

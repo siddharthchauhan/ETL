@@ -2,7 +2,7 @@
 * Program:    driver.sas
 * Purpose:    Master driver for SDTM transformation pipeline
 * Study:      MAXIS-08
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 ********************************************************************************/
 
@@ -30,6 +30,7 @@
 %include "&programs/vs.sas";
 %include "&programs/suppmh.sas";
 %include "&programs/cm.sas";
+%include "&programs/ex.sas";
 %include "&programs/lb.sas";
 %include "&programs/suppcm.sas";
 %include "&programs/lb.sas";
@@ -46,6 +47,7 @@
 %include "&programs/mh.sas";
 %include "&programs/qs.sas";
 %include "&programs/lb.sas";
+%include "&programs/pc.sas";
 %include "&programs/qs.sas";
 %include "&programs/dm.sas";
 %include "&programs/eg.sas";

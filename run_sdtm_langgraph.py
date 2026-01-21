@@ -53,8 +53,10 @@ def download_s3_data():
     zip_path = f"{download_dir}/EDC_Data.zip"
 
     try:
-        s3.download_file(bucket, "EDC Data.zip", zip_path)
-        print(f"  Downloaded: EDC Data.zip")
+        incoming_prefix = os.getenv('S3_INCOMING_PREFIX', 'incoming')
+        s3_key = f"{incoming_prefix}/EDC Data.zip"
+        s3.download_file(bucket, s3_key, zip_path)
+        print(f"  Downloaded: {s3_key}")
     except Exception as e:
         print(f"  Note: Could not download from S3: {e}")
         print("  Using existing data if available...")

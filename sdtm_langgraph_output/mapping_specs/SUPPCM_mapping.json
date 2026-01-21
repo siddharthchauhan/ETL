@@ -4,124 +4,69 @@
   "target_domain": "SUPPCM",
   "column_mappings": [
     {
+      "source_column": "PT",
+      "target_variable": "SUBJID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
       "source_column": "STUDY",
       "target_variable": "STUDYID",
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping to study identifier"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "STUDY",
-      "target_variable": "RDOMAIN",
-      "transformation": "Set to 'CM'",
-      "derivation_rule": "Constant value 'CM' as this supplements the CM domain",
+      "source_column": "VISIT",
+      "target_variable": "SUPPCMVISIT",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Related domain for concomitant medications"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "PT",
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'SUPPCM'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
       "target_variable": "USUBJID",
-      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
-      "derivation_rule": "Concatenate study, site, and patient identifiers with hyphens",
-      "controlled_terminology": null,
-      "comments": "Create unique subject identifier from available components"
-    },
-    {
-      "source_column": "REPEATSN",
-      "target_variable": "IDVAR",
-      "transformation": "Set to 'CMSEQ'",
-      "derivation_rule": "Constant value 'CMSEQ' to identify the related CM record",
-      "controlled_terminology": null,
-      "comments": "Identifying variable for the related CM domain record"
-    },
-    {
-      "source_column": "REPEATSN",
-      "target_variable": "IDVARVAL",
-      "transformation": "Convert to character",
-      "derivation_rule": "Use REPEATSN as the sequence number value",
-      "controlled_terminology": null,
-      "comments": "Value of the identifying variable linking to CM record"
-    },
-    {
-      "source_column": "ATCCODE",
-      "target_variable": "QNAM",
-      "transformation": "Set to 'ATCCODE'",
-      "derivation_rule": "Constant value for ATC code qualifier",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable name for ATC code"
-    },
-    {
-      "source_column": "ATCCODE",
-      "target_variable": "QLABEL",
-      "transformation": "Set to 'ATC Code'",
-      "derivation_rule": "Constant label for ATC code",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable label for ATC code"
-    },
-    {
-      "source_column": "ATCCODE",
-      "target_variable": "QVAL",
       "transformation": null,
-      "derivation_rule": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
       "controlled_terminology": null,
-      "comments": "ATC code value as supplemental qualifier"
+      "comments": "Derived unique subject identifier"
     },
     {
-      "source_column": "ATCCLASS",
-      "target_variable": "QNAM",
-      "transformation": "Set to 'ATCCLASS'",
-      "derivation_rule": "Create second record with ATCCLASS as qualifier name",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable name for ATC class (separate SUPPCM record)"
-    },
-    {
-      "source_column": "ATCCLASS",
-      "target_variable": "QLABEL",
-      "transformation": "Set to 'ATC Class'",
-      "derivation_rule": "Constant label for ATC class",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable label for ATC class"
-    },
-    {
-      "source_column": "ATCCLASS",
-      "target_variable": "QVAL",
+      "source_column": "",
+      "target_variable": "SUPPCMSEQ",
       "transformation": null,
-      "derivation_rule": null,
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "ATC class value as supplemental qualifier"
-    },
-    {
-      "source_column": "MDINDL",
-      "target_variable": "QNAM",
-      "transformation": "Set to 'MDINDL'",
-      "derivation_rule": "Create third record with indication as qualifier name",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable name for medical indication (separate SUPPCM record)"
-    },
-    {
-      "source_column": "MDINDL",
-      "target_variable": "QLABEL",
-      "transformation": "Set to 'Medical Indication'",
-      "derivation_rule": "Constant label for medical indication",
-      "controlled_terminology": null,
-      "comments": "Qualifier variable label for medical indication"
-    },
-    {
-      "source_column": "MDINDL",
-      "target_variable": "QVAL",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Medical indication value as supplemental qualifier"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "SUPPCMSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY SUPPCMDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "SUPPCMSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY SUPPCMDTC)"
+    "DOMAIN": "'SUPPCM'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:29:23.415990",
+  "created_at": "2026-01-21T00:19:33.920449",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for CAMED19C.csv to SDTM SUPPCM"

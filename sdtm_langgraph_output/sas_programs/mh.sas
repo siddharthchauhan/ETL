@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM MH domain from source data
 * Study:      MAXIS-08
 * Source:     SURGHX.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data mh_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,28 +52,23 @@ data mh_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation is a constant for MH domain */
-    DOMAIN = Set to 'MH' for Medical History domain;
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: Concatenate STUDY + '-' + PT */
+    /* MHVISIT from VISIT */
+    MHVISIT = VISIT;
 
-    /* MHSEQ from REPEATSN */
-    MHSEQ = REPEATSN;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* MHTERM from MHFDG */
-    MHTERM = MHFDG;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'MH';
 
-    /* MHDECOD from MHQSN */
-    MHDECOD = MHQSN;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* MHCAT from DCMNAME */
-    MHCAT = DCMNAME;
-    /* TODO: Apply transformation: Extract category from 'MH_SURGICAL_HX' */
-
-    /* MHSTDTC from MHDT */
-    %convert_to_iso(invar=MHDT, outvar=MHSTDTC);
+    /* MHSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

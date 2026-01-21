@@ -4,100 +4,69 @@
   "target_domain": "TR",
   "column_mappings": [
     {
+      "source_column": "PT",
+      "target_variable": "SUBJID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
       "source_column": "STUDY",
       "target_variable": "STUDYID",
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping of study identifier"
+      "comments": "Common mapping"
     },
     {
-      "source_column": null,
+      "source_column": "VISIT",
+      "target_variable": "TRVISIT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
       "target_variable": "DOMAIN",
       "transformation": null,
-      "derivation_rule": "Set to 'TR'",
+      "derivation_rule": "'TR'",
       "controlled_terminology": null,
-      "comments": "Hard-coded domain value for tumor results"
+      "comments": "Constant value"
     },
     {
-      "source_column": "STUDY + INVSITE + PT",
+      "source_column": "",
       "target_variable": "USUBJID",
-      "transformation": "Concatenate STUDY + '-' + INVSITE + '-' + PT",
-      "derivation_rule": "Construct unique subject identifier from study, site, and patient components",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
       "controlled_terminology": null,
-      "comments": "Standard USUBJID construction using available identifiers"
+      "comments": "Derived unique subject identifier"
     },
     {
-      "source_column": "REPEATSN",
+      "source_column": "",
       "target_variable": "TRSEQ",
       "transformation": null,
-      "derivation_rule": null,
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "Sequence number for tumor assessment records"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "TRTESTCD",
-      "transformation": "Map 'TM_ASSESS_TAR' to appropriate test code",
-      "derivation_rule": "Convert to standardized test code",
-      "controlled_terminology": null,
-      "comments": "Tumor assessment test code derived from data collection module name"
-    },
-    {
-      "source_column": "TMDESC",
-      "target_variable": "TRTEST",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Tumor assessment test description"
-    },
-    {
-      "source_column": "TMSUM",
-      "target_variable": "TRORRES",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Original tumor assessment result as collected"
-    },
-    {
-      "source_column": "TMSIZE2",
-      "target_variable": "TRSTRESN",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Numeric tumor size measurement"
-    },
-    {
-      "source_column": "TMLOCL",
-      "target_variable": "TRLOC",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Anatomical location of tumor (LUNG, LIVER, etc.)"
-    },
-    {
-      "source_column": "TMNO",
-      "target_variable": "TRLNKID",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "Tumor identifier for linking related records"
-    },
-    {
-      "source_column": "TMDT",
-      "target_variable": "TRDTC",
-      "transformation": "Convert YYYYMMDD format to ISO 8601 (YYYY-MM-DD)",
-      "derivation_rule": "Transform date from numeric YYYYMMDD to ISO 8601 format",
-      "controlled_terminology": null,
-      "comments": "Date of tumor assessment converted to standard format"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "TRSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY TRDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "TRSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY TRDTC)"
+    "DOMAIN": "'TR'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:29:58.867338",
+  "created_at": "2026-01-21T00:19:42.725189",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for TARTUMR.csv to SDTM TR"

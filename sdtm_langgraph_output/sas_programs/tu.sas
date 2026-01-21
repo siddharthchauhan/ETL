@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM TU domain from source data
 * Study:      MAXIS-08
 * Source:     NONTUMR.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,9 @@ data tu_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -47,41 +49,26 @@ data tu_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain constant for Tumor/Lesion Identification */
-    DOMAIN = Set to 'TU';
+    /* TUVISIT from VISIT */
+    TUVISIT = VISIT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: concatenate */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* TUSEQ from REPEATSN */
-    TUSEQ = REPEATSN;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'TU';
 
-    /* TUTESTCD from DCMNAME */
-    TUTESTCD = DCMNAME;
-    /* TODO: Apply transformation: standardize */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* TUTEST from TMDESC */
-    TUTEST = TMDESC;
-
-    /* TUORRES from TMRSPN */
-    TUORRES = TMRSPN;
-
-    /* TUSTRESC from TMRSPN */
-    TUSTRESC = TMRSPN;
-    /* TODO: Apply transformation: standardize */
-
-    /* TULOC from TMLOCL */
-    TULOC = TMLOCL;
-
-    /* TULNKID from TMNO */
-    TULNKID = TMNO;
-
-    /* TUDTC from TMDT */
-    %convert_to_iso(invar=TMDT, outvar=TUDTC);
+    /* TUSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

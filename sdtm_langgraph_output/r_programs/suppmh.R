@@ -3,7 +3,7 @@
 #' Purpose:    Create SDTM SUPPMH domain from source data
 #' Study:      MAXIS-08
 #' Source:     SURGHXC.csv
-#' Created:    2026-01-20
+#' Created:    2026-01-21
 #' Author:     SDTM Pipeline (Auto-generated)
 #' ============================================================================
 

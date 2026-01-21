@@ -2,15 +2,18 @@
 SDTM Mapping Specification Generator
 ====================================
 Uses LLM to analyze source data and generate SDTM mapping specifications.
-Enhanced with Tavily (web search) and Pinecone (vector database) for
+Enhanced with SDTMIG reference module, Tavily (web search) and Pinecone (vector database) for
 referencing SDTM IG, business rules, and controlled terminology.
 """
 
+import os
 import pandas as pd
 import json
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import anthropic
+from dotenv import load_dotenv
+load_dotenv()
 
 from ..models.sdtm_models import (
     MappingSpecification,
@@ -27,6 +30,14 @@ except ImportError:
     KNOWLEDGE_TOOLS_AVAILABLE = False
     SDTMKnowledgeRetriever = None
 
+# Import SDTMIG reference module
+try:
+    from ..langgraph_agent.sdtmig_reference import get_sdtmig_reference, SDTMIGReference
+    SDTMIG_AVAILABLE = True
+except ImportError:
+    SDTMIG_AVAILABLE = False
+    SDTMIGReference = None
+
 
 class MappingSpecificationGenerator:
     """
@@ -40,6 +51,16 @@ class MappingSpecificationGenerator:
         self.api_key = api_key
         self.study_id = study_id
         self.client = anthropic.Anthropic(api_key=api_key)
+
+        # Initialize SDTMIG reference
+        self.sdtmig_reference: Optional[SDTMIGReference] = None
+        if SDTMIG_AVAILABLE:
+            try:
+                self.sdtmig_reference = get_sdtmig_reference()
+                print("  SDTMIG reference module enabled")
+            except Exception as e:
+                print(f"  WARNING: SDTMIG reference initialization failed: {e}")
+                self.sdtmig_reference = None
 
         # Initialize knowledge retriever for SDTM guidelines
         self.knowledge_retriever: Optional[SDTMKnowledgeRetriever] = None
@@ -156,8 +177,9 @@ Available SDTM domains:
 Return ONLY the 2-letter domain code (e.g., DM, AE, VS, LB, CM, EX)."""
 
         try:
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
             response = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=model,
                 max_tokens=100,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -225,28 +247,38 @@ Return ONLY the 2-letter domain code (e.g., DM, AE, VS, LB, CM, EX)."""
         target_domain: str,
         domain_spec
     ) -> List[ColumnMapping]:
-        """Generate column mappings using LLM enhanced with knowledge retrieval."""
+        """Generate column mappings using LLM enhanced with SDTMIG reference and knowledge retrieval."""
         source_columns = [col["name"] for col in analysis["columns"]]
 
-        # Get expected SDTM variables
+        # Get SDTMIG reference context (comprehensive domain specification)
+        sdtmig_context = ""
+        if self.sdtmig_reference:
+            sdtmig_context = self.sdtmig_reference.generate_mapping_prompt_context(target_domain)
+
+        # Get expected SDTM variables from SDTMIG
         expected_vars = []
-        if domain_spec:
+        if self.sdtmig_reference:
+            expected_vars = (
+                self.sdtmig_reference.get_required_variables(target_domain) +
+                self.sdtmig_reference.get_expected_variables(target_domain)
+            )
+        elif domain_spec:
             expected_vars = (
                 domain_spec.required_variables +
                 domain_spec.expected_variables
             )
 
-        # Retrieve SDTM knowledge from Pinecone/Tavily
+        # Retrieve additional SDTM knowledge from Pinecone/Tavily
         domain_knowledge = self._retrieve_domain_knowledge(target_domain, expected_vars)
         business_rules = self._retrieve_business_rules(target_domain)
 
-        # Build enhanced prompt with retrieved knowledge
+        # Build enhanced prompt with SDTMIG reference
         knowledge_context = ""
         if domain_knowledge:
             knowledge_context = f"""
 
-SDTM Implementation Guide Knowledge (retrieved from documentation):
-{json.dumps(domain_knowledge, default=str)[:2000]}
+Additional SDTM Knowledge (from Pinecone):
+{json.dumps(domain_knowledge, default=str)[:1500]}
 """
 
         rules_context = ""
@@ -254,49 +286,60 @@ SDTM Implementation Guide Knowledge (retrieved from documentation):
             rules_context = f"""
 
 Business Rules and Validation Requirements:
-{json.dumps(business_rules, default=str)[:1500]}
+{json.dumps(business_rules, default=str)[:1000]}
 """
 
-        # Build prompt for LLM
-        prompt = f"""You are an expert in CDISC SDTM standards. Generate column mappings from source data to SDTM {target_domain} domain.
+        # Build comprehensive prompt for LLM
+        prompt = f"""You are an expert in CDISC SDTM standards (SDTMIG 3.4). Generate comprehensive column mappings from source EDC data to SDTM {target_domain} domain.
 
-Source columns: {source_columns}
-Source sample data: {json.dumps(analysis['columns'][:10], default=str)}
-
-Target SDTM domain: {target_domain}
-Expected SDTM variables: {expected_vars}
+{sdtmig_context}
 {knowledge_context}
 {rules_context}
-For each source column, provide a mapping in this JSON format:
+
+SOURCE DATA ANALYSIS:
+=====================
+Source columns: {source_columns}
+Source sample data: {json.dumps(analysis['columns'][:15], default=str)}
+
+MAPPING REQUIREMENTS:
+=====================
+1. Map ALL source columns to appropriate SDTM variables
+2. Include ALL Required (Req) and Expected (Exp) SDTM variables
+3. Create derivations for variables not directly in source
+4. Convert dates to ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+5. Apply controlled terminology mappings where applicable
+6. Generate sequence numbers ({target_domain}SEQ)
+7. Derive USUBJID from study/site/subject identifiers
+
+For each mapping, provide in this JSON format:
 {{
   "mappings": [
     {{
-      "source_column": "SOURCE_COL",
+      "source_column": "SOURCE_COL or null if derived",
       "target_variable": "SDTM_VAR",
-      "transformation": "transformation rule or null",
-      "derivation_rule": "derivation logic or null",
-      "comments": "explanation"
+      "transformation": "transformation rule (e.g., 'Convert to ISO 8601', 'Map M/F to SEX codelist') or null",
+      "derivation_rule": "derivation logic for derived variables or null",
+      "controlled_terminology": "codelist name if applicable or null",
+      "comments": "explanation of mapping logic"
     }}
   ]
 }}
 
-Key SDTM variable naming conventions for {target_domain}:
-- STUDYID: Study identifier
-- DOMAIN: Domain abbreviation ({target_domain})
-- USUBJID: Unique subject identifier (STUDYID + "-" + SITEID + "-" + SUBJID)
-- {target_domain}SEQ: Sequence number
+IMPORTANT: Include mappings for:
+- All source columns that have SDTM equivalents
+- All Required SDTM variables (derive if not in source)
+- All Expected SDTM variables that can be derived
+- Standard derived variables: DOMAIN, USUBJID, {target_domain}SEQ
+- Date conversions to ISO 8601 format
 
-Standard variables to derive if not in source:
-- USUBJID from STUDY + subject ID
-- {target_domain}SEQ as row number per subject
-- Date variables converted to ISO 8601 format (--DTC variables)
-
-Return ONLY valid JSON."""
+Return ONLY valid JSON with comprehensive mappings."""
 
         try:
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+            max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
             response = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=2000,
+                model=model,
+                max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}]
             )
 
@@ -311,12 +354,16 @@ Return ONLY valid JSON."""
                 mappings = []
                 for m in mapping_data.get("mappings", []):
                     mappings.append(ColumnMapping(
-                        source_column=m.get("source_column", ""),
+                        source_column=m.get("source_column") or "",
                         target_variable=m.get("target_variable", ""),
                         transformation=m.get("transformation"),
                         derivation_rule=m.get("derivation_rule"),
+                        controlled_terminology=m.get("controlled_terminology"),
                         comments=m.get("comments", "")
                     ))
+
+                # Ensure all required SDTM variables are included
+                mappings = self._ensure_required_variables(mappings, target_domain)
                 return mappings
 
         except Exception as e:
@@ -324,6 +371,63 @@ Return ONLY valid JSON."""
 
         # Fallback: Generate basic mappings
         return self._generate_fallback_mappings(source_columns, target_domain)
+
+    def _ensure_required_variables(
+        self,
+        mappings: List[ColumnMapping],
+        target_domain: str
+    ) -> List[ColumnMapping]:
+        """
+        Ensure all required SDTM variables are included in the mapping.
+
+        Args:
+            mappings: Current list of mappings
+            target_domain: Target SDTM domain
+
+        Returns:
+            Updated mappings with all required variables
+        """
+        if not self.sdtmig_reference:
+            return mappings
+
+        # Get mapped variables
+        mapped_vars = {m.target_variable.upper() for m in mappings if m.target_variable}
+
+        # Get required and expected variables from SDTMIG
+        required_vars = self.sdtmig_reference.get_required_variables(target_domain)
+        expected_vars = self.sdtmig_reference.get_expected_variables(target_domain)
+        derivation_rules = self.sdtmig_reference.get_derivation_rules(target_domain)
+        ct_vars = self.sdtmig_reference.get_controlled_terminology_variables(target_domain)
+
+        # Add missing required variables
+        for var in required_vars:
+            if var.upper() not in mapped_vars:
+                var_def = self.sdtmig_reference.get_variable_definition(target_domain, var)
+                derivation = derivation_rules.get(var, f"Derived - {var_def.get('label', '') if var_def else ''}")
+
+                mappings.append(ColumnMapping(
+                    source_column="",
+                    target_variable=var,
+                    derivation_rule=derivation,
+                    controlled_terminology=ct_vars.get(var),
+                    comments=f"Required variable (SDTMIG) - {var_def.get('label', '') if var_def else 'auto-added'}"
+                ))
+                mapped_vars.add(var.upper())
+
+        # Add key expected variables if not present
+        key_expected = ['USUBJID', f'{target_domain}SEQ', 'DOMAIN', 'STUDYID']
+        for var in key_expected:
+            if var.upper() not in mapped_vars:
+                derivation = derivation_rules.get(var, "")
+                mappings.append(ColumnMapping(
+                    source_column="",
+                    target_variable=var,
+                    derivation_rule=derivation,
+                    comments="Standard derived variable (SDTMIG)"
+                ))
+                mapped_vars.add(var.upper())
+
+        return mappings
 
     def _retrieve_domain_knowledge(
         self,
@@ -521,29 +625,81 @@ Return ONLY valid JSON."""
         target_domain: str,
         mappings: List[ColumnMapping]
     ) -> Dict[str, str]:
-        """Generate derivation rules for computed variables."""
+        """Generate derivation rules for computed variables using SDTMIG reference."""
         rules = {}
 
-        # USUBJID derivation
-        rules["USUBJID"] = "STUDYID || '-' || SITEID || '-' || SUBJID"
+        # Get derivation rules from SDTMIG reference
+        if self.sdtmig_reference:
+            rules = self.sdtmig_reference.get_derivation_rules(target_domain).copy()
+
+        # Standard derivations (fallback if not in SDTMIG)
+        if "USUBJID" not in rules:
+            rules["USUBJID"] = "STUDYID || '-' || SITEID || '-' || SUBJID"
+
+        if "DOMAIN" not in rules:
+            rules["DOMAIN"] = f"'{target_domain}'"
 
         # Sequence number
-        if target_domain != "DM":
-            rules[f"{target_domain}SEQ"] = f"ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY {target_domain}DTC)"
+        seq_var = f"{target_domain}SEQ"
+        if seq_var not in rules and target_domain != "DM":
+            rules[seq_var] = f"ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY {target_domain}DTC)"
 
-        # Domain-specific derivations
+        # Domain-specific derivations (enhanced)
         if target_domain == "DM":
-            rules["AGE"] = "Calculate from BRTHDTC and RFSTDTC"
-            rules["AGEU"] = "'YEARS'"
+            if "AGE" not in rules:
+                rules["AGE"] = "floor((RFSTDTC - BRTHDTC) / 365.25) -- Calculate age in years"
+            if "AGEU" not in rules:
+                rules["AGEU"] = "'YEARS'"
 
         elif target_domain == "VS":
-            rules["VSSTRESC"] = "VSORRES converted to standard format"
-            rules["VSSTRESN"] = "Numeric conversion of VSSTRESC"
+            if "VSSTRESC" not in rules:
+                rules["VSSTRESC"] = "VSORRES converted to standard format"
+            if "VSSTRESN" not in rules:
+                rules["VSSTRESN"] = "Numeric conversion of VSSTRESC where applicable"
+            if "VSBLFL" not in rules:
+                rules["VSBLFL"] = "'Y' for baseline records, null otherwise"
 
         elif target_domain == "LB":
-            rules["LBSTRESC"] = "LBORRES converted to standard format"
-            rules["LBSTRESN"] = "Numeric conversion of LBSTRESC"
-            rules["LBNRIND"] = "Derived from LBSTRESN and reference ranges"
+            if "LBSTRESC" not in rules:
+                rules["LBSTRESC"] = "LBORRES converted to standard format"
+            if "LBSTRESN" not in rules:
+                rules["LBSTRESN"] = "Numeric conversion of LBSTRESC where applicable"
+            if "LBNRIND" not in rules:
+                rules["LBNRIND"] = "Derived: 'NORMAL' if LBSTNRLO <= LBSTRESN <= LBSTNRHI, 'LOW' if < LBSTNRLO, 'HIGH' if > LBSTNRHI"
+            if "LBBLFL" not in rules:
+                rules["LBBLFL"] = "'Y' for baseline records, null otherwise"
+
+        elif target_domain == "AE":
+            if "AESEQ" not in rules:
+                rules["AESEQ"] = "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY AESTDTC, AETERM)"
+            if "AESTDY" not in rules:
+                rules["AESTDY"] = "AESTDTC - RFSTDTC + 1 (if AESTDTC >= RFSTDTC) else AESTDTC - RFSTDTC"
+            if "AEENDY" not in rules:
+                rules["AEENDY"] = "AEENDTC - RFSTDTC + 1 (if AEENDTC >= RFSTDTC) else AEENDTC - RFSTDTC"
+
+        elif target_domain == "CM":
+            if "CMSEQ" not in rules:
+                rules["CMSEQ"] = "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY CMSTDTC, CMTRT)"
+            if "CMSTDY" not in rules:
+                rules["CMSTDY"] = "CMSTDTC - RFSTDTC + 1 (if CMSTDTC >= RFSTDTC) else CMSTDTC - RFSTDTC"
+            if "CMENDY" not in rules:
+                rules["CMENDY"] = "CMENDTC - RFSTDTC + 1 (if CMENDTC >= RFSTDTC) else CMENDTC - RFSTDTC"
+
+        elif target_domain == "EX":
+            if "EXSEQ" not in rules:
+                rules["EXSEQ"] = "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY EXSTDTC)"
+            if "EXSTDY" not in rules:
+                rules["EXSTDY"] = "EXSTDTC - RFSTDTC + 1 (if EXSTDTC >= RFSTDTC) else EXSTDTC - RFSTDTC"
+
+        elif target_domain == "MH":
+            if "MHSEQ" not in rules:
+                rules["MHSEQ"] = "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY MHTERM)"
+
+        # Add derivations from mappings
+        for mapping in mappings:
+            if mapping.derivation_rule and mapping.target_variable:
+                if mapping.target_variable not in rules:
+                    rules[mapping.target_variable] = mapping.derivation_rule
 
         return rules
 

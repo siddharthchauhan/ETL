@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM DM domain from source data
 * Study:      MAXIS-08
 * Source:     DEMO.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,14 +34,14 @@ data dm_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
-        DOMAIN $2
-        USUBJID $40
         SUBJID $20
-        SITEID $10
+        RACE $50
         BRTHDTC $20
         SEX $2
-        RACE $50
-        AGE 8
+        SEX $2
+        SITEID $10
+        DOMAIN $2
+        USUBJID $40
     ;
 
     set dm_raw;
@@ -56,35 +56,32 @@ data dm_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Demographics */
-    DOMAIN = Constant value 'DM';
-
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
-
     /* SUBJID from PT */
     SUBJID = PT;
-
-    /* SITEID from INVSITE */
-    SITEID = INVSITE;
-
-    /* BRTHDTC from DOB */
-    BRTHDTC = DOB;
-    /* TODO: Apply transformation: Convert YYYYMMDD integer to YYYY-MM-DD format */
-
-    /* SEX from GENDER */
-    SEX = GENDER;
 
     /* RACE from RCE */
     RACE = upcase(strip(RCE));
     /* Apply controlled terminology mapping */
 
-    /* AGE: Age derived from birth date - requires reference date */
-    /* Derivation: Calculate age in years from birth date to study reference date */
+    /* BRTHDTC from DOB */
+    %convert_to_iso(invar=DOB, outvar=BRTHDTC);
 
-    /* AGEU: Age unit set to years */
-    AGEU = Constant value 'YEARS';
+    /* SEX from GENDRL */
+    SEX = GENDRL;
+    /* TODO: Apply transformation: Map MALE/FEMALE to M/F */
+
+    /* SEX from GENDER */
+    SEX = upcase(strip(GENDER));
+    /* Apply controlled terminology mapping */
+
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
+
+    /* DOMAIN: Constant value */
+    DOMAIN = 'DM';
+
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
 run;
 

@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM SUPPCM domain from source data
 * Study:      MAXIS-08
 * Source:     CAMED19C.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,10 @@ data suppcm_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
+        DOMAIN $2
         USUBJID $40
     ;
 
@@ -46,57 +49,26 @@ data suppcm_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* RDOMAIN from STUDY */
-    RDOMAIN = STUDY;
-    /* TODO: Apply transformation: Set to 'CM' */
+    /* SUPPCMVISIT from VISIT */
+    SUPPCMVISIT = VISIT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + PT */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* IDVAR from REPEATSN */
-    IDVAR = REPEATSN;
-    /* TODO: Apply transformation: Set to 'CMSEQ' */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'SUPPCM';
 
-    /* IDVARVAL from REPEATSN */
-    IDVARVAL = REPEATSN;
-    /* TODO: Apply transformation: Convert to character */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* QNAM from ATCCODE */
-    QNAM = ATCCODE;
-    /* TODO: Apply transformation: Set to 'ATCCODE' */
-
-    /* QLABEL from ATCCODE */
-    QLABEL = ATCCODE;
-    /* TODO: Apply transformation: Set to 'ATC Code' */
-
-    /* QVAL from ATCCODE */
-    QVAL = ATCCODE;
-
-    /* QNAM from ATCCLASS */
-    QNAM = ATCCLASS;
-    /* TODO: Apply transformation: Set to 'ATCCLASS' */
-
-    /* QLABEL from ATCCLASS */
-    QLABEL = ATCCLASS;
-    /* TODO: Apply transformation: Set to 'ATC Class' */
-
-    /* QVAL from ATCCLASS */
-    QVAL = ATCCLASS;
-
-    /* QNAM from MDINDL */
-    QNAM = MDINDL;
-    /* TODO: Apply transformation: Set to 'MDINDL' */
-
-    /* QLABEL from MDINDL */
-    QLABEL = MDINDL;
-    /* TODO: Apply transformation: Set to 'Medical Indication' */
-
-    /* QVAL from MDINDL */
-    QVAL = MDINDL;
+    /* SUPPCMSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

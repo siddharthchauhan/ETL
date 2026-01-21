@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM QS domain from source data
 * Study:      MAXIS-08
 * Source:     QS.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data qs_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,29 +52,23 @@ data qs_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Questionnaires domain */
-    DOMAIN = Constant value 'QS';
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from STUDY, INVSITE, PT */
-    USUBJID = STUDY, INVSITE, PT;
-    /* TODO: Apply transformation: Concatenate with hyphens */
+    /* QSVISIT from VISIT */
+    QSVISIT = VISIT;
 
-    /* QSSEQ: Sequence number for questionnaire records per subject */
-    /* Derivation: Row number per USUBJID */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* QSCAT from DCMNAME */
-    QSCAT = DCMNAME;
-    /* TODO: Apply transformation: Remove 'QS_' prefix */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'QS';
 
-    /* VISITNUM from VISIT */
-    VISITNUM = VISIT;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* QSDTC from VISDT */
-    %convert_to_iso(invar=VISDT, outvar=QSDTC);
-
-    /* QSSEQ from SUBEVE */
-    QSSEQ = SUBEVE;
-    /* TODO: Apply transformation: Use as part of sequence logic */
+    /* QSSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

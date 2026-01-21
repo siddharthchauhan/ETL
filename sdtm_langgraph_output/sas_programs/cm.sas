@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM CM domain from source data
 * Study:      MAXIS-08
 * Source:     RADMEDS.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,13 +34,11 @@ data cm_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
         CMSEQ 8
-        CMTRT $200
-        CMDECOD $200
-        CMSTDTC $20
-        CMENDTC $20
     ;
 
     set cm_raw;
@@ -55,44 +53,23 @@ data cm_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Standard domain code for concomitant medications */
-    DOMAIN = Set to 'CM';
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + PT */
+    /* CMVISIT from VISIT */
+    CMVISIT = VISIT;
 
-    /* CMSEQ from REPEATSN */
-    CMSEQ = REPEATSN;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* CMTRT from MDANYL */
-    CMTRT = MDANYL;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'CM';
 
-    /* CMDECOD from MDANYL */
-    CMDECOD = MDANYL;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* CMCAT from DCMNAME */
-    CMCAT = DCMNAME;
-    /* TODO: Apply transformation: Remove 'MD_' prefix and replace underscores with spaces */
-
-    /* CMOCCUR from MDANYL */
-    CMOCCUR = MDANYL;
-    /* TODO: Apply transformation: If MDANYL contains 'NO' then 'N', else 'Y' */
-
-    /* CMSTDTC from MDSTDT */
-    %convert_to_iso(invar=MDSTDT, outvar=CMSTDTC);
-
-    /* CMENDTC from MDEDDT */
-    %convert_to_iso(invar=MDEDDT, outvar=CMENDTC);
-
-    /* CMINDC from MDIND */
-    CMINDC = MDIND;
-
-    /* CMDOSU from MDUNIT */
-    CMDOSU = MDUNIT;
-
-    /* VISITNUM from VISIT */
-    VISITNUM = VISIT;
+    /* CMSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

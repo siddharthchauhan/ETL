@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM IE domain from source data
 * Study:      MAXIS-08
 * Source:     ELIG.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,6 +34,8 @@ data ie_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -50,31 +52,23 @@ data ie_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain constant for Inclusion/Exclusion Events */
-    DOMAIN = Set to constant 'IE';
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from PT */
-    USUBJID = PT;
-    /* TODO: Apply transformation: STUDY + '-' + PT */
+    /* IEVISIT from VISIT */
+    IEVISIT = VISIT;
 
-    /* IESEQ from REPEATSN */
-    IESEQ = REPEATSN;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* IETEST from ELQSN */
-    IETEST = ELQSN;
-    /* TODO: Apply transformation: Map ELQSN values to full test descriptions */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'IE';
 
-    /* IETESTCD from ELQSN */
-    IETESTCD = ELQSN;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* IECAT from DCMNAME */
-    IECAT = DCMNAME;
-
-    /* IEORRES from ELQSN */
-    IEORRES = ELQSN;
-
-    /* IESTRESC from ELQSN */
-    IESTRESC = ELQSN;
+    /* IESEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

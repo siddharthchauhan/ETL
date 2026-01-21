@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM TA domain from source data
 * Study:      MAXIS-08
 * Source:     INV.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,7 +34,10 @@ data ta_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
+        USUBJID $40
     ;
 
     set ta_raw;
@@ -49,31 +52,23 @@ data ta_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Trial Arms domain */
-    DOMAIN = Set DOMAIN = 'TA';
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* ARMCD from PT */
-    ARMCD = PT;
+    /* TAVISIT from VISIT */
+    TAVISIT = VISIT;
 
-    /* ARM from DCMNAME */
-    ARM = DCMNAME;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* TASEQ from REPEATSN */
-    TASEQ = REPEATSN;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'TA';
 
-    /* ETCD from CPEVENT */
-    ETCD = CPEVENT;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* ELEMENT from CPEVENT */
-    ELEMENT = CPEVENT;
-    /* TODO: Apply transformation: Derive descriptive text from code */
-
-    /* TABRANCH from VISIT */
-    TABRANCH = VISIT;
-    /* TODO: Apply transformation: Convert to character */
-
-    /* EPOCH: Epoch needs to be derived from available visit/event data */
-    /* Derivation: Determine epoch based on visit/event context */
+    /* TASEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

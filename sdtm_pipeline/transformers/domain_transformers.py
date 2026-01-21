@@ -2,6 +2,7 @@
 SDTM Domain Transformers
 ========================
 Transform raw clinical data to SDTM format for each domain.
+Enhanced with SDTMIG reference for comprehensive variable handling.
 """
 
 import pandas as pd
@@ -17,6 +18,14 @@ from ..models.sdtm_models import (
     CONTROLLED_TERMINOLOGY
 )
 
+# Import SDTMIG reference
+try:
+    from ..langgraph_agent.sdtmig_reference import get_sdtmig_reference, SDTMIG_DOMAIN_SPECS
+    SDTMIG_AVAILABLE = True
+except ImportError:
+    SDTMIG_AVAILABLE = False
+    SDTMIG_DOMAIN_SPECS = {}
+
 
 class BaseDomainTransformer(ABC):
     """Base class for SDTM domain transformers."""
@@ -27,10 +36,62 @@ class BaseDomainTransformer(ABC):
         self.domain_code = ""
         self.transformation_log: List[str] = []
 
+        # Get SDTMIG specification for the domain
+        self.sdtmig_spec = None
+        if SDTMIG_AVAILABLE:
+            try:
+                self.sdtmig_ref = get_sdtmig_reference()
+            except Exception:
+                self.sdtmig_ref = None
+        else:
+            self.sdtmig_ref = None
+
     def log(self, message: str):
         """Add message to transformation log."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.transformation_log.append(f"[{timestamp}] {message}")
+
+    def get_sdtmig_variables(self) -> List[Dict[str, Any]]:
+        """Get all variables for this domain from SDTMIG."""
+        if self.sdtmig_ref and self.domain_code:
+            return self.sdtmig_ref.get_domain_variables(self.domain_code)
+        return SDTMIG_DOMAIN_SPECS.get(self.domain_code, {}).get("variables", [])
+
+    def get_required_variables(self) -> List[str]:
+        """Get required variable names for this domain."""
+        if self.sdtmig_ref and self.domain_code:
+            return self.sdtmig_ref.get_required_variables(self.domain_code)
+        return [v["name"] for v in self.get_sdtmig_variables() if v.get("core") == "Req"]
+
+    def get_expected_variables(self) -> List[str]:
+        """Get expected variable names for this domain."""
+        if self.sdtmig_ref and self.domain_code:
+            return self.sdtmig_ref.get_expected_variables(self.domain_code)
+        return [v["name"] for v in self.get_sdtmig_variables() if v.get("core") == "Exp"]
+
+    def ensure_required_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Ensure all required SDTM columns exist in the dataframe."""
+        required = self.get_required_variables()
+        for col in required:
+            if col not in df.columns:
+                # Add empty column
+                df[col] = None
+                self.log(f"Added missing required column: {col}")
+        return df
+
+    def reorder_columns_per_sdtmig(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Reorder columns according to SDTMIG specification."""
+        sdtmig_vars = [v["name"] for v in self.get_sdtmig_variables()]
+        ordered_cols = [c for c in sdtmig_vars if c in df.columns]
+        remaining_cols = [c for c in df.columns if c not in ordered_cols]
+        return df[ordered_cols + remaining_cols]
+
+    def apply_controlled_terminology(self, df: pd.DataFrame, column: str, codelist: str) -> pd.DataFrame:
+        """Apply controlled terminology to a column."""
+        ct_mapping = CONTROLLED_TERMINOLOGY.get(codelist, {})
+        if ct_mapping and column in df.columns:
+            df[column] = df[column].apply(lambda x: ct_mapping.get(str(x).upper(), x) if pd.notna(x) else x)
+        return df
 
     @abstractmethod
     def transform(self, source_df: pd.DataFrame) -> pd.DataFrame:
@@ -147,11 +208,19 @@ class BaseDomainTransformer(ABC):
         self.transformation_log = []
         self.log(f"Starting {self.domain_code} transformation")
         self.log(f"Source records: {len(source_df)}")
+        self.log(f"SDTMIG reference: {'enabled' if self.sdtmig_ref else 'disabled'}")
 
         try:
             result_df = self.transform(source_df)
 
+            # Ensure required columns exist
+            result_df = self.ensure_required_columns(result_df)
+
+            # Reorder columns per SDTMIG
+            result_df = self.reorder_columns_per_sdtmig(result_df)
+
             self.log(f"Output records: {len(result_df)}")
+            self.log(f"Output columns: {len(result_df.columns)}")
             self.log("Transformation completed successfully")
 
             return TransformationResult(
@@ -178,70 +247,120 @@ class BaseDomainTransformer(ABC):
 
 
 class DMTransformer(BaseDomainTransformer):
-    """Demographics domain transformer."""
+    """Demographics domain transformer (SDTMIG compliant)."""
 
     def __init__(self, study_id: str, mapping_spec: Optional[MappingSpecification] = None):
         super().__init__(study_id, mapping_spec)
         self.domain_code = "DM"
 
     def transform(self, source_df: pd.DataFrame) -> pd.DataFrame:
-        """Transform demographics data to SDTM DM domain."""
-        self.log("Transforming to DM domain")
+        """Transform demographics data to SDTM DM domain per SDTMIG 3.4."""
+        self.log("Transforming to DM domain (SDTMIG 3.4)")
 
         dm_records = []
 
         for idx, row in source_df.iterrows():
             dm_record = {
-                "STUDYID": row.get("STUDY", self.study_id),
+                # Required Identifier Variables
+                "STUDYID": row.get("STUDY", row.get("STUDYID", self.study_id)),
                 "DOMAIN": "DM",
                 "USUBJID": self._generate_usubjid(row),
-                "SUBJID": str(row.get("PT", "")),
-                "SITEID": str(row.get("INVSITE", "")).split("_")[-1] if row.get("INVSITE") else "",
+                "SUBJID": str(row.get("PT", row.get("SUBJID", ""))),
+
+                # Required Record Qualifier Variables
+                "SITEID": str(row.get("INVSITE", row.get("SITEID", ""))).split("_")[-1] if row.get("INVSITE", row.get("SITEID")) else "",
             }
 
-            # Birth date
-            if "DOB" in row:
-                dm_record["BRTHDTC"] = self._convert_date_to_iso(row["DOB"])
+            # Sex (Required per SDTMIG)
+            for sex_col in ["GENDER", "GENDRL", "SEX"]:
+                if sex_col in row and pd.notna(row[sex_col]):
+                    dm_record["SEX"] = self._map_sex(row[sex_col])
+                    break
 
-            # Sex
-            sex_col = "GENDER" if "GENDER" in source_df.columns else "GENDRL"
-            if sex_col in row:
-                dm_record["SEX"] = self._map_sex(row[sex_col])
+            # ARM/ARMCD (Required per SDTMIG)
+            for arm_col in ["ARM", "ARMCD", "TRT", "TREATMENT"]:
+                if arm_col in row and pd.notna(row[arm_col]):
+                    dm_record["ARM"] = str(row[arm_col])
+                    dm_record["ARMCD"] = str(row[arm_col])[:8]  # ARMCD max 8 chars
+                    break
+            if "ARM" not in dm_record:
+                dm_record["ARM"] = "UNKNOWN"
+                dm_record["ARMCD"] = "UNKNOWN"
 
-            # Race
-            if "RCE" in row:
-                dm_record["RACE"] = self._map_race(row["RCE"])
+            # COUNTRY (Required per SDTMIG)
+            for country_col in ["COUNTRY", "CTRY", "NATION"]:
+                if country_col in row and pd.notna(row[country_col]):
+                    dm_record["COUNTRY"] = str(row[country_col]).upper()[:3]
+                    break
+            if "COUNTRY" not in dm_record:
+                dm_record["COUNTRY"] = "USA"
 
-            # Derive ethnicity from race if Hispanic
-            race_val = str(row.get("RCE", "")).upper()
-            if "HISPANIC" in race_val:
-                dm_record["ETHNIC"] = "HISPANIC OR LATINO"
-            else:
-                dm_record["ETHNIC"] = "NOT HISPANIC OR LATINO"
+            # Expected Variables - Race
+            for race_col in ["RCE", "RACE"]:
+                if race_col in row and pd.notna(row[race_col]):
+                    dm_record["RACE"] = self._map_race(row[race_col])
+                    break
 
-            # Age (would need reference date in real implementation)
-            # For now, calculate from birth date if available
+            # Expected Variables - Ethnicity
+            race_val = str(row.get("RCE", row.get("RACE", ""))).upper()
+            for ethnic_col in ["ETHNIC", "ETHNICITY"]:
+                if ethnic_col in row and pd.notna(row[ethnic_col]):
+                    dm_record["ETHNIC"] = self._map_ethnicity(row[ethnic_col])
+                    break
+            if "ETHNIC" not in dm_record:
+                if "HISPANIC" in race_val:
+                    dm_record["ETHNIC"] = "HISPANIC OR LATINO"
+                else:
+                    dm_record["ETHNIC"] = "NOT HISPANIC OR LATINO"
+
+            # Permissible - Birth date
+            for dob_col in ["DOB", "BRTHDTC", "BIRTHDT"]:
+                if dob_col in row and pd.notna(row[dob_col]):
+                    dm_record["BRTHDTC"] = self._convert_date_to_iso(row[dob_col])
+                    break
+
+            # Expected Variables - Reference dates
+            for ref_col in ["RFSTDT", "RFSTDTC", "FIRSTDOSE"]:
+                if ref_col in row and pd.notna(row[ref_col]):
+                    dm_record["RFSTDTC"] = self._convert_date_to_iso(row[ref_col])
+                    break
+
+            for ref_col in ["RFENDT", "RFENDTC", "LASTDOSE"]:
+                if ref_col in row and pd.notna(row[ref_col]):
+                    dm_record["RFENDTC"] = self._convert_date_to_iso(row[ref_col])
+                    break
+
+            # Expected Variables - Age
             if dm_record.get("BRTHDTC"):
                 try:
                     birth_date = datetime.strptime(dm_record["BRTHDTC"][:10], "%Y-%m-%d")
-                    ref_date = datetime.now()  # Would use RFSTDTC in production
+                    # Use RFSTDTC if available, otherwise use current date
+                    if dm_record.get("RFSTDTC"):
+                        ref_date = datetime.strptime(dm_record["RFSTDTC"][:10], "%Y-%m-%d")
+                    else:
+                        ref_date = datetime.now()
                     age = (ref_date - birth_date).days // 365
                     dm_record["AGE"] = age
                     dm_record["AGEU"] = "YEARS"
                 except Exception:
                     pass
 
+            # Permissible - Collection date
+            for dtc_col in ["DMDT", "DMDTC", "COLLDT"]:
+                if dtc_col in row and pd.notna(row[dtc_col]):
+                    dm_record["DMDTC"] = self._convert_date_to_iso(row[dtc_col])
+                    break
+
+            # Permissible - Actual arm (if different from planned)
+            if "ACTARM" in row and pd.notna(row["ACTARM"]):
+                dm_record["ACTARM"] = str(row["ACTARM"])
+                dm_record["ACTARMCD"] = str(row["ACTARM"])[:8]
+
             dm_records.append(dm_record)
 
         result_df = pd.DataFrame(dm_records)
 
-        # Reorder columns
-        dm_cols = ["STUDYID", "DOMAIN", "USUBJID", "SUBJID", "SITEID",
-                   "BRTHDTC", "AGE", "AGEU", "SEX", "RACE", "ETHNIC"]
-        existing_cols = [c for c in dm_cols if c in result_df.columns]
-        result_df = result_df[existing_cols]
-
-        self.log(f"Created {len(result_df)} DM records")
+        self.log(f"Created {len(result_df)} DM records with {len(result_df.columns)} variables")
         return result_df
 
 

@@ -105,6 +105,14 @@ class SDTMPipelineState(TypedDict, total=False):
     raw_validation_results: List[ValidationResult]
     sdtm_validation_results: List[ValidationResult]
 
+    # Multi-layer validation results (new for multi-agent architecture)
+    structural_validation: Dict[str, Any]
+    cdisc_validation: Dict[str, Any]
+    cross_domain_validation: Dict[str, Any]
+    semantic_validation: Dict[str, Any]
+    anomaly_detection: Dict[str, Any]
+    protocol_compliance: Dict[str, Any]
+
     # Mapping specifications
     mapping_specifications: List[MappingSpec]
 
@@ -121,6 +129,17 @@ class SDTMPipelineState(TypedDict, total=False):
     human_feedback: str
     pending_review: str  # Which checkpoint needs review
 
+    # Self-correction loop (new for multi-agent architecture)
+    iteration_count: int  # Current iteration (max 3)
+    conformance_score: float  # Overall score 0-100
+    needs_correction: bool  # Whether self-correction is needed
+    correction_feedback: str  # Feedback for correction
+    max_iterations: int  # Maximum allowed iterations (default 3)
+
+    # Conformance scoring details
+    layer_scores: Dict[str, float]  # Per-layer scores
+    submission_ready: bool  # True if score >= 95%
+
     # Processing stats
     processing_stats: Dict[str, Any]
 
@@ -136,7 +155,8 @@ def create_initial_state(
     study_id: str,
     raw_data_dir: str,
     output_dir: str,
-    api_key: str = ""
+    api_key: str = "",
+    max_iterations: int = 3
 ) -> SDTMPipelineState:
     """Create initial pipeline state."""
     return SDTMPipelineState(
@@ -152,6 +172,13 @@ def create_initial_state(
         raw_data_info={},
         raw_validation_results=[],
         sdtm_validation_results=[],
+        # Multi-layer validation (new)
+        structural_validation={},
+        cdisc_validation={},
+        cross_domain_validation={},
+        semantic_validation={},
+        anomaly_detection={},
+        protocol_compliance={},
         mapping_specifications=[],
         transformation_results=[],
         sdtm_data_paths={},
@@ -160,6 +187,14 @@ def create_initial_state(
         human_decision="",
         human_feedback="",
         pending_review="",
+        # Self-correction loop (new)
+        iteration_count=0,
+        conformance_score=0.0,
+        needs_correction=False,
+        correction_feedback="",
+        max_iterations=max_iterations,
+        layer_scores={},
+        submission_ready=False,
         processing_stats={},
         errors=[],
         messages=[],

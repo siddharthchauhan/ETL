@@ -83,6 +83,18 @@ tavily-python>=0.3.0      # Web search for CDISC/FDA guidelines
 pinecone>=3.0.0           # Vector DB for SDTM documentation
 
 # ===========================================
+# Hybrid Search (BM25 + Semantic)
+# ===========================================
+rank-bm25>=0.2.2          # BM25 keyword search
+nltk>=3.8                 # Tokenization for BM25
+
+# ===========================================
+# Anomaly Detection & Statistics
+# ===========================================
+scikit-learn>=1.3.0       # Isolation Forest, StandardScaler
+scipy>=1.11.0             # Statistical functions (zscore)
+
+# ===========================================
 # Testing
 # ===========================================
 pytest>=8.3.0

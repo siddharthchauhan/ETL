@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM TR domain from source data
 * Study:      MAXIS-08
 * Source:     TARTUMR.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,9 @@ data tr_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -47,40 +49,26 @@ data tr_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Hard-coded domain value for tumor results */
-    DOMAIN = Set to 'TR';
+    /* TRVISIT from VISIT */
+    TRVISIT = VISIT;
 
-    /* USUBJID from STUDY + INVSITE + PT */
-    USUBJID = STUDY + INVSITE + PT;
-    /* TODO: Apply transformation: Concatenate STUDY + '-' + INVSITE + '-' + PT */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* TRSEQ from REPEATSN */
-    TRSEQ = REPEATSN;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'TR';
 
-    /* TRTESTCD from DCMNAME */
-    TRTESTCD = DCMNAME;
-    /* TODO: Apply transformation: Map 'TM_ASSESS_TAR' to appropriate test code */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* TRTEST from TMDESC */
-    TRTEST = TMDESC;
-
-    /* TRORRES from TMSUM */
-    TRORRES = TMSUM;
-
-    /* TRSTRESN from TMSIZE2 */
-    TRSTRESN = TMSIZE2;
-
-    /* TRLOC from TMLOCL */
-    TRLOC = TMLOCL;
-
-    /* TRLNKID from TMNO */
-    TRLNKID = TMNO;
-
-    /* TRDTC from TMDT */
-    %convert_to_iso(invar=TMDT, outvar=TRDTC);
+    /* TRSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

@@ -2,7 +2,7 @@
 * Program:    setup.sas
 * Purpose:    Initialize environment for SDTM transformations
 * Study:      MAXIS-08
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 ********************************************************************************/
 

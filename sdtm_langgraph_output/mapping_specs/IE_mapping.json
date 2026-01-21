@@ -9,79 +9,64 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping from STUDY to STUDYID"
-    },
-    {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": null,
-      "derivation_rule": "Set to constant 'IE'",
-      "controlled_terminology": null,
-      "comments": "Domain constant for Inclusion/Exclusion Events"
+      "comments": "Common mapping"
     },
     {
       "source_column": "PT",
-      "target_variable": "USUBJID",
-      "transformation": "STUDY + '-' + PT",
-      "derivation_rule": "Concatenate STUDY and PT with hyphen separator",
+      "target_variable": "SUBJID",
+      "transformation": null,
+      "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "PT appears to be the subject identifier (01-01, 01-02, etc.)"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "REPEATSN",
+      "source_column": "VISIT",
+      "target_variable": "IEVISIT",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "INVSITE",
+      "target_variable": "SITEID",
+      "transformation": null,
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "",
+      "target_variable": "DOMAIN",
+      "transformation": null,
+      "derivation_rule": "'IE'",
+      "controlled_terminology": null,
+      "comments": "Constant value"
+    },
+    {
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "controlled_terminology": null,
+      "comments": "Derived unique subject identifier"
+    },
+    {
+      "source_column": "",
       "target_variable": "IESEQ",
       "transformation": null,
-      "derivation_rule": null,
+      "derivation_rule": "Row number within USUBJID",
       "controlled_terminology": null,
-      "comments": "REPEATSN can serve as sequence number for IE records"
-    },
-    {
-      "source_column": "ELQSN",
-      "target_variable": "IETEST",
-      "transformation": "Map ELQSN values to full test descriptions",
-      "derivation_rule": "Convert coded values to descriptive test names",
-      "controlled_terminology": null,
-      "comments": "ELQSN contains eligibility question responses that need to be expanded to full test descriptions"
-    },
-    {
-      "source_column": "ELQSN",
-      "target_variable": "IETESTCD",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "ELQSN contains the test code for eligibility assessments"
-    },
-    {
-      "source_column": "DCMNAME",
-      "target_variable": "IECAT",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "DCMNAME (ELIGIBILITY) provides the category for IE records"
-    },
-    {
-      "source_column": "ELQSN",
-      "target_variable": "IEORRES",
-      "transformation": null,
-      "derivation_rule": null,
-      "controlled_terminology": null,
-      "comments": "ELQSN contains the original result (ELIGIBLE, etc.)"
-    },
-    {
-      "source_column": "ELQSN",
-      "target_variable": "IESTRESC",
-      "transformation": null,
-      "derivation_rule": "Standardize ELQSN values to controlled terminology",
-      "controlled_terminology": null,
-      "comments": "Standardized result based on ELQSN, may need mapping to controlled terminology"
+      "comments": "Derived sequence number"
     }
   ],
   "derivation_rules": {
+    "IESEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY IEDTC)",
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "IESEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY IEDTC)"
+    "DOMAIN": "'IE'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-20T15:31:05.938787",
+  "created_at": "2026-01-21T00:19:59.168566",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for ELIG.csv to SDTM IE"

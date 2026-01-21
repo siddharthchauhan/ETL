@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM AE domain from source data
 * Study:      MAXIS-08
 * Source:     AEVENT.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,15 +33,15 @@ data ae_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
+        AEENDTC $20
+        AESTDTC $20
         STUDYID $20
+        AESEV $10
+        SITEID $10
         DOMAIN $2
         USUBJID $40
         AESEQ 8
-        AETERM $200
-        AEDECOD $200
-        AESTDTC $20
-        AEENDTC $20
-        AESEV $10
     ;
 
     set ae_raw;
@@ -53,36 +53,17 @@ data ae_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
-    /* STUDYID from STUDY */
-    STUDYID = STUDY;
-
-    /* DOMAIN: Domain abbreviation for Adverse Events */
-    DOMAIN = Set to constant 'AE';
-
-    /* USUBJID from INVSITE */
-    USUBJID = INVSITE;
-    /* TODO: Apply transformation: STUDY + '-' + INVSITE + '-' + subject_id */
-
-    /* AESEQ from AESEQ */
-    AESEQ = AESEQ;
-
-    /* AETERM from AECOD */
-    AETERM = AECOD;
-
-    /* AEDECOD from AECOD */
-    AEDECOD = AECOD;
-
-    /* AEBODSYS from AEHTT */
-    AEBODSYS = AEHTT;
-
-    /* AESTDTC from AESTDT */
-    %convert_to_iso(invar=AESTDT, outvar=AESTDTC);
+    /* SUBJID from PT */
+    SUBJID = PT;
 
     /* AEENDTC from AEENDT */
     %convert_to_iso(invar=AEENDT, outvar=AEENDTC);
 
-    /* AESER from AESER */
-    AESER = AESER;
+    /* AESTDTC from AESTDT */
+    %convert_to_iso(invar=AESTDT, outvar=AESTDTC);
+
+    /* STUDYID from STUDY */
+    STUDYID = STUDY;
 
     /* AESEV from AESEV */
     AESEV = AESEV;
@@ -90,29 +71,20 @@ data ae_temp;
     /* AEREL from AEREL */
     AEREL = AEREL;
 
-    /* AEACN from AEACT */
-    AEACN = AEACT;
+    /* AEVISIT from VISIT */
+    AEVISIT = VISIT;
 
-    /* AEOUT from AEOUTC */
-    AEOUT = AEOUTC;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* AESCONG: Congenital anomaly or birth defect - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
+    /* DOMAIN: Constant value */
+    DOMAIN = 'AE';
 
-    /* AESDISAB: Persistent or significant disability/incapacity - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* AESDTH: Results in death - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
-
-    /* AESHOSP: Requires or prolongs hospitalization - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
-
-    /* AESLIFE: Life threatening - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
-
-    /* AESMIE: Other medically important serious event - not available in source */
-    /* Derivation: Derive from available serious event criteria if present */
+    /* AESEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

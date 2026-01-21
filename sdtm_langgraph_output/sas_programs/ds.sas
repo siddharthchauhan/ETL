@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM DS domain from source data
 * Study:      MAXIS-08
 * Source:     DEATHGEN.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -33,7 +33,9 @@ data ds_temp;
         STUDYID $20
         DOMAIN $2
         USUBJID $40
+        SUBJID $20
         STUDYID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
     ;
@@ -47,31 +49,26 @@ data ds_temp;
     /* Generate USUBJID */
     USUBJID = %gen_usubjid(study=STUDY, site=scan(INVSITE, -1, "_"), subj=PT);
 
+    /* SUBJID from PT */
+    SUBJID = PT;
+
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Disposition domain */
-    DOMAIN = Set to 'DS';
+    /* DSVISIT from VISIT */
+    DSVISIT = VISIT;
 
-    /* USUBJID from STUDY,INVSITE,PT */
-    USUBJID = STUDY,INVSITE,PT;
-    /* TODO: Apply transformation: Concatenate with hyphens */
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* DSSEQ from REPEATSN */
-    DSSEQ = REPEATSN;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'DS';
 
-    /* DSTERM from CPEVENT */
-    DSTERM = CPEVENT;
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* DSDECOD from CPEVENT */
-    DSDECOD = CPEVENT;
-
-    /* DSCAT from DCMNAME */
-    DSCAT = DCMNAME;
-    /* TODO: Apply transformation: Extract category from form name */
-
-    /* DSSTDTC from GNDT */
-    %convert_to_iso(invar=GNDT, outvar=DSSTDTC);
+    /* DSSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

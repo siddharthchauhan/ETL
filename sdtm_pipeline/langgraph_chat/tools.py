@@ -552,14 +552,640 @@ def preview_source_file(filename: str) -> str:
     return output
 
 
+@tool
+def get_mapping_specification(domain: str) -> str:
+    """
+    Get SDTM mapping specification from Pinecone knowledge base.
+
+    Retrieves variable definitions, derivation rules, and controlled terminology
+    for generating SDTM datasets from the vector database.
+
+    Args:
+        domain: SDTM domain code (e.g., DM, AE, VS, LB, CM)
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+
+        # Get source columns if data is loaded
+        source_cols = []
+        if _source_data:
+            for filename, df in _source_data.items():
+                if _determine_domain(filename) == domain.upper():
+                    source_cols.extend(df.columns.tolist())
+                    break
+
+        spec = retriever.get_mapping_specification(domain.upper(), source_cols)
+
+        output = f"## Mapping Specification for {domain.upper()}\n\n"
+        output += f"*Retrieved from Pinecone knowledge base*\n\n"
+
+        # Variable mappings
+        if spec.get("variable_mappings"):
+            output += "### SDTM Variables\n\n"
+            output += "| Variable | Label | Type | Core | Description |\n"
+            output += "|----------|-------|------|------|-------------|\n"
+            for var in spec["variable_mappings"][:15]:
+                name = var.get("variable", "")[:12]
+                label = var.get("label", "")[:20]
+                vtype = var.get("type", "")[:8]
+                core = var.get("core", "")[:4]
+                desc = var.get("description", "")[:30]
+                output += f"| {name} | {label} | {vtype} | {core} | {desc}... |\n"
+
+        # Derivation rules
+        if spec.get("derivation_rules"):
+            output += "\n### Derivation Rules\n\n"
+            for rule in spec["derivation_rules"][:10]:
+                rule_id = rule.get("rule_id", "")
+                variable = rule.get("variable", "")
+                rule_text = rule.get("rule", "")[:100]
+                output += f"- **{rule_id}** ({variable}): {rule_text}...\n"
+
+        # Controlled terminology
+        if spec.get("controlled_terminology"):
+            output += "\n### Controlled Terminology\n\n"
+            for codelist, info in list(spec["controlled_terminology"].items())[:5]:
+                values = info.get("values", [])
+                if isinstance(values, list):
+                    values_str = ", ".join(str(v) for v in values[:5])
+                else:
+                    values_str = str(values)[:50]
+                output += f"- **{codelist}**: {values_str}...\n"
+
+        if not spec.get("variable_mappings") and not spec.get("derivation_rules"):
+            output += "\n*No mapping specification found. Ensure OpenAI API key is configured.*\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error retrieving mapping specification: {str(e)}"
+
+
+@tool
+def get_validation_rules(domain: str) -> str:
+    """
+    Get comprehensive validation rules for a domain from Pinecone.
+
+    Retrieves FDA, Pinnacle 21, and CDISC validation rules from the knowledge base.
+    These rules are used to validate SDTM datasets for regulatory compliance.
+
+    Args:
+        domain: SDTM domain code (e.g., DM, AE, VS, LB, CM)
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+        rules = retriever.get_validation_rules_for_domain(domain.upper())
+
+        if not rules:
+            return f"No validation rules found for domain {domain}. Ensure OpenAI API key is configured."
+
+        output = f"## Validation Rules for {domain.upper()}\n\n"
+        output += f"*Retrieved {len(rules)} rules from Pinecone knowledge base*\n\n"
+
+        # Group by severity
+        errors = [r for r in rules if r.get("severity") == "error"]
+        warnings = [r for r in rules if r.get("severity") == "warning"]
+        others = [r for r in rules if r.get("severity") not in ["error", "warning"]]
+
+        if errors:
+            output += "### Error Rules (Must Fix)\n\n"
+            for rule in errors[:10]:
+                rule_id = rule.get("rule_id", "")
+                message = rule.get("message", "")[:100]
+                check = rule.get("check", "")[:50]
+                output += f"- **{rule_id}**: {message}\n"
+                if check:
+                    output += f"  - Check: `{check}`\n"
+
+        if warnings:
+            output += "\n### Warning Rules (Should Review)\n\n"
+            for rule in warnings[:10]:
+                rule_id = rule.get("rule_id", "")
+                message = rule.get("message", "")[:100]
+                output += f"- **{rule_id}**: {message}\n"
+
+        if others:
+            output += "\n### Other Rules\n\n"
+            for rule in others[:5]:
+                rule_id = rule.get("rule_id", "")
+                message = rule.get("message", "")[:100]
+                output += f"- **{rule_id}**: {message}\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error retrieving validation rules: {str(e)}"
+
+
+@tool
+def get_sdtm_guidance(domain: str) -> str:
+    """
+    Get comprehensive guidance for generating an SDTM dataset from Pinecone.
+
+    Retrieves required/expected variables, transformation steps, and examples
+    for creating compliant SDTM datasets.
+
+    Args:
+        domain: SDTM domain code (e.g., DM, AE, VS, LB, CM)
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+
+        # Describe source data if loaded
+        source_desc = "EDC clinical trial data"
+        if _source_data:
+            for filename, df in _source_data.items():
+                if _determine_domain(filename) == domain.upper():
+                    source_desc = f"EDC data with columns: {', '.join(df.columns[:10])}"
+                    break
+
+        guidance = retriever.get_sdtm_generation_guidance(domain.upper(), source_desc)
+
+        output = f"## SDTM Generation Guidance for {domain.upper()}\n\n"
+        output += f"*Retrieved from Pinecone knowledge base*\n\n"
+
+        # Required variables
+        if guidance.get("required_variables"):
+            output += "### Required Variables (Must Include)\n\n"
+            output += "| Variable | Label | Type | Description |\n"
+            output += "|----------|-------|------|-------------|\n"
+            for var in guidance["required_variables"][:10]:
+                name = var.get("variable", "")[:12]
+                label = var.get("label", "")[:20]
+                vtype = var.get("type", "")[:8]
+                desc = var.get("description", "")[:35]
+                output += f"| {name} | {label} | {vtype} | {desc}... |\n"
+
+        # Expected variables
+        if guidance.get("expected_variables"):
+            output += "\n### Expected Variables (Should Include)\n\n"
+            for var in guidance["expected_variables"][:8]:
+                name = var.get("variable", "")
+                label = var.get("label", "")
+                output += f"- **{name}**: {label}\n"
+
+        # Transformation steps
+        if guidance.get("transformation_steps"):
+            output += "\n### Transformation Steps\n\n"
+            for i, step in enumerate(guidance["transformation_steps"][:8], 1):
+                step_text = step.get("step", "")[:100]
+                variable = step.get("variable", "")
+                output += f"{i}. "
+                if variable:
+                    output += f"**{variable}**: "
+                output += f"{step_text}\n"
+
+        if not guidance.get("required_variables") and not guidance.get("transformation_steps"):
+            output += "\n*No guidance found. Ensure OpenAI API key is configured.*\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error retrieving SDTM guidance: {str(e)}"
+
+
+@tool
+def search_knowledge_base(query: str) -> str:
+    """
+    Search all Pinecone indexes for SDTM-related information.
+
+    Searches across business rules, validation rules, SDTM IG, and controlled
+    terminology indexes to find relevant information.
+
+    Args:
+        query: Search query (e.g., "AE domain AESER variable", "date format ISO 8601")
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+        all_results = retriever.search_all_indexes(query, top_k_per_index=5)
+
+        if not all_results:
+            return f"No results found for query: {query}\n\nEnsure OpenAI API key is configured for Pinecone queries."
+
+        output = f"## Knowledge Base Search: {query}\n\n"
+
+        for index_name, results in all_results.items():
+            output += f"### {index_name.upper()}\n\n"
+            for i, r in enumerate(results[:3], 1):
+                score = r.get("score", 0)
+                meta = r.get("metadata", {})
+
+                # Extract key info from metadata
+                title = meta.get("title", meta.get("name", meta.get("variable", meta.get("rule_id", f"Result {i}"))))
+                desc = meta.get("description", meta.get("text", meta.get("content", meta.get("rule", ""))))[:150]
+
+                output += f"**{i}. {title}** (score: {score:.3f})\n"
+                output += f"   {desc}...\n\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error searching knowledge base: {str(e)}"
+
+
+@tool
+def get_controlled_terminology(codelist: str) -> str:
+    """
+    Get CDISC controlled terminology values for a specific codelist from Pinecone.
+
+    Retrieves valid values for codelists like SEX, RACE, ETHNIC, AESER, etc.
+
+    Args:
+        codelist: Codelist name (e.g., SEX, RACE, ETHNIC, AESER, AESEV)
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+
+        # Search controlled terminology index
+        results = retriever.search_pinecone(
+            query=f"CDISC controlled terminology {codelist} codelist valid values terms",
+            index_name="sdtmct",
+            top_k=5
+        )
+
+        if not results:
+            return f"No controlled terminology found for codelist: {codelist}"
+
+        output = f"## Controlled Terminology: {codelist.upper()}\n\n"
+        output += f"*Retrieved from SDTM CT Pinecone index*\n\n"
+
+        for i, r in enumerate(results, 1):
+            meta = r.get("metadata", {})
+            score = r.get("score", 0)
+
+            name = meta.get("codelist", meta.get("name", f"Result {i}"))
+            values = meta.get("values", meta.get("terms", meta.get("codelist_values", [])))
+            desc = meta.get("description", meta.get("text", ""))
+
+            output += f"### {name} (score: {score:.3f})\n\n"
+            if desc:
+                output += f"*{desc[:100]}*\n\n"
+
+            if values:
+                if isinstance(values, list):
+                    output += "**Valid Values:**\n"
+                    for v in values[:20]:
+                        output += f"- {v}\n"
+                    if len(values) > 20:
+                        output += f"- *... and {len(values) - 20} more*\n"
+                else:
+                    output += f"**Values:** {str(values)[:200]}\n"
+            output += "\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error retrieving controlled terminology: {str(e)}"
+
+
+@tool
+def upload_sdtm_to_s3(
+    domain: str = "",
+    bucket: str = "s3dcri",
+    prefix: str = "processed"
+) -> str:
+    """
+    Upload converted SDTM data to S3 bucket.
+
+    Uploads the SDTM dataset(s) as CSV files to the specified S3 bucket
+    under the 'processed' folder.
+    Also uploads mapping specifications and validation reports.
+
+    Args:
+        domain: Specific domain to upload (empty string uploads all converted domains)
+        bucket: S3 bucket name (default: s3dcri)
+        prefix: S3 key prefix for output files (default: processed)
+    """
+    if not _sdtm_data:
+        return "No SDTM data to upload. Please use convert_domain first."
+
+    try:
+        s3 = boto3.client('s3')
+        uploaded_files = []
+        total_records = 0
+
+        # Determine which domains to upload
+        domains_to_upload = [domain.upper()] if domain else list(_sdtm_data.keys())
+
+        for dom in domains_to_upload:
+            if dom not in _sdtm_data:
+                continue
+
+            df = _sdtm_data[dom]
+
+            # Create CSV in memory
+            csv_buffer = df.to_csv(index=False)
+
+            # Upload SDTM data
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            s3_key = f"{prefix}/{_study_id}/sdtm_data/{dom.lower()}.csv"
+
+            s3.put_object(
+                Bucket=bucket,
+                Key=s3_key,
+                Body=csv_buffer.encode('utf-8'),
+                ContentType='text/csv'
+            )
+
+            uploaded_files.append({
+                "domain": dom,
+                "key": s3_key,
+                "records": len(df)
+            })
+            total_records += len(df)
+
+        # Create and upload manifest
+        manifest = {
+            "study_id": _study_id,
+            "uploaded_at": datetime.now().isoformat(),
+            "domains": [f["domain"] for f in uploaded_files],
+            "total_records": total_records,
+            "files": uploaded_files
+        }
+
+        manifest_key = f"{prefix}/{_study_id}/manifest.json"
+        s3.put_object(
+            Bucket=bucket,
+            Key=manifest_key,
+            Body=json.dumps(manifest, indent=2).encode('utf-8'),
+            ContentType='application/json'
+        )
+
+        # Format output
+        output = f"## S3 Upload Complete\n\n"
+        output += f"**Study ID:** {_study_id}\n"
+        output += f"**Bucket:** {bucket}\n"
+        output += f"**Total Records:** {total_records}\n"
+        output += f"**Files Uploaded:** {len(uploaded_files) + 1}\n\n"
+
+        output += "### Uploaded Files\n\n"
+        output += "| Domain | S3 Key | Records |\n"
+        output += "|--------|--------|----------|\n"
+
+        for f in uploaded_files:
+            output += f"| {f['domain']} | {f['key']} | {f['records']} |\n"
+
+        output += f"| MANIFEST | {manifest_key} | - |\n"
+
+        output += f"\n✓ All SDTM data successfully uploaded to S3!\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error uploading to S3: {str(e)}\n\n{traceback.format_exc()}"
+
+
+@tool
+def load_sdtm_to_neo4j(domain: str = "") -> str:
+    """
+    Load converted SDTM data to Neo4j graph database.
+
+    Creates nodes for subjects, domains, and records with relationships
+    showing the data lineage and cross-domain connections.
+
+    Args:
+        domain: Specific domain to load (empty string loads all converted domains)
+    """
+    if not _sdtm_data:
+        return "No SDTM data to load. Please use convert_domain first."
+
+    try:
+        from neo4j import GraphDatabase
+
+        # Get Neo4j connection details from environment
+        neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+        neo4j_password = os.getenv("NEO4J_PASSWORD", "")
+
+        if not neo4j_password:
+            return "Error: NEO4J_PASSWORD environment variable not set. Please configure Neo4j credentials."
+
+        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+
+        # Determine which domains to load
+        domains_to_load = [domain.upper()] if domain else list(_sdtm_data.keys())
+
+        loaded_stats = []
+        total_nodes = 0
+        total_relationships = 0
+
+        with driver.session() as session:
+            for dom in domains_to_load:
+                if dom not in _sdtm_data:
+                    continue
+
+                df = _sdtm_data[dom]
+
+                # Create domain constraint (if not exists)
+                try:
+                    session.run(f"""
+                        CREATE CONSTRAINT IF NOT EXISTS
+                        FOR (n:{dom}) REQUIRE n.record_id IS UNIQUE
+                    """)
+                except:
+                    pass  # Constraint may already exist
+
+                # Create Study node
+                session.run("""
+                    MERGE (s:Study {study_id: $study_id})
+                    SET s.updated_at = datetime()
+                """, study_id=_study_id)
+
+                # Create Domain node
+                session.run("""
+                    MERGE (d:Domain {name: $domain, study_id: $study_id})
+                    SET d.record_count = $count, d.updated_at = datetime()
+                    WITH d
+                    MATCH (s:Study {study_id: $study_id})
+                    MERGE (s)-[:HAS_DOMAIN]->(d)
+                """, domain=dom, study_id=_study_id, count=len(df))
+
+                nodes_created = 0
+                rels_created = 0
+
+                # Create Subject nodes and domain records
+                for idx, row in df.iterrows():
+                    record_data = row.to_dict()
+                    # Clean NaN values
+                    record_data = {k: (None if pd.isna(v) else v) for k, v in record_data.items()}
+
+                    usubjid = record_data.get('USUBJID', f'{_study_id}-{idx}')
+                    record_id = f"{dom}_{usubjid}_{idx}"
+
+                    # Create Subject node
+                    session.run("""
+                        MERGE (sub:Subject {usubjid: $usubjid, study_id: $study_id})
+                        SET sub.updated_at = datetime()
+                    """, usubjid=usubjid, study_id=_study_id)
+
+                    # Create domain record node with all data
+                    # Dynamically set properties from the record
+                    props_str = ", ".join([f"n.{k} = ${k}" for k in record_data.keys() if k])
+
+                    session.run(f"""
+                        MERGE (n:{dom} {{record_id: $record_id}})
+                        SET {props_str}, n.updated_at = datetime()
+                        WITH n
+                        MATCH (sub:Subject {{usubjid: $usubjid, study_id: $study_id}})
+                        MERGE (sub)-[:HAS_{dom}]->(n)
+                        WITH n
+                        MATCH (d:Domain {{name: $domain, study_id: $study_id}})
+                        MERGE (n)-[:BELONGS_TO]->(d)
+                    """, record_id=record_id, usubjid=usubjid, study_id=_study_id,
+                        domain=dom, **record_data)
+
+                    nodes_created += 1
+                    rels_created += 2  # Subject->Record, Record->Domain
+
+                loaded_stats.append({
+                    "domain": dom,
+                    "nodes": nodes_created,
+                    "relationships": rels_created
+                })
+                total_nodes += nodes_created
+                total_relationships += rels_created
+
+        driver.close()
+
+        # Format output
+        output = f"## Neo4j Load Complete\n\n"
+        output += f"**Study ID:** {_study_id}\n"
+        output += f"**Neo4j URI:** {neo4j_uri}\n"
+        output += f"**Total Nodes Created:** {total_nodes}\n"
+        output += f"**Total Relationships:** {total_relationships}\n\n"
+
+        output += "### Loaded Domains\n\n"
+        output += "| Domain | Nodes | Relationships |\n"
+        output += "|--------|-------|---------------|\n"
+
+        for stat in loaded_stats:
+            output += f"| {stat['domain']} | {stat['nodes']} | {stat['relationships']} |\n"
+
+        output += f"\n### Graph Structure\n\n"
+        output += "```\n"
+        output += f"(Study:{_study_id})\n"
+        output += "    |\n"
+        output += "    |--[:HAS_DOMAIN]-->(Domain)\n"
+        output += "    |                     |\n"
+        output += "    |--[:HAS_SUBJECT]-->(Subject)\n"
+        output += "                          |\n"
+        output += f"                          |--[:HAS_{{domain}}]-->(Record)\n"
+        output += "```\n"
+
+        output += f"\n✓ All SDTM data successfully loaded to Neo4j!\n"
+
+        return output
+
+    except ImportError:
+        return "Error: neo4j package not installed. Run: pip install neo4j"
+    except Exception as e:
+        import traceback
+        return f"Error loading to Neo4j: {str(e)}\n\n{traceback.format_exc()}"
+
+
+@tool
+def save_sdtm_locally(output_dir: str = "./sdtm_chat_output") -> str:
+    """
+    Save converted SDTM data to local files.
+
+    Saves SDTM datasets as CSV files along with mapping specs and validation reports.
+
+    Args:
+        output_dir: Local directory to save files (default: ./sdtm_chat_output)
+    """
+    if not _sdtm_data:
+        return "No SDTM data to save. Please use convert_domain first."
+
+    try:
+        # Create output directories
+        output_path = Path(output_dir)
+        sdtm_dir = output_path / "sdtm_data"
+        sdtm_dir.mkdir(parents=True, exist_ok=True)
+
+        saved_files = []
+        total_records = 0
+
+        for domain, df in _sdtm_data.items():
+            # Save SDTM CSV
+            csv_path = sdtm_dir / f"{domain.lower()}.csv"
+            df.to_csv(csv_path, index=False)
+
+            saved_files.append({
+                "domain": domain,
+                "path": str(csv_path),
+                "records": len(df)
+            })
+            total_records += len(df)
+
+        # Create and save manifest
+        manifest = {
+            "study_id": _study_id,
+            "created_at": datetime.now().isoformat(),
+            "domains": list(_sdtm_data.keys()),
+            "total_records": total_records,
+            "files": saved_files
+        }
+
+        manifest_path = output_path / "manifest.json"
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+
+        # Format output
+        output = f"## Local Save Complete\n\n"
+        output += f"**Study ID:** {_study_id}\n"
+        output += f"**Output Directory:** {output_dir}\n"
+        output += f"**Total Records:** {total_records}\n"
+        output += f"**Files Saved:** {len(saved_files) + 1}\n\n"
+
+        output += "### Saved Files\n\n"
+        output += "| Domain | Path | Records |\n"
+        output += "|--------|------|----------|\n"
+
+        for f in saved_files:
+            output += f"| {f['domain']} | {f['path']} | {f['records']} |\n"
+
+        output += f"| MANIFEST | {manifest_path} | - |\n"
+
+        output += f"\n✓ All SDTM data saved locally!\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error saving locally: {str(e)}\n\n{traceback.format_exc()}"
+
+
 # Export all tools
 SDTM_TOOLS = [
+    # Data loading
     load_data_from_s3,
     list_available_domains,
+    preview_source_file,
+    # Conversion
     convert_domain,
     validate_domain,
     get_conversion_status,
+    # Output/Storage
+    upload_sdtm_to_s3,
+    load_sdtm_to_neo4j,
+    save_sdtm_locally,
+    # Knowledge base
     search_sdtm_guidelines,
     get_business_rules,
-    preview_source_file,
+    get_mapping_specification,
+    get_validation_rules,
+    get_sdtm_guidance,
+    search_knowledge_base,
+    get_controlled_terminology,
 ]

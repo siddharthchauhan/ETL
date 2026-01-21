@@ -3,13 +3,13 @@
 * Purpose:    Create SDTM LB domain from source data
 * Study:      MAXIS-08
 * Source:     GENOLAB.csv
-* Created:    2026-01-20
+* Created:    2026-01-21
 * Author:     SDTM Pipeline (Auto-generated)
 *
 * Modification History:
 * Date        Author      Description
 * ----------  ----------  ---------------------------------------------------
-* 2026-01-20  Pipeline    Initial creation
+* 2026-01-21  Pipeline    Initial creation
 ********************************************************************************/
 
 %include "&programs/setup.sas";
@@ -34,12 +34,11 @@ data lb_temp;
         DOMAIN $2
         USUBJID $40
         STUDYID $20
+        SUBJID $20
+        SITEID $10
         DOMAIN $2
         USUBJID $40
         LBSEQ 8
-        LBTESTCD $8
-        LBTEST $40
-        LBORRES $20
     ;
 
     set lb_raw;
@@ -54,36 +53,23 @@ data lb_temp;
     /* STUDYID from STUDY */
     STUDYID = STUDY;
 
-    /* DOMAIN: Domain abbreviation for Laboratory Test Results */
-    DOMAIN = Set to 'LB' for all records;
+    /* SUBJID from PT */
+    SUBJID = PT;
 
-    /* USUBJID from ['STUDY', 'PT'] */
-    USUBJID = ['STUDY', 'PT'];
-    /* TODO: Apply transformation: Concatenate STUDY + '-' + PT */
+    /* LBVISIT from VISIT */
+    LBVISIT = VISIT;
 
-    /* LBSEQ from REPEATSN */
-    LBSEQ = REPEATSN;
+    /* SITEID from INVSITE */
+    SITEID = INVSITE;
 
-    /* LBTESTCD from LPARM */
-    LBTESTCD = LPARM;
+    /* DOMAIN: Constant value */
+    DOMAIN = 'LB';
 
-    /* LBTEST from LPARM */
-    LBTEST = LPARM;
-    /* TODO: Apply transformation: Expand to full test name */
+    /* USUBJID: Derived unique subject identifier */
+    USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID;
 
-    /* LBCAT from DCMNAME */
-    LBCAT = DCMNAME;
-    /* TODO: Apply transformation: Map 'LABS_GENOTYPING' to 'GENOTYPING' */
-
-    /* LBORRES from LVALC */
-    LBORRES = LVALC;
-
-    /* LBSTRESC from LVALC */
-    LBSTRESC = LVALC;
-
-    /* LBBLFL from CPEVENT */
-    LBBLFL = CPEVENT;
-    /* TODO: Apply transformation: If CPEVENT = 'BASELINE' then 'Y' else null */
+    /* LBSEQ: Derived sequence number */
+    /* Derivation: Row number within USUBJID */
 
 run;
 

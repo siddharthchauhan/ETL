@@ -9,23 +9,7 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Direct mapping of study identifier"
-    },
-    {
-      "source_column": null,
-      "target_variable": "DOMAIN",
-      "transformation": "Set to 'DM'",
-      "derivation_rule": "Constant value 'DM'",
-      "controlled_terminology": null,
-      "comments": "Domain abbreviation for Demographics"
-    },
-    {
-      "source_column": "PT",
-      "target_variable": "USUBJID",
-      "transformation": "STUDY + '-' + INVSITE + '-' + PT",
-      "derivation_rule": "Concatenate STUDY, INVSITE, and PT with hyphens",
-      "controlled_terminology": null,
-      "comments": "Unique subject identifier constructed from study, site, and patient ID"
+      "comments": "Common mapping"
     },
     {
       "source_column": "PT",
@@ -33,7 +17,39 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Patient identifier maps to subject ID"
+      "comments": "Common mapping"
+    },
+    {
+      "source_column": "RCE",
+      "target_variable": "RACE",
+      "transformation": "Map to CDISC controlled terminology",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Domain-specific mapping for DM"
+    },
+    {
+      "source_column": "DOB",
+      "target_variable": "BRTHDTC",
+      "transformation": "Convert YYYYMMDD to ISO 8601",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Domain-specific mapping for DM"
+    },
+    {
+      "source_column": "GENDRL",
+      "target_variable": "SEX",
+      "transformation": "Map MALE/FEMALE to M/F",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Domain-specific mapping for DM"
+    },
+    {
+      "source_column": "GENDER",
+      "target_variable": "SEX",
+      "transformation": "Map M/F to controlled terminology",
+      "derivation_rule": null,
+      "controlled_terminology": null,
+      "comments": "Domain-specific mapping for DM"
     },
     {
       "source_column": "INVSITE",
@@ -41,52 +57,29 @@
       "transformation": null,
       "derivation_rule": null,
       "controlled_terminology": null,
-      "comments": "Investigator site maps to site identifier"
+      "comments": "Common mapping"
     },
     {
-      "source_column": "DOB",
-      "target_variable": "BRTHDTC",
-      "transformation": "Convert YYYYMMDD integer to YYYY-MM-DD format",
-      "derivation_rule": "Format DOB from integer 19740918 to '1974-09-18'",
-      "controlled_terminology": null,
-      "comments": "Birth date converted to ISO 8601 format"
-    },
-    {
-      "source_column": "GENDER",
-      "target_variable": "SEX",
+      "source_column": "",
+      "target_variable": "DOMAIN",
       "transformation": null,
-      "derivation_rule": null,
+      "derivation_rule": "'DM'",
       "controlled_terminology": null,
-      "comments": "Gender code (M/F) maps directly to sex"
+      "comments": "Constant value"
     },
     {
-      "source_column": "RCE",
-      "target_variable": "RACE",
-      "transformation": "Map to controlled terminology",
-      "derivation_rule": "Convert source race values to CDISC CT race terms",
+      "source_column": "",
+      "target_variable": "USUBJID",
+      "transformation": null,
+      "derivation_rule": "STUDYID || '-' || SITEID || '-' || SUBJID",
       "controlled_terminology": null,
-      "comments": "Race values need mapping to CDISC controlled terminology"
-    },
-    {
-      "source_column": null,
-      "target_variable": "AGE",
-      "transformation": "Calculate from DOB and reference date",
-      "derivation_rule": "Calculate age in years from birth date to study reference date",
-      "controlled_terminology": null,
-      "comments": "Age derived from birth date - requires reference date"
-    },
-    {
-      "source_column": null,
-      "target_variable": "AGEU",
-      "transformation": "Set to 'YEARS'",
-      "derivation_rule": "Constant value 'YEARS'",
-      "controlled_terminology": null,
-      "comments": "Age unit set to years"
+      "comments": "Derived unique subject identifier"
     }
   ],
   "derivation_rules": {
     "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
-    "AGE": "Calculate from BRTHDTC and RFSTDTC",
+    "AGE": "floor((RFSTDTC - BRTHDTC) / 365.25)",
+    "DOMAIN": "'DM'",
     "AGEU": "'YEARS'"
   },
   "controlled_terminologies": {
@@ -106,16 +99,9 @@
       "NOT REPORTED",
       "UNKNOWN",
       "OTHER"
-    ],
-    "AGEU": [
-      "YEARS",
-      "MONTHS",
-      "WEEKS",
-      "DAYS",
-      "HOURS"
     ]
   },
-  "created_at": "2026-01-20T15:30:56.710737",
+  "created_at": "2026-01-21T00:19:55.502172",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for DEMO.csv to SDTM DM"
