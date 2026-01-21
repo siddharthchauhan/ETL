@@ -211,9 +211,10 @@ def convert_domain(domain: str) -> str:
     Convert a specific domain from EDC to SDTM format.
 
     This performs the full conversion pipeline:
+    0. Fetches SDTM-IG 3.4 guidance from Pinecone knowledge base
     1. Generates mapping specification using Claude AI
     2. Transforms data according to mapping
-    3. Validates the SDTM dataset
+    3. Validates the SDTM dataset against Pinecone rules
     4. Returns detailed results
 
     Args:
@@ -240,8 +241,128 @@ def convert_domain(domain: str) -> str:
         from sdtm_pipeline.transformers.domain_transformers import get_transformer
         from sdtm_pipeline.validators.sdtm_validator import SDTMValidator
 
-        # Step 1: Generate mapping
-        output += "### Step 1: Mapping Specification\n\n"
+        # Step 0: Fetch SDTM-IG 3.4 guidance from Pinecone
+        output += "### Step 0: Fetching SDTM-IG 3.4 Guidance from Pinecone\n\n"
+
+        try:
+            from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+            retriever = get_knowledge_retriever()
+
+            if retriever and retriever.pinecone_client:
+                # Fetch domain specification
+                domain_spec = retriever.get_domain_specification(domain)
+                guidance = retriever.get_sdtm_generation_guidance(domain, "EDC clinical trial data")
+
+                if guidance and guidance.get("required_variables"):
+                    output += "**📚 Pinecone Knowledge Base Retrieved:**\n\n"
+
+                    # Show required variables
+                    req_vars = guidance.get("required_variables", [])
+                    if req_vars:
+                        output += "**Required Variables (SDTM-IG 3.4):**\n"
+                        for var in req_vars[:10]:
+                            var_name = var.get("variable", var.get("name", ""))
+                            var_label = var.get("label", "")
+                            if var_name:
+                                output += f"- `{var_name}`: {var_label}\n"
+                        if len(req_vars) > 10:
+                            output += f"- *... and {len(req_vars) - 10} more required variables*\n"
+                        output += "\n"
+
+                    # Show expected variables
+                    exp_vars = guidance.get("expected_variables", [])
+                    if exp_vars:
+                        output += "**Expected Variables:**\n"
+                        for var in exp_vars[:5]:
+                            var_name = var.get("variable", var.get("name", ""))
+                            if var_name:
+                                output += f"- `{var_name}`\n"
+                        if len(exp_vars) > 5:
+                            output += f"- *... and {len(exp_vars) - 5} more expected variables*\n"
+                        output += "\n"
+
+                    # Show transformation steps
+                    trans_steps = guidance.get("transformation_steps", [])
+                    if trans_steps:
+                        output += "**Derivation Rules from Business Rules Index:**\n"
+                        for step in trans_steps[:3]:
+                            step_desc = step.get("step", step.get("rule", ""))[:80]
+                            if step_desc:
+                                output += f"- {step_desc}\n"
+                        output += "\n"
+                else:
+                    output += "*Using local SDTM-IG 3.4 specifications (Pinecone guidance not found)*\n\n"
+            else:
+                output += "*Pinecone not available - using local SDTM-IG 3.4 specifications*\n\n"
+        except Exception as e:
+            output += f"*Pinecone lookup note: {str(e)[:50]} - using local specifications*\n\n"
+
+        # Step 1: Intelligent Column Mapping Discovery
+        output += "### Step 1: Intelligent Column Mapping Discovery\n\n"
+
+        # Get first source file
+        source_file = source_files[0]
+        df = _source_data[source_file]
+
+        output += f"**Source File:** {source_file}\n"
+        output += f"**Source Columns ({len(df.columns)}):** {', '.join(df.columns[:15])}"
+        if len(df.columns) > 15:
+            output += f"... (+{len(df.columns) - 15} more)"
+        output += "\n\n"
+
+        # Use intelligent mapper to discover mappings
+        intelligent_mapping_spec = None
+        pinecone_retriever = None
+
+        try:
+            from sdtm_pipeline.transformers.intelligent_mapper import IntelligentMapper, create_intelligent_mapping
+
+            # Get Pinecone retriever if available
+            try:
+                from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+                pinecone_retriever = get_knowledge_retriever()
+            except Exception:
+                pinecone_retriever = None
+
+            # Create intelligent mapping
+            intelligent_mapper = IntelligentMapper(pinecone_retriever)
+            intelligent_mapping_spec = intelligent_mapper.analyze_source_data(df, domain)
+
+            if intelligent_mapping_spec and intelligent_mapping_spec.mappings:
+                output += "**🧠 Intelligent Mapping Discovery:**\n\n"
+                output += "| Source Column | SDTM Variable | Confidence | Method |\n"
+                output += "|---------------|---------------|------------|--------|\n"
+
+                # Show high confidence mappings first
+                sorted_mappings = sorted(intelligent_mapping_spec.mappings,
+                                        key=lambda x: x.confidence, reverse=True)
+
+                for mapping in sorted_mappings[:15]:
+                    conf_indicator = "✓" if mapping.confidence >= 0.8 else "~" if mapping.confidence >= 0.6 else "?"
+                    method = mapping.mapping_reason.split(":")[0] if ":" in mapping.mapping_reason else mapping.mapping_reason
+                    output += f"| {mapping.source_column[:25]} | {mapping.sdtm_variable} | {conf_indicator} {mapping.confidence:.0%} | {method[:15]} |\n"
+
+                if len(intelligent_mapping_spec.mappings) > 15:
+                    output += f"\n*... and {len(intelligent_mapping_spec.mappings) - 15} more discovered mappings*\n"
+
+                # Show unmapped columns
+                if intelligent_mapping_spec.unmapped_source_columns:
+                    output += f"\n**⚠️ Unmapped Source Columns:** {', '.join(intelligent_mapping_spec.unmapped_source_columns[:10])}"
+                    if len(intelligent_mapping_spec.unmapped_source_columns) > 10:
+                        output += f"... (+{len(intelligent_mapping_spec.unmapped_source_columns) - 10} more)"
+                    output += "\n"
+
+                output += "\n"
+            else:
+                output += "*Intelligent mapping found no patterns - using AI-generated mapping*\n\n"
+
+        except ImportError as e:
+            output += f"*Intelligent mapper not available: {str(e)[:50]} - using AI-generated mapping*\n\n"
+        except Exception as e:
+            output += f"*Intelligent mapping note: {str(e)[:50]} - using AI-generated mapping*\n\n"
+
+        # Step 1b: AI-Generated Mapping (supplement intelligent mapping)
+        output += "### Step 1b: AI-Enhanced Mapping Specification\n\n"
 
         api_key = os.getenv("ANTHROPIC_API_KEY", "")
         if not api_key:
@@ -252,10 +373,6 @@ def convert_domain(domain: str) -> str:
             study_id=_study_id,
             use_knowledge_tools=True
         )
-
-        # Get first source file
-        source_file = source_files[0]
-        df = _source_data[source_file]
 
         spec = generator.generate_mapping(
             df=df,
@@ -284,19 +401,26 @@ def convert_domain(domain: str) -> str:
             for var, rule in list(spec.derivation_rules.items())[:5]:
                 output += f"- `{var}`: {rule}\n"
 
-        # Step 2: Transform
-        output += "\n### Step 2: Transformation\n\n"
+        # Step 2: Transform with Intelligent Mapping
+        output += "\n### Step 2: Transformation (with Intelligent Mapping)\n\n"
 
         combined_df = pd.concat(
             [_source_data[f] for f in source_files],
             ignore_index=True
         )
 
+        # Get transformer with Pinecone retriever for intelligent mapping
         transformer = get_transformer(
             domain_code=domain,
             study_id=_study_id,
-            mapping_spec=spec
+            mapping_spec=spec,
+            pinecone_retriever=pinecone_retriever
         )
+
+        # Discover mappings before transforming (if intelligent mapper available)
+        if hasattr(transformer, 'discover_mappings') and intelligent_mapping_spec:
+            transformer._discovered_mapping = intelligent_mapping_spec
+            output += "*Using intelligent column mapping during transformation*\n\n"
 
         sdtm_df = transformer.transform(combined_df)
         _sdtm_data[domain] = sdtm_df
@@ -468,6 +592,300 @@ def search_sdtm_guidelines(query: str) -> str:
 
     except Exception as e:
         return f"Error searching guidelines: {str(e)}"
+
+
+@tool
+def fetch_sdtmig_specification(domain: str) -> str:
+    """
+    Fetch SDTM-IG 3.4 specification for a domain from authoritative CDISC sources.
+
+    This tool retrieves the complete variable specification for an SDTM domain including:
+    - Required variables (must be present)
+    - Expected variables (should be present if data available)
+    - Permissible variables (optional, used based on study needs)
+    - Data types, roles, and controlled terminology references
+
+    Sources:
+    - SDTM-IG 3.4: https://sastricks.com/cdisc/SDTMIG%20v3.4-FINAL_2022-07-21.pdf
+    - CDISC SDTMIG: https://www.cdisc.org/standards/foundational/sdtmig
+
+    Args:
+        domain: SDTM domain code (e.g., AE, DM, VS, LB, CM, EX, MH, DS)
+    """
+    domain = domain.upper()
+
+    try:
+        from sdtm_pipeline.transformers.sdtm_web_reference import get_sdtm_web_reference
+
+        ref = get_sdtm_web_reference()
+        spec = ref.get_domain_specification(domain)
+
+        if not spec:
+            return f"No specification found for domain: {domain}. Try: {', '.join(ref.get_all_domains())}"
+
+        output = f"## 📋 SDTM-IG 3.4 Specification: {domain} Domain\n\n"
+        output += f"**Description:** {spec.get('description', 'N/A')}\n"
+        output += f"**Class:** {spec.get('class', 'N/A')}\n"
+        output += f"**Structure:** {spec.get('structure', 'N/A')}\n\n"
+
+        variables = spec.get("variables", {})
+
+        # Required variables
+        req_vars = variables.get("required", [])
+        if req_vars:
+            output += "### Required Variables (Req)\n"
+            output += "*Must be present in all datasets*\n\n"
+            output += "| Variable | Label | Type | Role |\n"
+            output += "|----------|-------|------|------|\n"
+            for v in req_vars:
+                output += f"| `{v['name']}` | {v.get('label', '')} | {v.get('type', '')} | {v.get('role', '')} |\n"
+            output += "\n"
+
+        # Expected variables
+        exp_vars = variables.get("expected", [])
+        if exp_vars:
+            output += "### Expected Variables (Exp)\n"
+            output += "*Should be present if data is collected*\n\n"
+            output += "| Variable | Label | Type | Codelist |\n"
+            output += "|----------|-------|------|----------|\n"
+            for v in exp_vars:
+                cl = v.get('codelist', '-')
+                output += f"| `{v['name']}` | {v.get('label', '')} | {v.get('type', '')} | {cl} |\n"
+            output += "\n"
+
+        # Permissible variables (show first 15)
+        perm_vars = variables.get("permissible", [])
+        if perm_vars:
+            output += f"### Permissible Variables (Perm) - showing first 15 of {len(perm_vars)}\n"
+            output += "*Optional, used based on study needs*\n\n"
+            output += "| Variable | Label | Codelist |\n"
+            output += "|----------|-------|----------|\n"
+            for v in perm_vars[:15]:
+                cl = v.get('codelist', '-')
+                output += f"| `{v['name']}` | {v.get('label', '')} | {cl} |\n"
+            if len(perm_vars) > 15:
+                output += f"\n*... and {len(perm_vars) - 15} more permissible variables*\n"
+            output += "\n"
+
+        output += f"**Total Variables:** {len(req_vars)} Required + {len(exp_vars)} Expected + {len(perm_vars)} Permissible = {len(req_vars) + len(exp_vars) + len(perm_vars)}\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error fetching SDTM-IG spec: {str(e)}\n\n{traceback.format_exc()}"
+
+
+@tool
+def fetch_controlled_terminology(codelist: str) -> str:
+    """
+    Fetch CDISC Controlled Terminology for a codelist.
+
+    Provides the valid values for SDTM variables that require controlled terminology.
+    Use this to ensure data values comply with CDISC standards.
+
+    Sources:
+    - CDISC CT: https://www.cdisc.org/standards/terminology
+
+    Common codelists:
+    - SEX: Sex (M, F, U, UNDIFFERENTIATED)
+    - NY: No/Yes Response (N, Y)
+    - AESEV: Severity (MILD, MODERATE, SEVERE)
+    - REL: Causality Relationship
+    - OUT: Outcome of Event
+    - ACN: Action Taken with Study Treatment
+    - RACE: Race
+    - ETHNIC: Ethnicity
+    - TOXGR: Toxicity Grade (CTCAE)
+    - AGEU: Age Unit
+
+    Args:
+        codelist: Codelist code (e.g., SEX, NY, REL, OUT, ACN, AESEV)
+    """
+    codelist = codelist.upper()
+
+    try:
+        from sdtm_pipeline.transformers.sdtm_web_reference import get_sdtm_web_reference
+
+        ref = get_sdtm_web_reference()
+        ct = ref.get_controlled_terminology(codelist)
+
+        if not ct:
+            available = ref.get_all_codelists()
+            return f"Codelist '{codelist}' not found. Available codelists: {', '.join(available)}"
+
+        output = f"## 📖 CDISC Controlled Terminology: {codelist}\n\n"
+        output += f"**Name:** {ct.get('name', codelist)}\n"
+        output += f"**Extensible:** {'Yes' if ct.get('extensible') else 'No'}\n\n"
+
+        terms = ct.get("terms", [])
+        if terms:
+            output += "### Valid Values\n\n"
+            output += "| Code | Decode | Definition |\n"
+            output += "|------|--------|------------|\n"
+            for t in terms:
+                code = t.get('code', '')
+                decode = t.get('decode', '')
+                defn = t.get('definition', '')[:60]
+                output += f"| `{code}` | {decode} | {defn} |\n"
+
+        output += f"\n**Total Terms:** {len(terms)}\n"
+
+        if ct.get('extensible'):
+            output += "\n*Note: This codelist is extensible - sponsor-defined values are allowed if not in standard list.*\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error fetching CT: {str(e)}"
+
+
+@tool
+def get_mapping_guidance_from_web(source_column: str, domain: str) -> str:
+    """
+    Get intelligent mapping guidance from SDTM-IG 3.4 for a source column.
+
+    This tool analyzes a source column name and provides:
+    - Matching SDTM variables with confidence scores
+    - Variable definitions and requirements
+    - Controlled terminology requirements
+    - Web search results for specific guidance
+
+    Use this when you're unsure how to map a specific EDC column to SDTM.
+
+    Args:
+        source_column: Source data column name from EDC
+        domain: Target SDTM domain (e.g., AE, DM, VS)
+    """
+    domain = domain.upper()
+
+    try:
+        from sdtm_pipeline.transformers.sdtm_web_reference import get_sdtm_web_reference
+
+        ref = get_sdtm_web_reference()
+        guidance = ref.get_mapping_guidance(source_column, domain)
+
+        output = f"## 🎯 Mapping Guidance: {source_column} → {domain}\n\n"
+
+        suggestions = guidance.get("suggestions", [])
+        if suggestions:
+            output += "### Suggested SDTM Variables\n\n"
+            output += "| SDTM Variable | Label | Score | Reasons | Level | CT |\n"
+            output += "|---------------|-------|-------|---------|-------|----|\n"
+
+            for s in suggestions:
+                score = s.get('score', 0)
+                score_icon = "✓" if score >= 0.8 else "~" if score >= 0.6 else "?"
+                reasons = ", ".join(s.get('reasons', []))
+                ct = s.get('codelist') or '-'
+                output += f"| `{s['variable']}` | {s.get('label', '')[:30]} | {score_icon} {score:.0%} | {reasons} | {s.get('level', '')} | {ct} |\n"
+            output += "\n"
+
+            # Best recommendation
+            if suggestions[0].get('score', 0) >= 0.7:
+                best = suggestions[0]
+                output += f"**Recommended Mapping:** `{source_column}` → `{best['variable']}`\n"
+                if best.get('codelist'):
+                    output += f"*Note: Apply Controlled Terminology `{best['codelist']}` to values*\n"
+                output += "\n"
+
+        # Web guidance
+        web_guidance = guidance.get("guidance", [])
+        if web_guidance:
+            output += "### Additional Web Guidance\n\n"
+            for g in web_guidance:
+                source = g.get('source', 'web')
+                content = g.get('content', '')[:200]
+                output += f"**Source:** {source}\n"
+                output += f"{content}...\n\n"
+
+        if not suggestions:
+            output += "*No confident mapping suggestions found. This column may need manual review or custom derivation.*\n"
+
+        return output
+
+    except Exception as e:
+        return f"Error getting mapping guidance: {str(e)}"
+
+
+@tool
+def search_internet(query: str) -> str:
+    """
+    Search the internet for any information using Tavily AI search.
+
+    Use this tool when you need to:
+    - Look up current regulatory guidance or FDA announcements
+    - Find clinical trial best practices
+    - Research data standards or terminologies
+    - Get information not available in Pinecone knowledge base
+    - Answer general questions about SDTM, CDISC, or clinical data
+
+    Args:
+        query: Search query - be specific for better results
+    """
+    try:
+        # Try Tavily first (preferred)
+        try:
+            from tavily import TavilyClient
+            tavily_key = os.getenv("TAVILY_API_KEY")
+            if tavily_key:
+                client = TavilyClient(api_key=tavily_key)
+                response = client.search(
+                    query=query,
+                    search_depth="advanced",
+                    max_results=5,
+                    include_answer=True
+                )
+
+                output = f"## 🌐 Internet Search: {query}\n\n"
+
+                # Include AI-generated answer if available
+                if response.get("answer"):
+                    output += f"**Summary:** {response['answer']}\n\n"
+
+                output += "### Sources:\n\n"
+                for i, r in enumerate(response.get("results", [])[:5], 1):
+                    title = r.get('title', 'No title')
+                    url = r.get('url', '')
+                    content = r.get('content', '')[:350]
+
+                    output += f"**{i}. {title}**\n"
+                    output += f"🔗 {url}\n\n"
+                    output += f"{content}...\n\n"
+                    output += "---\n\n"
+
+                return output
+        except ImportError:
+            pass
+
+        # Fallback to knowledge retriever's web search
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+        retriever = get_knowledge_retriever()
+
+        if retriever and retriever.tavily_client:
+            results = retriever.search_web(query, search_depth="advanced", max_results=5)
+
+            if not results:
+                return f"No internet results found for: {query}. Try a different query."
+
+            output = f"## 🌐 Internet Search: {query}\n\n"
+
+            for i, r in enumerate(results, 1):
+                title = r.get('title', 'No title')
+                url = r.get('url', '')
+                content = r.get('content', '')[:350]
+
+                output += f"**{i}. {title}**\n"
+                output += f"🔗 {url}\n\n"
+                output += f"{content}...\n\n"
+                output += "---\n\n"
+
+            return output
+        else:
+            return "Internet search not available. TAVILY_API_KEY not configured."
+
+    except Exception as e:
+        return f"Error searching internet: {str(e)}"
 
 
 @tool
@@ -1180,7 +1598,7 @@ SDTM_TOOLS = [
     upload_sdtm_to_s3,
     load_sdtm_to_neo4j,
     save_sdtm_locally,
-    # Knowledge base
+    # Knowledge base (Pinecone)
     search_sdtm_guidelines,
     get_business_rules,
     get_mapping_specification,
@@ -1188,4 +1606,10 @@ SDTM_TOOLS = [
     get_sdtm_guidance,
     search_knowledge_base,
     get_controlled_terminology,
+    # SDTM-IG 3.4 Web Reference (CDISC Authoritative Sources)
+    fetch_sdtmig_specification,
+    fetch_controlled_terminology,
+    get_mapping_guidance_from_web,
+    # Internet search (Tavily)
+    search_internet,
 ]

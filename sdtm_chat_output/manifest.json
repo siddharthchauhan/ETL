@@ -1,0 +1,15 @@
+{
+  "study_id": "MAXIS-08",
+  "created_at": "2026-01-21T13:22:25.021463",
+  "domains": [
+    "AE"
+  ],
+  "total_records": 826,
+  "files": [
+    {
+      "domain": "AE",
+      "path": "sdtm_chat_output/sdtm_data/ae.csv",
+      "records": 826
+    }
+  ]
+}

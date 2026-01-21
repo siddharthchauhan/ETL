@@ -303,6 +303,35 @@ SDTMIG_DOMAIN_SPECS = {
             {"name": "MHDY", "label": "Study Day of History Collection", "type": "Num", "core": "Perm", "role": "Timing"},
         ]
     },
+    "DS": {
+        "name": "Disposition",
+        "description": "Disposition domain contains disposition data for subjects",
+        "class": "Events",
+        "structure": "One record per disposition event per subject",
+        "variables": [
+            {"name": "STUDYID", "label": "Study Identifier", "type": "Char", "core": "Req", "role": "Identifier"},
+            {"name": "DOMAIN", "label": "Domain Abbreviation", "type": "Char", "core": "Req", "role": "Identifier", "value": "DS"},
+            {"name": "USUBJID", "label": "Unique Subject Identifier", "type": "Char", "core": "Req", "role": "Identifier"},
+            {"name": "DSSEQ", "label": "Sequence Number", "type": "Num", "core": "Req", "role": "Identifier"},
+            {"name": "DSSPID", "label": "Sponsor-Defined Identifier", "type": "Char", "core": "Perm", "role": "Identifier"},
+            {"name": "DSTERM", "label": "Reported Term for the Disposition Event", "type": "Char", "core": "Req", "role": "Topic"},
+            {"name": "DSMODIFY", "label": "Modified Reported Term", "type": "Char", "core": "Perm", "role": "Synonym Qualifier"},
+            {"name": "DSDECOD", "label": "Standardized Disposition Term", "type": "Char", "core": "Exp", "role": "Synonym Qualifier"},
+            {"name": "DSCAT", "label": "Category for Disposition Event", "type": "Char", "core": "Exp", "role": "Grouping Qualifier"},
+            {"name": "DSSCAT", "label": "Subcategory for Disposition Event", "type": "Char", "core": "Perm", "role": "Grouping Qualifier"},
+            {"name": "DSSTAT", "label": "Completion Status", "type": "Char", "core": "Perm", "role": "Record Qualifier", "codelist": "ND"},
+            {"name": "DSREASND", "label": "Reason Disposition Event Not Collected", "type": "Char", "core": "Perm", "role": "Record Qualifier"},
+            {"name": "DSSTRF", "label": "Start Relative to Reference Period", "type": "Char", "core": "Perm", "role": "Record Qualifier"},
+            {"name": "DSENRF", "label": "End Relative to Reference Period", "type": "Char", "core": "Perm", "role": "Record Qualifier"},
+            {"name": "EPOCH", "label": "Epoch", "type": "Char", "core": "Perm", "role": "Timing"},
+            {"name": "DSSTDTC", "label": "Start Date/Time of Disposition Event", "type": "Char", "core": "Exp", "role": "Timing", "format": "ISO 8601"},
+            {"name": "DSENDTC", "label": "End Date/Time of Disposition Event", "type": "Char", "core": "Perm", "role": "Timing", "format": "ISO 8601"},
+            {"name": "DSSTDY", "label": "Study Day of Start of Disposition Event", "type": "Num", "core": "Perm", "role": "Timing"},
+            {"name": "DSENDY", "label": "Study Day of End of Disposition Event", "type": "Num", "core": "Perm", "role": "Timing"},
+            {"name": "DSDTC", "label": "Date/Time of Collection", "type": "Char", "core": "Perm", "role": "Timing", "format": "ISO 8601"},
+            {"name": "DSDY", "label": "Study Day of Collection", "type": "Num", "core": "Perm", "role": "Timing"},
+        ]
+    },
 }
 
 

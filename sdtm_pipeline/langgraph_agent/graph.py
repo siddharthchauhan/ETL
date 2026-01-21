@@ -1,7 +1,17 @@
 """
-SDTM Pipeline Graph Export
-==========================
+SDTM Pipeline Graph Export (7-Phase ETL Pipeline)
+=================================================
+
 Exports the compiled LangGraph for use with `langgraph dev`.
+
+This implements the 7-phase SDTM ETL process:
+1. Data Ingestion (Extract) - Phase 1
+2. Raw Data Validation (Business Checks) - Phase 2
+3. Metadata and Specification Preparation - Phase 3
+4. SDTM Transformation (Transform) - Phase 4
+5. SDTM Target Data Generation (Load) - Phase 5
+6. Target Data Validation (Compliance Checks) - Phase 6
+7. Data Warehouse Loading - Phase 7
 
 Multi-Agent Architecture:
 - 6 specialized agents (Source Analyst, SDTM Expert, Code Generator, Validator, Anomaly Detector, Protocol Compliance)
@@ -23,6 +33,9 @@ Input Schema (when invoking via Studio):
         "output_dir": "./sdtm_langgraph_output",
         "human_decision": "approve"
     }
+
+Author: SDTM ETL Pipeline
+Version: 2.0.0 (Enhanced with 7-phase pipeline support)
 """
 
 import os
@@ -34,12 +47,19 @@ from pydantic import BaseModel, Field
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.runnables import RunnableConfig
 
 # Ensure the package is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Use absolute imports
-from sdtm_pipeline.langgraph_agent.state import SDTMPipelineState, create_initial_state
+from sdtm_pipeline.langgraph_agent.state import (
+    SDTMPipelineState,
+    create_initial_state,
+    PIPELINE_PHASES,
+    get_next_phase,
+    get_pipeline_progress
+)
 from sdtm_pipeline.langgraph_agent.async_nodes import (
     ingest_data_node,
     validate_raw_data_parallel_node,
@@ -225,7 +245,7 @@ def route_after_final_scoring(
 
 async def conformance_scoring_node(
     state: SDTMPipelineState,
-    config: Dict[str, Any]
+    config: RunnableConfig
 ) -> Dict[str, Any]:
     """Calculate conformance score from multi-layer validation."""
 
@@ -286,7 +306,7 @@ async def conformance_scoring_node(
 
 async def self_correction_node(
     state: SDTMPipelineState,
-    config: Dict[str, Any]
+    config: RunnableConfig
 ) -> Dict[str, Any]:
     """
     Generate feedback for self-correction loop.
@@ -340,6 +360,110 @@ async def self_correction_node(
 
 
 # ============================================================================
+# Phase 5: Target Data Generation (Define.xml)
+# ============================================================================
+
+async def generate_define_xml_node(
+    state: SDTMPipelineState,
+    config: RunnableConfig
+) -> Dict[str, Any]:
+    """
+    Phase 5: Generate Define.xml and finalize SDTM datasets.
+
+    Define.xml is the machine-readable metadata file required for FDA submissions.
+    """
+    from datetime import datetime
+    import os
+
+    print("\n" + "=" * 60)
+    print("PHASE 5: TARGET DATA GENERATION")
+    print("=" * 60)
+
+    study_id = state.get("study_id", "UNKNOWN")
+    output_dir = state.get("output_dir", "./output")
+    sdtm_data_paths = state.get("sdtm_data_paths", {})
+
+    # Import Define.xml generator
+    try:
+        from sdtm_pipeline.generators.define_xml_generator import (
+            create_define_xml_generator,
+            DefineXMLGenerator
+        )
+        DEFINE_AVAILABLE = True
+    except ImportError:
+        DEFINE_AVAILABLE = False
+        print("  Warning: Define.xml generator not available")
+
+    define_xml_info = {}
+    define_xml_path = ""
+
+    if DEFINE_AVAILABLE and sdtm_data_paths:
+        try:
+            # Get list of domains created
+            domains = list(sdtm_data_paths.keys())
+            print(f"  Generating Define.xml for domains: {domains}")
+
+            # Create Define.xml generator
+            generator = create_define_xml_generator(
+                study_id=study_id,
+                study_name=f"Study {study_id}",
+                protocol_name=study_id,
+                sdtmig_version=state.get("sdtmig_version", "3.4"),
+                domains=domains
+            )
+
+            # Generate Define.xml
+            define_path = os.path.join(output_dir, "define.xml")
+            os.makedirs(output_dir, exist_ok=True)
+
+            xml_content = generator.generate(define_path)
+            define_xml_path = define_path
+
+            # Save metadata JSON
+            metadata_path = os.path.join(output_dir, "define_metadata.json")
+            generator.save_metadata_json(metadata_path)
+
+            define_xml_info = {
+                "file_path": define_path,
+                "study_oid": f"STUDY.{study_id}",
+                "datasets_count": len(generator.datasets),
+                "codelists_count": len(generator.codelists),
+                "generated_at": datetime.utcnow().isoformat(),
+                "sdtmig_version": state.get("sdtmig_version", "3.4"),
+                "define_version": "2.1.0"
+            }
+
+            print(f"  Define.xml generated: {define_path}")
+            print(f"    - Datasets: {define_xml_info['datasets_count']}")
+            print(f"    - Codelists: {define_xml_info['codelists_count']}")
+
+        except Exception as e:
+            print(f"  Error generating Define.xml: {e}")
+            define_xml_info = {"error": str(e)}
+
+    # Build SDTM datasets info
+    sdtm_datasets = {}
+    for domain, path in sdtm_data_paths.items():
+        sdtm_datasets[domain] = {
+            "path": path,
+            "domain": domain,
+            "generated_at": datetime.utcnow().isoformat()
+        }
+
+    print(f"  Phase 5 complete: {len(sdtm_datasets)} datasets finalized")
+
+    return {
+        "current_phase": "target_data_generation",
+        "phase_5_complete": True,
+        "define_xml_info": define_xml_info,
+        "define_xml_path": define_xml_path,
+        "sdtm_datasets": sdtm_datasets,
+        "phase_history": ["target_data_generation"],
+        "messages": [f"Phase 5 complete: Define.xml generated for {len(sdtm_datasets)} domains"]
+    }
+
+
+# ============================================================================
 # Build the Graph
 # ============================================================================
 
@@ -347,32 +471,81 @@ def build_sdtm_graph() -> StateGraph:
     """
     Build the SDTM transformation pipeline graph.
 
-    Multi-Agent Architecture Flow:
-    1. ingest_data → validate_raw_data
-    2. validate_raw_data → [human_review | generate_mappings]
-    3. generate_mappings → transform
-    4. transform → validate_sdtm
-    5. validate_sdtm → conformance_scoring
-    6. conformance_scoring → [generate_code | self_correction | human_review]
-    7. self_correction → [generate_mappings | human_review]
-    8. generate_code → load_neo4j → upload_s3 → generate_report → END
+    7-Phase SDTM ETL Pipeline Flow:
+    ==============================
+    Phase 1: Data Ingestion (Extract)
+        → ingest_data node
+
+    Phase 2: Raw Data Validation (Business Checks)
+        → validate_raw_data node
+        → If critical errors: human_review checkpoint
+
+    Phase 3: Metadata and Specification Preparation
+        → generate_mappings node (creates SDTM Mapping Specification)
+
+    Phase 4: SDTM Transformation (Transform)
+        → transform node (applies mapping logic)
+
+    Phase 5: SDTM Target Data Generation (Load)
+        → generate_define_xml node (creates Define.xml)
+        → validate_sdtm node
+
+    Phase 6: Target Data Validation (Compliance Checks)
+        → conformance_scoring node
+        → Self-correction loop (up to 3 iterations)
+        → If score < 95%: human_review checkpoint
+
+    Phase 7: Data Warehouse Loading
+        → generate_code node (SAS/R programs)
+        → load_neo4j node
+        → upload_s3 node
+        → generate_report node
     """
 
     # Create the graph with state schema
     workflow = StateGraph(SDTMPipelineState)
 
-    # Add all nodes
+    # =========================================================================
+    # Phase 1: Data Ingestion
+    # =========================================================================
     workflow.add_node("ingest_data", ingest_data_node)
+
+    # =========================================================================
+    # Phase 2: Raw Data Validation (Business Checks)
+    # =========================================================================
     workflow.add_node("validate_raw_data", validate_raw_data_parallel_node)
+
+    # =========================================================================
+    # Phase 3: Metadata and Specification Preparation
+    # =========================================================================
     workflow.add_node("generate_mappings", generate_mappings_parallel_node)
+
+    # =========================================================================
+    # Phase 4: SDTM Transformation
+    # =========================================================================
     workflow.add_node("transform", transform_to_sdtm_parallel_node)
+
+    # =========================================================================
+    # Phase 5: Target Data Generation (Define.xml)
+    # =========================================================================
+    workflow.add_node("generate_define_xml", generate_define_xml_node)
+
+    # =========================================================================
+    # Phase 6: Target Data Validation (Compliance Checks)
+    # =========================================================================
     workflow.add_node("validate_sdtm", validate_sdtm_parallel_node)
     workflow.add_node("conformance_scoring", conformance_scoring_node)
     workflow.add_node("self_correction", self_correction_node)
+
+    # =========================================================================
+    # Phase 7: Data Warehouse Loading
+    # =========================================================================
     workflow.add_node("generate_code", generate_code_parallel_node)
     workflow.add_node("load_neo4j", load_to_neo4j_node)
     workflow.add_node("upload_s3", upload_to_s3_node)
     workflow.add_node("generate_report", generate_report_node)
+
+    # Human Review (used at multiple checkpoints)
     workflow.add_node("human_review", human_review_node)
 
     # Set entry point
@@ -391,13 +564,16 @@ def build_sdtm_graph() -> StateGraph:
         }
     )
 
-    # Mappings -> Transform (removed mandatory human review for faster iteration)
+    # Phase 3 -> Phase 4: Mappings -> Transform
     workflow.add_edge("generate_mappings", "transform")
 
-    # Transform -> Validate SDTM
-    workflow.add_edge("transform", "validate_sdtm")
+    # Phase 4 -> Phase 5: Transform -> Generate Define.xml
+    workflow.add_edge("transform", "generate_define_xml")
 
-    # Validate SDTM -> Conformance Scoring
+    # Phase 5 -> Phase 6: Generate Define.xml -> Validate SDTM
+    workflow.add_edge("generate_define_xml", "validate_sdtm")
+
+    # Phase 6: Validate SDTM -> Conformance Scoring
     workflow.add_edge("validate_sdtm", "conformance_scoring")
 
     # Conformance Scoring routing (self-correction loop)
