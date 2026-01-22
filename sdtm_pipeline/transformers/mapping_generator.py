@@ -178,12 +178,17 @@ Return ONLY the 2-letter domain code (e.g., DM, AE, VS, LB, CM, EX)."""
 
         try:
             model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
-            response = self.client.messages.create(
+            # Use streaming even for short calls to avoid timeout issues
+            response_text = ""
+            with self.client.messages.stream(
                 model=model,
                 max_tokens=100,
                 messages=[{"role": "user", "content": prompt}]
-            )
-            domain = response.content[0].text.strip().upper()[:2]
+            ) as stream:
+                for text in stream.text_stream:
+                    response_text += text
+
+            domain = response_text.strip().upper()[:2]
             if domain in SDTM_DOMAINS:
                 return domain
         except Exception:
@@ -337,13 +342,16 @@ Return ONLY valid JSON with comprehensive mappings."""
         try:
             model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
             max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
-            response = self.client.messages.create(
+
+            # Use streaming to avoid timeout for long-running operations
+            response_text = ""
+            with self.client.messages.stream(
                 model=model,
                 max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}]
-            )
-
-            response_text = response.content[0].text
+            ) as stream:
+                for text in stream.text_stream:
+                    response_text += text
 
             # Extract JSON from response
             json_start = response_text.find("{")
@@ -713,8 +721,8 @@ Return ONLY valid JSON with comprehensive mappings."""
         """
         ct = {}
 
-        # Get mapped variables
-        mapped_vars = {m.target_variable for m in mappings}
+        # Get mapped variables (filter out None values)
+        mapped_vars = {m.target_variable for m in mappings if m.target_variable}
 
         # Common CT codelists by variable name patterns
         ct_codelists = {
@@ -737,7 +745,11 @@ Return ONLY valid JSON with comprehensive mappings."""
 
         # Check local CT definitions first
         for var, values in CONTROLLED_TERMINOLOGY.items():
-            if var in mapped_vars or any(var in m.target_variable for m in mappings):
+            # Check if var is in mapped_vars OR if var is a substring of any target_variable
+            # (e.g., "SEX" in "AESEX" for AE domain)
+            if var in mapped_vars or any(
+                m.target_variable and var in m.target_variable for m in mappings
+            ):
                 ct[var] = values
 
         # Enhance with Pinecone knowledge base if available

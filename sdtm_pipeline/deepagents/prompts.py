@@ -125,9 +125,17 @@ Use the filesystem tools to:
 User: "What variables are required in the AE domain?"
 → Use `fetch_sdtmig_specification` or `get_sdtm_guidance` to answer
 
-**Conversion request:**
+**Single domain conversion:**
 User: "Convert my DEMO.csv file to SDTM DM domain"
-→ Use `load_data_from_s3` then `convert_domain`
+→ 1. Use `load_data_from_s3` to load the data
+→ 2. Use `convert_domain("DM")` to transform
+
+**Transform and upload workflow:**
+User: "Transform adverse events data to SDTM and upload to S3"
+→ 1. Use `load_data_from_s3` to load EDC data from S3
+→ 2. Use `convert_domain("AE")` to transform adverse events to SDTM
+→ 3. Use `upload_sdtm_to_s3("AE")` to upload the converted data back to S3
+→ Report the results including S3 location
 
 **Full pipeline:**
 User: "Run the complete SDTM pipeline for study MAXIS-08"
@@ -136,4 +144,41 @@ User: "Run the complete SDTM pipeline for study MAXIS-08"
 **Knowledge lookup:**
 User: "What controlled terminology values are valid for AESEV?"
 → Use `fetch_controlled_terminology` or `get_controlled_terminology`
+
+**Save data locally:**
+User: "Transform vitals to SDTM and save locally"
+→ 1. Use `load_data_from_s3` to load data
+→ 2. Use `convert_domain("VS")` to transform
+→ 3. Use `save_sdtm_locally()` to save to local files
+
+## Tool Execution Order
+
+When handling data transformation requests, ALWAYS follow this order:
+
+### Option A: High-Level Flow (Recommended for interactive use)
+1. **Load data first** - Use `load_data_from_s3` to get source data
+2. **Convert domains** - Use `convert_domain` for each requested domain
+   - This tool internally handles: mapping generation → transformation → validation
+3. **Output data** - Use `upload_sdtm_to_s3`, `save_sdtm_locally`, or `load_sdtm_to_neo4j`
+
+### Option B: Low-Level Flow (For granular control)
+1. **Load/Scan data** - Use `download_edc_data` and `scan_source_files`
+2. **Analyze source** - Use `analyze_source_file` to understand data structure
+3. **Generate mapping specification** - Use `generate_mapping_spec` to create the mapping
+   - ⚠️ MANDATORY: You MUST generate mapping specs BEFORE transformation
+4. **Save mapping spec** - Use `save_mapping_spec` to persist the specification
+5. **Transform to SDTM** - Use `transform_to_sdtm` with the generated mapping_spec
+6. **Validate and output** - Use validation and output tools
+
+### Option C: Specification-Driven Flow (For enterprise use)
+1. **Load mapping specification** - Use `load_mapping_specification` to load Excel spec
+2. **Load source data** - Load CSV files for transformation
+3. **Transform domain** - Use `transform_domain_with_spec` for each domain
+4. **Validate and output** - Use validation and output tools
+
+CRITICAL RULES:
+- Never skip the data loading step. The conversion tools require data to be loaded first.
+- Never use `transform_to_sdtm` without first generating a mapping specification using `generate_mapping_spec`
+- The mapping specification defines HOW source columns map to SDTM variables
+- Without a mapping specification, transformation cannot produce correct SDTM data
 """

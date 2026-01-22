@@ -66,7 +66,7 @@
     "DOMAIN": "'SUPPMH'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-21T00:19:37.515308",
+  "created_at": "2026-01-22T12:23:40.377253",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for SURGHXC.csv to SDTM SUPPMH"

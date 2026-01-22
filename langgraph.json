@@ -1,9 +1,24 @@
 {
   "dependencies": [".", "./requirements.txt"],
   "graphs": {
-    "sdtm_agent": "sdtm_pipeline.deepagents.graph:graph",
-    "sdtm_deepagent": "sdtm_pipeline.deepagents.graph:graph",
-    "sdtm_pipeline": "sdtm_pipeline.langgraph_agent.graph:graph"
+    "sdtm_agent": {
+      "path": "sdtm_pipeline.deepagents.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    },
+    "sdtm_deepagent": {
+      "path": "sdtm_pipeline.deepagents.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    },
+    "sdtm_pipeline": {
+      "path": "sdtm_pipeline.langgraph_agent.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    }
   },
   "env": ".env"
 }

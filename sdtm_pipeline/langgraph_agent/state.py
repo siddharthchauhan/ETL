@@ -200,6 +200,7 @@ class SDTMPipelineState(TypedDict, total=False):
     raw_data_dir: Required[str]
     output_dir: Required[str]
     api_key: str
+    target_domains: Optional[List[str]]  # Filter to specific SDTM domains (e.g., ['VS', 'DM'])
 
     # ==========================================================================
     # 7-PHASE PIPELINE TRACKING
@@ -335,7 +336,8 @@ def create_initial_state(
     api_key: str = "",
     max_iterations: int = 3,
     sdtmig_version: str = "3.4",
-    ct_version: str = "2024-12-20"
+    ct_version: str = "2024-12-20",
+    target_domains: Optional[List[str]] = None
 ) -> SDTMPipelineState:
     """
     Create initial pipeline state for the 7-phase SDTM ETL process.
@@ -348,6 +350,7 @@ def create_initial_state(
         max_iterations: Maximum self-correction iterations
         sdtmig_version: SDTM-IG version to use
         ct_version: Controlled Terminology version to use
+        target_domains: Optional list of SDTM domains to process (e.g., ['VS', 'DM'])
 
     Returns:
         Initialized SDTMPipelineState
@@ -358,6 +361,7 @@ def create_initial_state(
         raw_data_dir=raw_data_dir,
         output_dir=output_dir,
         api_key=api_key,
+        target_domains=target_domains,
 
         # 7-Phase pipeline tracking
         current_phase="initialized",

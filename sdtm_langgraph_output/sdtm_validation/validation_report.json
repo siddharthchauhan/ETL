@@ -4,13 +4,13 @@
       "is_valid": false,
       "domain": "LB",
       "total_records": 3387,
-      "error_count": 2,
+      "error_count": 4,
       "warning_count": 0,
       "issues": [
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'LBTESTCD' is missing",
+          "message": "Required variable 'LBTESTCD' is completely empty",
           "domain": "LB",
           "variable": "LBTESTCD",
           "record_id": null,
@@ -19,9 +19,27 @@
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'LBTEST' is missing",
+          "message": "Required variable 'LBTEST' is completely empty",
           "domain": "LB",
           "variable": "LBTEST",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "LBSEQ is not unique within USUBJID (2861 duplicates)",
+          "domain": "LB",
+          "variable": "LBSEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "LB0001",
+          "severity": "error",
+          "message": "3387 records have missing LBTESTCD",
+          "domain": "LB",
+          "variable": "LBTESTCD",
           "record_id": null,
           "value": null
         }
@@ -30,15 +48,82 @@
     {
       "is_valid": false,
       "domain": "PE",
-      "error": "Error tokenizing data. C error: Expected 4 fields in line 35, saw 5\n"
+      "total_records": 2169,
+      "error_count": 3,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PETESTCD' is missing",
+          "domain": "PE",
+          "variable": "PETESTCD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Required variable 'PETEST' is missing",
+          "domain": "PE",
+          "variable": "PETEST",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "PESEQ is not unique within USUBJID (1796 duplicates)",
+          "domain": "PE",
+          "variable": "PESEQ",
+          "record_id": null,
+          "value": null
+        }
+      ]
     },
     {
       "is_valid": false,
       "domain": "AE",
       "total_records": 550,
-      "error_count": 3,
-      "warning_count": 0,
+      "error_count": 5,
+      "warning_count": 3,
       "issues": [
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "AESEQ is not unique within USUBJID (260 duplicates)",
+          "domain": "AE",
+          "variable": "AESEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0024",
+          "severity": "warning",
+          "message": "4 records have invalid AESER values (not in CT)",
+          "domain": "AE",
+          "variable": "AESER",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0025",
+          "severity": "warning",
+          "message": "10 records have invalid AESEV values (not in CT)",
+          "domain": "AE",
+          "variable": "AESEV",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0030",
+          "severity": "error",
+          "message": "6 records have invalid ISO 8601 dates in AEDTC",
+          "domain": "AE",
+          "variable": "AEDTC",
+          "record_id": null,
+          "value": null
+        },
         {
           "rule_id": "SD0030",
           "severity": "error",
@@ -65,20 +150,47 @@
           "variable": "AESTDTC/AEENDTC",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "FDA0011",
+          "severity": "warning",
+          "message": "60 serious AEs have no seriousness criteria flagged",
+          "domain": "AE",
+          "variable": "AESER",
+          "record_id": null,
+          "value": null
         }
       ]
     },
     {
       "is_valid": false,
       "domain": "CM",
-      "total_records": 25,
-      "error_count": 1,
+      "total_records": 302,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'CMTRT' is missing",
+          "message": "Required variable 'CMTRT' is completely empty",
+          "domain": "CM",
+          "variable": "CMTRT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "CMSEQ is not unique within USUBJID (262 duplicates)",
+          "domain": "CM",
+          "variable": "CMSEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "CM0001",
+          "severity": "error",
+          "message": "302 records have missing CMTRT",
           "domain": "CM",
           "variable": "CMTRT",
           "record_id": null,
@@ -97,38 +209,63 @@
     {
       "is_valid": true,
       "domain": "SUPPCM",
-      "total_records": 2793,
-      "error_count": 0,
-      "warning_count": 0,
-      "issues": []
-    },
-    {
-      "is_valid": true,
-      "domain": "VS",
-      "total_records": 2184,
-      "error_count": 0,
-      "warning_count": 0,
-      "issues": []
-    },
-    {
-      "is_valid": true,
-      "domain": "SUPPMH",
-      "total_records": 2163,
+      "total_records": 7169,
       "error_count": 0,
       "warning_count": 0,
       "issues": []
     },
     {
       "is_valid": false,
+      "domain": "VS",
+      "total_records": 2184,
+      "error_count": 1,
+      "warning_count": 0,
+      "issues": [
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "VSSEQ is not unique within USUBJID (1773 duplicates)",
+          "domain": "VS",
+          "variable": "VSSEQ",
+          "record_id": null,
+          "value": null
+        }
+      ]
+    },
+    {
+      "is_valid": false,
+      "domain": "SUPPMH",
+      "error": "Error tokenizing data. C error: Expected 9 fields in line 469, saw 16\n"
+    },
+    {
+      "is_valid": false,
       "domain": "EX",
       "total_records": 271,
-      "error_count": 1,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'EXTRT' is missing",
+          "message": "Required variable 'EXTRT' is completely empty",
+          "domain": "EX",
+          "variable": "EXTRT",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "EXSEQ is not unique within USUBJID (221 duplicates)",
+          "domain": "EX",
+          "variable": "EXSEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "EX0001",
+          "severity": "error",
+          "message": "271 records have missing EXTRT",
           "domain": "EX",
           "variable": "EXTRT",
           "record_id": null,
@@ -140,7 +277,7 @@
       "is_valid": false,
       "domain": "CO",
       "total_records": 172,
-      "error_count": 1,
+      "error_count": 2,
       "warning_count": 0,
       "issues": [
         {
@@ -151,20 +288,47 @@
           "variable": "COVAL",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "COSEQ is not unique within USUBJID (152 duplicates)",
+          "domain": "CO",
+          "variable": "COSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
     {
       "is_valid": false,
       "domain": "MH",
-      "total_records": 68,
-      "error_count": 1,
+      "total_records": 229,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'MHTERM' is missing",
+          "message": "Required variable 'MHTERM' is completely empty",
+          "domain": "MH",
+          "variable": "MHTERM",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "MHSEQ is not unique within USUBJID (211 duplicates)",
+          "domain": "MH",
+          "variable": "MHSEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "MH0001",
+          "severity": "error",
+          "message": "229 records have missing MHTERM",
           "domain": "MH",
           "variable": "MHTERM",
           "record_id": null,
@@ -175,8 +339,8 @@
     {
       "is_valid": false,
       "domain": "IE",
-      "total_records": 16,
-      "error_count": 1,
+      "total_records": 45,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -187,6 +351,24 @@
           "variable": "IETEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "1 records have missing STUDYID",
+          "domain": "IE",
+          "variable": "STUDYID",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "IESEQ is not unique within USUBJID (27 duplicates)",
+          "domain": "IE",
+          "variable": "IESEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
@@ -194,7 +376,7 @@
       "is_valid": false,
       "domain": "TR",
       "total_records": 145,
-      "error_count": 2,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -214,6 +396,15 @@
           "variable": "TRTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "TRSEQ is not unique within USUBJID (115 duplicates)",
+          "domain": "TR",
+          "variable": "TRSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
@@ -221,7 +412,7 @@
       "is_valid": false,
       "domain": "TU",
       "total_records": 95,
-      "error_count": 2,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -241,14 +432,23 @@
           "variable": "TUTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "TUSEQ is not unique within USUBJID (79 duplicates)",
+          "domain": "TU",
+          "variable": "TUSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
     {
       "is_valid": false,
       "domain": "QS",
-      "total_records": 5,
-      "error_count": 2,
+      "total_records": 100,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -268,6 +468,15 @@
           "variable": "QSTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "QSSEQ is not unique within USUBJID (40 duplicates)",
+          "domain": "QS",
+          "variable": "QSSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
@@ -275,7 +484,7 @@
       "is_valid": false,
       "domain": "PC",
       "total_records": 16,
-      "error_count": 2,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -295,22 +504,68 @@
           "variable": "PCTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "PCSEQ is not unique within USUBJID (15 duplicates)",
+          "domain": "PC",
+          "variable": "PCSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
     {
-      "is_valid": true,
+      "is_valid": false,
       "domain": "DM",
-      "total_records": 16,
-      "error_count": 0,
+      "total_records": 22,
+      "error_count": 4,
       "warning_count": 0,
-      "issues": []
+      "issues": [
+        {
+          "rule_id": "SD0001",
+          "severity": "error",
+          "message": "Multiple STUDYID values found: ['MAXIS-08', 'TE']",
+          "domain": "DM",
+          "variable": "STUDYID",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0002",
+          "severity": "error",
+          "message": "1 records have incorrect DOMAIN value",
+          "domain": "DM",
+          "variable": "DOMAIN",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0003",
+          "severity": "error",
+          "message": "1 records have missing USUBJID",
+          "domain": "DM",
+          "variable": "USUBJID",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "DM0002",
+          "severity": "error",
+          "message": "DM should have one record per subject, found 19 duplicates",
+          "domain": "DM",
+          "variable": "USUBJID",
+          "record_id": null,
+          "value": null
+        }
+      ]
     },
     {
       "is_valid": false,
       "domain": "EG",
       "total_records": 60,
-      "error_count": 2,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -330,6 +585,15 @@
           "variable": "EGTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "EGSEQ is not unique within USUBJID (53 duplicates)",
+          "domain": "EG",
+          "variable": "EGSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
@@ -337,7 +601,7 @@
       "is_valid": false,
       "domain": "RS",
       "total_records": 28,
-      "error_count": 2,
+      "error_count": 3,
       "warning_count": 0,
       "issues": [
         {
@@ -357,6 +621,15 @@
           "variable": "RSTEST",
           "record_id": null,
           "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "RSSEQ is not unique within USUBJID (23 duplicates)",
+          "domain": "RS",
+          "variable": "RSSEQ",
+          "record_id": null,
+          "value": null
         }
       ]
     },
@@ -364,13 +637,13 @@
       "is_valid": false,
       "domain": "DS",
       "total_records": 16,
-      "error_count": 2,
+      "error_count": 4,
       "warning_count": 0,
       "issues": [
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'DSTERM' is missing",
+          "message": "Required variable 'DSTERM' is completely empty",
           "domain": "DS",
           "variable": "DSTERM",
           "record_id": null,
@@ -379,9 +652,27 @@
         {
           "rule_id": "SD0001",
           "severity": "error",
-          "message": "Required variable 'DSDECOD' is missing",
+          "message": "Required variable 'DSDECOD' is completely empty",
           "domain": "DS",
           "variable": "DSDECOD",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "SD0010",
+          "severity": "error",
+          "message": "DSSEQ is not unique within USUBJID (15 duplicates)",
+          "domain": "DS",
+          "variable": "DSSEQ",
+          "record_id": null,
+          "value": null
+        },
+        {
+          "rule_id": "DS0001",
+          "severity": "error",
+          "message": "16 records have missing DSTERM",
+          "domain": "DS",
+          "variable": "DSTERM",
           "record_id": null,
           "value": null
         }

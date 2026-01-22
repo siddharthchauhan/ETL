@@ -66,7 +66,7 @@
     "DOMAIN": "'RS'"
   },
   "controlled_terminologies": {},
-  "created_at": "2026-01-21T00:19:52.578418",
+  "created_at": "2026-01-22T12:23:43.778256",
   "created_by": "SDTM Pipeline",
   "version": "1.0",
   "comments": "Auto-generated mapping for RESP.csv to SDTM RS"

@@ -25,7 +25,9 @@ class RCodeGenerator:
     def __init__(self, study_id: str, output_dir: str = "./r_programs"):
         self.study_id = study_id
         self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        # Only create dir if it doesn't exist (avoid blocking in async contexts)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
 
     def generate_all(self, mappings: List[MappingSpecification]) -> Dict[str, str]:
         """

@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "study_id": "MAXIS-08",
+    "source_domain": "AEVENT.csv + AEVENTC.csv",
+    "target_domain": "AE",
+    "sdtm_version": "SDTM-IG 3.4",
+    "created_by": "SDTM Transformation Agent",
+    "created_date": "2025-01-22",
+    "description": "Comprehensive mapping specification for transforming adverse event data to CDISC SDTM AE domain"
+  },
+  "source_files": [
+    {
+      "filename": "AEVENT.csv",
+      "records": 550,
+      "columns": 38,
+      "description": "Primary adverse event data"
+    },
+    {
+      "filename": "AEVENTC.csv",
+      "records": 276,
+      "columns": 36,
+      "description": "Coded adverse event data with MedDRA terms"
+    }
+  ],
+  "variable_mappings": [
+    {
+      "sdtm_variable": "STUDYID",
+      "label": "Study Identifier",
+      "type": "Char",
+      "length": 20,
+      "core": "Req",
+      "source_column": null,
+      "derivation": "Constant: 'MAXIS-08'",
+      "transformation": "ASSIGN('MAXIS-08')",
+      "controlled_terminology": null,
+      "comments": "Study identifier constant"
+    },
+    {
+      "sdtm_variable": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "type": "Char",
+      "length": 2,
+      "core": "Req",
+      "source_column": null,
+      "derivation": "Constant: 'AE'",
+      "transformation": "ASSIGN('AE')",
+      "controlled_terminology": null,
+      "comments": "Domain identifier constant"
+    },
+    {
+      "sdtm_variable": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "type": "Char",
+      "length": 40,
+      "core": "Req",
+      "source_column": ["STUDY", "INVSITE", "PT"],
+      "derivation": "STUDYID || '-' || SITEID || '-' || SUBJID",
+      "transformation": "CONCAT(STUDY, '-', INVSITE, '-', PT)",
+      "controlled_terminology": null,
+      "comments": "Concatenation of study, site, and subject identifiers"
+    },
+    {
+      "sdtm_variable": "AESEQ",
+      "label": "Sequence Number",
+      "type": "Num",
+      "length": 8,
+      "core": "Req",
+      "source_column": null,
+      "derivation": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY AESTDTC)",
+      "transformation": "SEQUENCE(USUBJID, AESTDTC)",
+      "controlled_terminology": null,
+      "comments": "Unique sequence number per subject, ordered by start date"
+    },
+    {
+      "sdtm_variable": "AETERM",
+      "label": "Reported Term for the Adverse Event",
+      "type": "Char",
+      "length": 200,
+      "core": "Req",
+      "source_column": "AEVERB",
+      "derivation": null,
+      "transformation": "COPY(AEVERB)",
+      "controlled_terminology": null,
+      "comments": "Verbatim adverse event term as reported by investigator"
+    },
+    {
+      "sdtm_variable": "AEDECOD",
+      "label": "Dictionary-Derived Term",
+      "type": "Char",
+      "length": 200,
+      "core": "Req",
+      "source_column": "AEPTT",
+      "derivation": null,
+      "transformation": "COPY(AEPTT)",
+      "controlled_terminology": "MedDRA PT",
+      "comments": "Preferred Term from MedDRA coding"
+    },
+    {
+      "sdtm_variable": "AELLT",
+      "label": "Lowest Level Term",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "source_column": "AELTT",
+      "derivation": null,
+      "transformation": "COPY(AELTT)",
+      "controlled_terminology": "MedDRA LLT",
+      "comments": "MedDRA Lowest Level Term"
+    },
+    {
+      "sdtm_variable": "AELLTCD",
+      "label": "Lowest Level Term Code",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": "AELTC",
+      "derivation": null,
+      "transformation": "COPY(AELTC)",
+      "controlled_terminology": "MedDRA",
+      "comments": "Numeric code for MedDRA LLT"
+    },
+    {
+      "sdtm_variable": "AEPTCD",
+      "label": "Preferred Term Code",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": "AEPTC",
+      "derivation": null,
+      "transformation": "COPY(AEPTC)",
+      "controlled_terminology": "MedDRA",
+      "comments": "Numeric code for MedDRA PT"
+    },
+    {
+      "sdtm_variable": "AEHLT",
+      "label": "High Level Term",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "source_column": "AEHTT",
+      "derivation": null,
+      "transformation": "COPY(AEHTT)",
+      "controlled_terminology": "MedDRA HLT",
+      "comments": "MedDRA High Level Term"
+    },
+    {
+      "sdtm_variable": "AEHLTCD",
+      "label": "High Level Term Code",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": "AEHTC",
+      "derivation": null,
+      "transformation": "COPY(AEHTC)",
+      "controlled_terminology": "MedDRA",
+      "comments": "Numeric code for MedDRA HLT"
+    },
+    {
+      "sdtm_variable": "AEHLGT",
+      "label": "High Level Group Term",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "source_column": "AEHGT1",
+      "derivation": null,
+      "transformation": "COPY(AEHGT1)",
+      "controlled_terminology": "MedDRA HLGT",
+      "comments": "MedDRA High Level Group Term"
+    },
+    {
+      "sdtm_variable": "AEHLGTCD",
+      "label": "High Level Group Term Code",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": "AEHGC",
+      "derivation": null,
+      "transformation": "COPY(AEHGC)",
+      "controlled_terminology": "MedDRA",
+      "comments": "Numeric code for MedDRA HLGT"
+    },
+    {
+      "sdtm_variable": "AESOC",
+      "label": "Primary System Organ Class",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "source_column": "AESCT",
+      "derivation": null,
+      "transformation": "COPY(AESCT)",
+      "controlled_terminology": "MedDRA SOC",
+      "comments": "MedDRA System Organ Class"
+    },
+    {
+      "sdtm_variable": "AESOCCD",
+      "label": "Primary System Organ Class Code",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": "AESCC",
+      "derivation": null,
+      "transformation": "COPY(AESCC)",
+      "controlled_terminology": "MedDRA",
+      "comments": "Numeric code for MedDRA SOC"
+    },
+    {
+      "sdtm_variable": "AESTDTC",
+      "label": "Start Date/Time of Adverse Event",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "source_column": "AESTDT",
+      "derivation": "Convert to ISO 8601 format",
+      "transformation": "DATE_FORMAT(AESTDT, 'YYYYMMDD', 'YYYY-MM-DD')",
+      "controlled_terminology": "ISO 8601",
+      "comments": "Convert from YYYYMMDD or YYYYMM to ISO 8601 (YYYY-MM-DD or YYYY-MM)"
+    },
+    {
+      "sdtm_variable": "AEENDTC",
+      "label": "End Date/Time of Adverse Event",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "source_column": "AEENDT",
+      "derivation": "Convert to ISO 8601 format",
+      "transformation": "DATE_FORMAT(AEENDT, 'YYYYMMDD', 'YYYY-MM-DD')",
+      "controlled_terminology": "ISO 8601",
+      "comments": "Convert from YYYYMMDD or YYYYMM to ISO 8601"
+    },
+    {
+      "sdtm_variable": "AESTDY",
+      "label": "Study Day of Start of Adverse Event",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": null,
+      "derivation": "IF(AESTDTC >= RFSTDTC, DAYS(AESTDTC - RFSTDTC) + 1, DAYS(AESTDTC - RFSTDTC))",
+      "transformation": "STUDY_DAY(AESTDTC, RFSTDTC)",
+      "controlled_terminology": null,
+      "comments": "Calculated from DM.RFSTDTC and AESTDTC. Positive values >= reference date, negative values < reference date"
+    },
+    {
+      "sdtm_variable": "AEENDY",
+      "label": "Study Day of End of Adverse Event",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "source_column": null,
+      "derivation": "IF(AEENDTC >= RFSTDTC, DAYS(AEENDTC - RFSTDTC) + 1, DAYS(AEENDTC - RFSTDTC))",
+      "transformation": "STUDY_DAY(AEENDTC, RFSTDTC)",
+      "controlled_terminology": null,
+      "comments": "Calculated from DM.RFSTDTC and AEENDTC"
+    },
+    {
+      "sdtm_variable": "AEDTC",
+      "label": "Date/Time of Collection",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "source_column": "AESTDT",
+      "derivation": "Same as AESTDTC",
+      "transformation": "COPY(AESTDTC)",
+      "controlled_terminology": "ISO 8601",
+      "comments": "Collection date typically same as event start date"
+    },
+    {
+      "sdtm_variable": "AESEV",
+      "label": "Severity/Intensity",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "source_column": "AESEV",
+      "derivation": "Map to CDISC CT",
+      "transformation": "MAP(AESEV, {'MILD': 'MILD', 'MODERATE': 'MODERATE', 'SEVERE': 'SEVERE'})",
+      "controlled_terminology": "AESEV (C66769)",
+      "comments": "Valid values: MILD, MODERATE, SEVERE"
+    },
+    {
+      "sdtm_variable": "AESER",
+      "label": "Serious Event",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": "AESERL",
+      "derivation": "Map to Y/N",
+      "transformation": "MAP(AESERL, {'SERIOUS': 'Y', 'NOT SERIOUS': 'N', '1': 'Y', '0': 'N'})",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Valid values: Y (Yes), N (No)"
+    },
+    {
+      "sdtm_variable": "AEREL",
+      "label": "Causality",
+      "type": "Char",
+      "length": 40,
+      "core": "Exp",
+      "source_column": "AEREL",
+      "derivation": "Standardize relationship terminology",
+      "transformation": "MAP(AEREL, {'UNRELATED': 'NOT RELATED', 'UNLIKELY': 'UNLIKELY', 'POSSIBLE': 'POSSIBLY RELATED', 'RELATED': 'RELATED', 'PROBABLE': 'PROBABLE', 'DEFINITE': 'DEFINITE'})",
+      "controlled_terminology": "Study-specific",
+      "comments": "Relationship to study drug"
+    },
+    {
+      "sdtm_variable": "AEACN",
+      "label": "Action Taken with Study Treatment",
+      "type": "Char",
+      "length": 40,
+      "core": "Exp",
+      "source_column": "AEACTL",
+      "derivation": "Map to CDISC CT",
+      "transformation": "MAP(AEACTL, {'NONE': 'DOSE NOT CHANGED', 'REDUCED': 'DOSE REDUCED', 'INTERRUPTED': 'DRUG INTERRUPTED', 'WITHDRAWN': 'DRUG WITHDRAWN'})",
+      "controlled_terminology": "ACN (C66767)",
+      "comments": "Action taken due to adverse event"
+    },
+    {
+      "sdtm_variable": "AEOUT",
+      "label": "Outcome of Adverse Event",
+      "type": "Char",
+      "length": 40,
+      "core": "Exp",
+      "source_column": "AEOUTCL",
+      "derivation": "Map to CDISC CT",
+      "transformation": "MAP(AEOUTCL, {'RESOLVED': 'RECOVERED/RESOLVED', 'RECOVERING': 'RECOVERING/RESOLVING', 'NOT RESOLVED': 'NOT RECOVERED/NOT RESOLVED', 'CONTINUING': 'NOT RECOVERED/NOT RESOLVED', 'FATAL': 'FATAL'})",
+      "controlled_terminology": "OUT (C66768)",
+      "comments": "Final outcome of the adverse event"
+    },
+    {
+      "sdtm_variable": "AESDTH",
+      "label": "Results in Death",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "Derived from serious event criteria",
+      "transformation": "IF(AEOUT == 'FATAL', 'Y', 'N')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if AE resulted in death"
+    },
+    {
+      "sdtm_variable": "AESHOSP",
+      "label": "Requires or Prolongs Hospitalization",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "From serious event criteria",
+      "transformation": "CHECK_SERIOUSNESS_CRITERIA(source, 'HOSPITALIZATION')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if AE required/prolonged hospitalization"
+    },
+    {
+      "sdtm_variable": "AESDISAB",
+      "label": "Results in Disability",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "From serious event criteria",
+      "transformation": "CHECK_SERIOUSNESS_CRITERIA(source, 'DISABILITY')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if AE resulted in disability"
+    },
+    {
+      "sdtm_variable": "AESCONG",
+      "label": "Congenital Anomaly or Birth Defect",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "From serious event criteria",
+      "transformation": "CHECK_SERIOUSNESS_CRITERIA(source, 'CONGENITAL')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if AE was congenital anomaly"
+    },
+    {
+      "sdtm_variable": "AESLIFE",
+      "label": "Is Life Threatening",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "From serious event criteria",
+      "transformation": "CHECK_SERIOUSNESS_CRITERIA(source, 'LIFE_THREATENING')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if AE was life threatening"
+    },
+    {
+      "sdtm_variable": "AESMIE",
+      "label": "Other Medically Important Serious Event",
+      "type": "Char",
+      "length": 1,
+      "core": "Exp",
+      "source_column": null,
+      "derivation": "From serious event criteria",
+      "transformation": "CHECK_SERIOUSNESS_CRITERIA(source, 'MEDICALLY_IMPORTANT')",
+      "controlled_terminology": "NY (C66742)",
+      "comments": "Y if other medically important serious event"
+    },
+    {
+      "sdtm_variable": "VISITNUM",
+      "label": "Visit Number",
+      "type": "Num",
+      "length": 8,
+      "core": "Exp",
+      "source_column": "VISIT",
+      "derivation": "Map visit codes to numeric values",
+      "transformation": "VISIT_NUMBER(VISIT)",
+      "controlled_terminology": null,
+      "comments": "Numeric visit identifier, 99 for unscheduled"
+    },
+    {
+      "sdtm_variable": "VISIT",
+      "label": "Visit Name",
+      "type": "Char",
+      "length": 40,
+      "core": "Perm",
+      "source_column": "VISIT",
+      "derivation": null,
+      "transformation": "COPY(VISIT)",
+      "controlled_terminology": "Study-specific",
+      "comments": "Protocol-defined visit name"
+    },
+    {
+      "sdtm_variable": "EPOCH",
+      "label": "Epoch",
+      "type": "Char",
+      "length": 40,
+      "core": "Perm",
+      "source_column": null,
+      "derivation": "Derived from visit or study day",
+      "transformation": "DERIVE_EPOCH(VISITNUM, AESTDY)",
+      "controlled_terminology": "Study-specific",
+      "comments": "Trial epoch (e.g., SCREENING, TREATMENT, FOLLOW-UP)"
+    }
+  ],
+  "controlled_terminologies": {
+    "AESEV": {
+      "codelist": "C66769",
+      "codelist_name": "Severity/Intensity Scale for Adverse Events",
+      "valid_values": ["MILD", "MODERATE", "SEVERE"],
+      "extensible": "No"
+    },
+    "AESER": {
+      "codelist": "C66742",
+      "codelist_name": "No Yes Response",
+      "valid_values": ["N", "Y"],
+      "extensible": "No"
+    },
+    "AEREL": {
+      "codelist": "Study-specific",
+      "codelist_name": "Causality",
+      "valid_values": ["NOT RELATED", "UNLIKELY", "POSSIBLY RELATED", "RELATED", "PROBABLE", "DEFINITE"],
+      "extensible": "Yes"
+    },
+    "AEACN": {
+      "codelist": "C66767",
+      "codelist_name": "Action Taken with Study Treatment",
+      "valid_values": ["DOSE NOT CHANGED", "DOSE REDUCED", "DOSE INCREASED", "DRUG INTERRUPTED", "DRUG WITHDRAWN", "NOT APPLICABLE", "UNKNOWN", "NOT EVALUABLE"],
+      "extensible": "No"
+    },
+    "AEOUT": {
+      "codelist": "C66768",
+      "codelist_name": "Outcome of Event",
+      "valid_values": ["RECOVERED/RESOLVED", "RECOVERING/RESOLVING", "NOT RECOVERED/NOT RESOLVED", "RECOVERED/RESOLVED WITH SEQUELAE", "FATAL", "UNKNOWN"],
+      "extensible": "No"
+    }
+  },
+  "derivation_algorithms": {
+    "USUBJID": {
+      "algorithm": "Concatenate STUDYID, SITEID (INVSITE), and SUBJID (PT) with hyphen delimiter",
+      "formula": "STUDYID || '-' || INVSITE || '-' || PT",
+      "example": "MAXIS-08-C008_408-01-01"
+    },
+    "AESEQ": {
+      "algorithm": "Generate sequential number within each USUBJID, ordered by AESTDTC ascending",
+      "formula": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY AESTDTC)",
+      "example": "1, 2, 3, ..."
+    },
+    "AESTDY": {
+      "algorithm": "Calculate study day relative to reference start date (RFSTDTC from DM)",
+      "formula": "IF(AESTDTC >= RFSTDTC, DAYS_BETWEEN(RFSTDTC, AESTDTC) + 1, DAYS_BETWEEN(RFSTDTC, AESTDTC))",
+      "example": "If RFSTDTC = 2008-09-01 and AESTDTC = 2008-09-10, then AESTDY = 10"
+    },
+    "AEENDY": {
+      "algorithm": "Calculate study day of end date relative to reference start date",
+      "formula": "IF(AEENDTC >= RFSTDTC, DAYS_BETWEEN(RFSTDTC, AEENDTC) + 1, DAYS_BETWEEN(RFSTDTC, AEENDTC))",
+      "example": "If RFSTDTC = 2008-09-01 and AEENDTC = 2008-09-11, then AEENDY = 11"
+    }
+  },
+  "data_quality_rules": [
+    {
+      "rule_id": "AE-001",
+      "rule_type": "Completeness",
+      "description": "STUDYID must be populated for all records",
+      "severity": "Error",
+      "check": "STUDYID IS NOT NULL"
+    },
+    {
+      "rule_id": "AE-002",
+      "rule_type": "Completeness",
+      "description": "DOMAIN must be 'AE' for all records",
+      "severity": "Error",
+      "check": "DOMAIN = 'AE'"
+    },
+    {
+      "rule_id": "AE-003",
+      "rule_type": "Completeness",
+      "description": "USUBJID must be populated for all records",
+      "severity": "Error",
+      "check": "USUBJID IS NOT NULL"
+    },
+    {
+      "rule_id": "AE-004",
+      "rule_type": "Uniqueness",
+      "description": "USUBJID + AESEQ must be unique",
+      "severity": "Error",
+      "check": "COUNT(USUBJID, AESEQ) = DISTINCT COUNT(USUBJID, AESEQ)"
+    },
+    {
+      "rule_id": "AE-005",
+      "rule_type": "Completeness",
+      "description": "AETERM must be populated for all records",
+      "severity": "Error",
+      "check": "AETERM IS NOT NULL"
+    },
+    {
+      "rule_id": "AE-006",
+      "rule_type": "Completeness",
+      "description": "AESTDTC must be populated for all records",
+      "severity": "Error",
+      "check": "AESTDTC IS NOT NULL"
+    },
+    {
+      "rule_id": "AE-007",
+      "rule_type": "Format",
+      "description": "AESTDTC must be in ISO 8601 format",
+      "severity": "Error",
+      "check": "AESTDTC MATCHES '^\\d{4}(-\\d{2}(-\\d{2})?)?$'"
+    },
+    {
+      "rule_id": "AE-008",
+      "rule_type": "Format",
+      "description": "AEENDTC must be in ISO 8601 format if populated",
+      "severity": "Error",
+      "check": "AEENDTC IS NULL OR AEENDTC MATCHES '^\\d{4}(-\\d{2}(-\\d{2})?)?$'"
+    },
+    {
+      "rule_id": "AE-009",
+      "rule_type": "Consistency",
+      "description": "AEENDTC must be >= AESTDTC if both populated",
+      "severity": "Warning",
+      "check": "AEENDTC IS NULL OR AEENDTC >= AESTDTC"
+    },
+    {
+      "rule_id": "AE-010",
+      "rule_type": "Controlled Terminology",
+      "description": "AESEV must be from valid codelist",
+      "severity": "Error",
+      "check": "AESEV IN ('MILD', 'MODERATE', 'SEVERE') OR AESEV IS NULL"
+    },
+    {
+      "rule_id": "AE-011",
+      "rule_type": "Controlled Terminology",
+      "description": "AESER must be Y or N",
+      "severity": "Error",
+      "check": "AESER IN ('Y', 'N') OR AESER IS NULL"
+    },
+    {
+      "rule_id": "AE-012",
+      "rule_type": "Consistency",
+      "description": "If AESER = 'Y', at least one serious criteria flag should be 'Y'",
+      "severity": "Warning",
+      "check": "IF AESER = 'Y' THEN (AESDTH = 'Y' OR AESHOSP = 'Y' OR AESDISAB = 'Y' OR AESCONG = 'Y' OR AESLIFE = 'Y' OR AESMIE = 'Y')"
+    },
+    {
+      "rule_id": "AE-013",
+      "rule_type": "Consistency",
+      "description": "If AEOUT = 'FATAL', AESDTH should be 'Y'",
+      "severity": "Warning",
+      "check": "IF AEOUT = 'FATAL' THEN AESDTH = 'Y'"
+    }
+  ],
+  "supplemental_qualifiers": [
+    {
+      "qnam": "AETRT",
+      "qlabel": "Reported Treatment for AE",
+      "qval_source": "AETRT",
+      "description": "Treatment received for the adverse event"
+    },
+    {
+      "qnam": "CPEVENT",
+      "qlabel": "Collected at Planned Event",
+      "qval_source": "CPEVENT",
+      "description": "Indicator whether AE collected at planned visit"
+    }
+  ],
+  "notes": [
+    "MedDRA coding hierarchy (LLT -> PT -> HLT -> HLGT -> SOC) should be consistent",
+    "Study day calculations require DM.RFSTDTC for each subject",
+    "Serious event criteria flags (AESDTH, AESHOSP, etc.) may need to be derived from source data annotations",
+    "EPOCH derivation requires study-specific visit-to-epoch mapping",
+    "Source data contains mix of verbatim terms (AEVERB) and coded terms (AEPTT, etc.)",
+    "AEVENTC.csv contains additional MedDRA codes that should be merged with AEVENT.csv where applicable"
+  ]
+}

@@ -6,18 +6,26 @@ Main DeepAgent implementation for SDTM transformation pipeline.
 This is the unified SDTM agent that combines:
 - DeepAgents architecture (planning, subagent delegation, filesystem backend)
 - SDTM Chat capabilities (interactive conversion, knowledge base, web search)
+- Skills for clinical data standards, programming, and QA/validation
 
 Architecture:
 - Main orchestrator agent with planning capabilities
 - Specialized subagents for domain-specific tasks
 - Filesystem backend for context management
 - 27 tools for complete SDTM pipeline operations
+- 3 skills for progressive disclosure of domain expertise
+
+Skills:
+- cdisc-standards: SDTM domain knowledge, controlled terminology, protocol interpretation
+- sdtm-programming: Python/SAS/R transformation patterns, date handling, ETL design
+- qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring, debugging
 """
 
 import os
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 from deepagents import create_deep_agent, SubAgent
 from deepagents.backends import FilesystemBackend, CompositeBackend, StateBackend
@@ -53,6 +61,7 @@ class SDTMAgentConfig:
     # Paths
     workspace_dir: str = "./sdtm_workspace"
     output_dir: str = "./sdtm_deepagent_output"
+    skills_dir: str = field(default_factory=lambda: str(Path(__file__).parent / "skills"))
 
     # S3 configuration
     s3_bucket: str = field(default_factory=lambda: os.getenv("S3_ETL_BUCKET", "s3dcri"))
@@ -72,6 +81,9 @@ class SDTMAgentConfig:
     # Validation thresholds
     min_compliance_score: float = 95.0
     max_critical_errors: int = 0
+
+    # LangGraph configuration
+    recursion_limit: int = field(default_factory=lambda: int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "50")))
 
 
 # =============================================================================
@@ -100,6 +112,12 @@ def create_sdtm_deep_agent(
     - Main orchestrator agent with planning (write_todos)
     - Filesystem backend for context management
     - 5 specialized subagents for domain expertise
+    - 3 skills for progressive disclosure of domain knowledge
+
+    Skills (loaded from skills_dir):
+    - cdisc-standards: CDISC SDTM knowledge, controlled terminology, protocol interpretation
+    - sdtm-programming: Python/SAS/R patterns, date handling, ETL design
+    - qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring
 
     Args:
         config: Agent configuration options
@@ -131,15 +149,25 @@ def create_sdtm_deep_agent(
     # Configure HITL if enabled
     interrupt_config = HITL_CONFIG if config.enable_human_review else None
 
-    # Create the deep agent
+    # Setup skills directory - skills provide progressive disclosure of domain expertise
+    # The agent will only load skill content when relevant to the current task
+    skills_paths = [config.skills_dir] if os.path.isdir(config.skills_dir) else []
+
+    # Create the deep agent with skills
     agent = create_deep_agent(
         model=config.model,
         tools=SDTM_TOOLS,
         system_prompt=SDTM_SYSTEM_PROMPT,
         subagents=subagents,
         backend=backend,
+        skills=skills_paths,
         interrupt_on=interrupt_config,
     )
+
+    # Apply recursion limit for complex SDTM pipelines
+    # Default LangGraph limit is 25, but SDTM transformations with
+    # subagents, skills, and multiple tool calls often need more steps
+    agent = agent.with_config(recursion_limit=config.recursion_limit)
 
     return agent
 

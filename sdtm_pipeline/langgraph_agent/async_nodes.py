@@ -255,14 +255,30 @@ async def ingest_data_node(state: SDTMPipelineState, config: RunnableConfig) -> 
         'PATICDO3.csv': 'DM',     # Patient ID -> Demographics
     }
 
+    # Get target domains filter from state (if specified)
+    target_domains = state.get("target_domains", None)
+
     selected_files = []
     for f in source_files:
         if f['name'] in domain_mapping:
             f['target_domain'] = domain_mapping[f['name']]
-            selected_files.append(f)
+
+            # Filter by target domains if specified
+            if target_domains is None:
+                # No filter - include all
+                selected_files.append(f)
+            elif f['target_domain'] in target_domains:
+                # Only include if domain matches filter
+                selected_files.append(f)
+            elif f['target_domain'].startswith('SUPP') and f['target_domain'][4:] in target_domains:
+                # Include SUPP domains if base domain is in filter (e.g., SUPPAE for AE)
+                selected_files.append(f)
 
     # Count unique domains
     unique_domains = set(f['target_domain'] for f in selected_files)
+
+    if target_domains:
+        print(f"  Domain filter applied: {target_domains}")
 
     messages.append(f"Found {len(source_files)} CSV files")
     messages.append(f"Selected {len(selected_files)} files mapping to {len(unique_domains)} SDTM domains")
@@ -406,7 +422,8 @@ async def generate_mappings_parallel_node(state: SDTMPipelineState, config: Runn
     print("=" * 60)
 
     study_id = state.get("study_id", "UNKNOWN")
-    api_key = state.get("api_key", "")
+    # Get API key from state or environment variable
+    api_key = state.get("api_key") or os.getenv("ANTHROPIC_API_KEY", "")
     selected_files = state.get("selected_files", [])
     output_dir = state.get("output_dir", "/tmp")
 
@@ -723,10 +740,21 @@ async def generate_code_parallel_node(state: SDTMPipelineState, config: Runnable
 
     messages = []
 
+    # Pre-create directories to avoid blocking in constructors
+    sas_dir = os.path.join(output_dir, "sas_programs")
+    r_dir = os.path.join(output_dir, "r_programs")
+
+    await asyncio.get_event_loop().run_in_executor(
+        None, lambda: os.makedirs(sas_dir, exist_ok=True)
+    )
+    await asyncio.get_event_loop().run_in_executor(
+        None, lambda: os.makedirs(r_dir, exist_ok=True)
+    )
+
     async def generate_sas():
         """Generate SAS programs."""
         print("  Generating SAS programs...")
-        sas_dir = os.path.join(output_dir, "sas_programs")
+        # Directory already created above
         sas_generator = SASCodeGenerator(study_id, sas_dir)
         return await asyncio.get_event_loop().run_in_executor(
             None, sas_generator.generate_all, specs
@@ -735,7 +763,7 @@ async def generate_code_parallel_node(state: SDTMPipelineState, config: Runnable
     async def generate_r():
         """Generate R scripts."""
         print("  Generating R scripts...")
-        r_dir = os.path.join(output_dir, "r_programs")
+        # Directory already created above
         r_generator = RCodeGenerator(study_id, r_dir)
         return await asyncio.get_event_loop().run_in_executor(
             None, r_generator.generate_all, specs

@@ -40,10 +40,24 @@ Version: 2.0.0 (Enhanced with 7-phase pipeline support)
 
 import os
 import sys
+import asyncio
 from typing import Dict, Any, List, Literal, Optional
 from typing_extensions import TypedDict
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+# =============================================================================
+# MONKEY-PATCH RECURSION LIMIT (must be done before importing langgraph.graph)
+# =============================================================================
+# The langgraph-api doesn't properly apply recursion_limit from langgraph.json
+# So we patch the default at import time
+try:
+    import langgraph.pregel.main as pregel_main
+    _RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+    pregel_main.DEFAULT_RECURSION_LIMIT = _RECURSION_LIMIT
+    print(f"[SDTM Pipeline] Patched DEFAULT_RECURSION_LIMIT to {_RECURSION_LIMIT}")
+except Exception as e:
+    print(f"[SDTM Pipeline] Warning: Could not patch recursion limit: {e}")
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -117,6 +131,10 @@ class PipelineInput(BaseModel):
     output_dir: str = Field(
         default="./sdtm_langgraph_output",
         description="Output directory for SDTM data and reports"
+    )
+    target_domains: Optional[List[str]] = Field(
+        default=None,
+        description="List of target SDTM domains to process (e.g., ['VS', 'DM']). If None, processes all domains."
     )
     human_decision: str = Field(
         default="approve",
@@ -414,7 +432,7 @@ async def generate_define_xml_node(
 
             # Generate Define.xml
             define_path = os.path.join(output_dir, "define.xml")
-            os.makedirs(output_dir, exist_ok=True)
+            await asyncio.to_thread(os.makedirs, output_dir, exist_ok=True)
 
             xml_content = generator.generate(define_path)
             define_xml_path = define_path
@@ -649,10 +667,18 @@ def build_sdtm_graph() -> StateGraph:
 # Compiled Graph Export (for langgraph dev)
 # ============================================================================
 
+# Recursion limit - increase from default 25 to handle complex pipelines
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+
 # Build and compile the graph
 # Note: Do NOT pass checkpointer here - langgraph dev handles persistence automatically
 _workflow = build_sdtm_graph()
+
+# Compile the graph
+# Note: recursion_limit is set via langgraph.json config, not with_config
+# because with_config returns a RunnableBinding which isn't recognized by langgraph dev
+print(f"[SDTM Pipeline] Creating graph (recursion_limit={RECURSION_LIMIT} set in langgraph.json)")
 graph = _workflow.compile()
 
 # Export graph info
-__all__ = ["graph", "build_sdtm_graph", "SDTMPipelineState", "PipelineInput", "PipelineOutput"]
+__all__ = ["graph", "build_sdtm_graph", "SDTMPipelineState", "PipelineInput", "PipelineOutput", "RECURSION_LIMIT"]

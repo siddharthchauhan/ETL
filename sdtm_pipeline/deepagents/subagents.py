@@ -1,7 +1,9 @@
 """
-SDTM Specialized Subagents
-==========================
+SDTM Specialized Subagents (Async)
+===================================
 DeepAgents subagent configurations for SDTM domain expertise.
+
+All tools are async to prevent blocking the ASGI event loop in LangGraph.
 
 Each subagent is a specialized agent that can be delegated to via the
 built-in `task` tool. Subagents provide context isolation and domain
@@ -16,11 +18,23 @@ Subagents:
 """
 
 import os
+import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from langchain_core.tools import tool
 import pandas as pd
+import aiofiles
+import aiofiles.os
+
+# Async utilities
+from .async_utils import (
+    async_read_csv,
+    async_to_csv,
+    async_makedirs,
+    async_s3_upload,
+    async_neo4j_load_dataframe,
+)
 
 
 # =============================================================================
@@ -77,7 +91,7 @@ CONTROLLED_TERMINOLOGY = {
 
 
 # =============================================================================
-# SDTM EXPERT TOOLS
+# SDTM EXPERT TOOLS (No I/O - can stay sync)
 # =============================================================================
 
 @tool
@@ -180,13 +194,13 @@ SDTM_EXPERT_TOOLS = [lookup_sdtm_domain, validate_controlled_terminology, get_ma
 
 
 # =============================================================================
-# VALIDATOR TOOLS
+# VALIDATOR TOOLS (Async)
 # =============================================================================
 
 @tool
-def validate_structural(file_path: str, domain: str) -> Dict[str, Any]:
+async def validate_structural(file_path: str, domain: str) -> Dict[str, Any]:
     """
-    Perform structural validation of SDTM dataset.
+    Perform structural validation of SDTM dataset (async).
 
     Args:
         file_path: Path to SDTM CSV file
@@ -196,7 +210,7 @@ def validate_structural(file_path: str, domain: str) -> Dict[str, Any]:
         Structural validation results
     """
     try:
-        df = pd.read_csv(file_path)
+        df = await async_read_csv(file_path)
     except Exception as e:
         return {"layer": "structural", "domain": domain, "is_valid": False, "error": str(e)}
 
@@ -223,9 +237,9 @@ def validate_structural(file_path: str, domain: str) -> Dict[str, Any]:
 
 
 @tool
-def validate_cdisc_conformance(file_path: str, domain: str) -> Dict[str, Any]:
+async def validate_cdisc_conformance(file_path: str, domain: str) -> Dict[str, Any]:
     """
-    Validate SDTM dataset against CDISC conformance rules.
+    Validate SDTM dataset against CDISC conformance rules (async).
 
     Args:
         file_path: Path to SDTM CSV file
@@ -237,7 +251,7 @@ def validate_cdisc_conformance(file_path: str, domain: str) -> Dict[str, Any]:
     import re
 
     try:
-        df = pd.read_csv(file_path)
+        df = await async_read_csv(file_path)
     except Exception as e:
         return {"layer": "cdisc", "domain": domain, "is_valid": False, "error": str(e)}
 
@@ -293,13 +307,13 @@ VALIDATOR_TOOLS = [validate_structural, validate_cdisc_conformance, calculate_co
 
 
 # =============================================================================
-# TRANSFORMER TOOLS
+# TRANSFORMER TOOLS (Async)
 # =============================================================================
 
 @tool
-def transform_demographics(file_path: str, study_id: str, output_path: str) -> Dict[str, Any]:
+async def transform_demographics(file_path: str, study_id: str, output_path: str) -> Dict[str, Any]:
     """
-    Transform source demographics data to SDTM DM domain.
+    Transform source demographics data to SDTM DM domain (async).
 
     Args:
         file_path: Path to source demographics CSV
@@ -310,7 +324,7 @@ def transform_demographics(file_path: str, study_id: str, output_path: str) -> D
         Transformation result
     """
     try:
-        df = pd.read_csv(file_path)
+        df = await async_read_csv(file_path)
         records_in = len(df)
 
         dm = pd.DataFrame()
@@ -334,8 +348,7 @@ def transform_demographics(file_path: str, study_id: str, output_path: str) -> D
         if "AGEU" not in dm.columns:
             dm["AGEU"] = "YEARS"
 
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        dm.to_csv(output_path, index=False)
+        await async_to_csv(dm, output_path, index=False)
 
         return {"success": True, "domain": "DM", "records_in": records_in, "records_out": len(dm), "output_path": output_path}
     except Exception as e:
@@ -343,9 +356,9 @@ def transform_demographics(file_path: str, study_id: str, output_path: str) -> D
 
 
 @tool
-def transform_adverse_events(file_path: str, study_id: str, output_path: str) -> Dict[str, Any]:
+async def transform_adverse_events(file_path: str, study_id: str, output_path: str) -> Dict[str, Any]:
     """
-    Transform source adverse event data to SDTM AE domain.
+    Transform source adverse event data to SDTM AE domain (async).
 
     Args:
         file_path: Path to source AE CSV
@@ -356,7 +369,7 @@ def transform_adverse_events(file_path: str, study_id: str, output_path: str) ->
         Transformation result
     """
     try:
-        df = pd.read_csv(file_path)
+        df = await async_read_csv(file_path)
         records_in = len(df)
 
         ae = pd.DataFrame()
@@ -381,8 +394,7 @@ def transform_adverse_events(file_path: str, study_id: str, output_path: str) ->
         if "USUBJID" in ae.columns and not ae["USUBJID"].astype(str).str.contains("-").any():
             ae["USUBJID"] = study_id + "-" + ae["USUBJID"].astype(str)
 
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        ae.to_csv(output_path, index=False)
+        await async_to_csv(ae, output_path, index=False)
 
         return {"success": True, "domain": "AE", "records_in": records_in, "records_out": len(ae), "output_path": output_path}
     except Exception as e:
@@ -393,13 +405,13 @@ TRANSFORMER_TOOLS = [transform_demographics, transform_adverse_events]
 
 
 # =============================================================================
-# CODE GENERATOR TOOLS
+# CODE GENERATOR TOOLS (Async)
 # =============================================================================
 
 @tool
-def generate_sas_program(domain: str, mapping_spec: Dict[str, Any], output_path: str) -> Dict[str, Any]:
+async def generate_sas_program(domain: str, mapping_spec: Dict[str, Any], output_path: str) -> Dict[str, Any]:
     """
-    Generate SAS program for SDTM transformation.
+    Generate SAS program for SDTM transformation (async).
 
     Args:
         domain: Target SDTM domain code
@@ -426,9 +438,9 @@ data sdtm.{domain.lower()};
     DOMAIN = "&domain";
 run;
 """
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w') as f:
-            f.write(sas_code)
+        await async_makedirs(os.path.dirname(output_path))
+        async with aiofiles.open(output_path, 'w') as f:
+            await f.write(sas_code)
 
         return {"success": True, "language": "SAS", "domain": domain, "output_path": output_path}
     except Exception as e:
@@ -436,9 +448,9 @@ run;
 
 
 @tool
-def generate_r_script(domain: str, mapping_spec: Dict[str, Any], output_path: str) -> Dict[str, Any]:
+async def generate_r_script(domain: str, mapping_spec: Dict[str, Any], output_path: str) -> Dict[str, Any]:
     """
-    Generate R script for SDTM transformation.
+    Generate R script for SDTM transformation (async).
 
     Args:
         domain: Target SDTM domain code
@@ -468,9 +480,9 @@ study_id <- Sys.getenv("STUDYID", "UNKNOWN")
 
 write_csv({domain.lower()}, "sdtm_data/{domain.lower()}.csv")
 '''
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w') as f:
-            f.write(r_code)
+        await async_makedirs(os.path.dirname(output_path))
+        async with aiofiles.open(output_path, 'w') as f:
+            await f.write(r_code)
 
         return {"success": True, "language": "R", "domain": domain, "output_path": output_path}
     except Exception as e:
@@ -481,13 +493,13 @@ CODE_GENERATOR_TOOLS = [generate_sas_program, generate_r_script]
 
 
 # =============================================================================
-# DATA LOADER TOOLS
+# DATA LOADER TOOLS (Async)
 # =============================================================================
 
 @tool
-def load_to_neo4j(domain: str, file_path: str) -> Dict[str, Any]:
+async def load_to_neo4j(domain: str, file_path: str) -> Dict[str, Any]:
     """
-    Load SDTM domain data to Neo4j graph database.
+    Load SDTM domain data to Neo4j graph database (async).
 
     Args:
         domain: SDTM domain code
@@ -497,35 +509,29 @@ def load_to_neo4j(domain: str, file_path: str) -> Dict[str, Any]:
         Load result with node count
     """
     try:
-        from neo4j import GraphDatabase
-
-        df = pd.read_csv(file_path)
+        df = await async_read_csv(file_path)
 
         uri = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
         user = os.getenv("NEO4J_USER", "neo4j")
         password = os.getenv("NEO4J_PASSWORD", "")
 
-        driver = GraphDatabase.driver(uri, auth=(user, password))
+        result = await async_neo4j_load_dataframe(
+            df=df,
+            uri=uri,
+            user=user,
+            password=password,
+            label=f"SDTM_{domain.upper()}",
+        )
 
-        with driver.session() as session:
-            for i, record in enumerate(df.to_dict(orient='records')):
-                clean_record = {k: v for k, v in record.items() if pd.notna(v)}
-                clean_record["id"] = f"{domain}_{i}"
-
-                props = ", ".join([f"{k}: ${k}" for k in clean_record.keys()])
-                session.run(f"CREATE (n:SDTM_{domain} {{{props}}})", **clean_record)
-
-        driver.close()
-
-        return {"success": True, "domain": domain, "nodes_created": len(df)}
+        return result
     except Exception as e:
         return {"success": False, "domain": domain, "error": str(e)}
 
 
 @tool
-def upload_to_s3(file_path: str, s3_key: str) -> Dict[str, Any]:
+async def upload_to_s3(file_path: str, s3_key: str) -> Dict[str, Any]:
     """
-    Upload file to S3 bucket.
+    Upload file to S3 bucket (async).
 
     Args:
         file_path: Local file path
@@ -535,13 +541,9 @@ def upload_to_s3(file_path: str, s3_key: str) -> Dict[str, Any]:
         Upload result
     """
     try:
-        import boto3
-
         bucket = os.getenv("S3_ETL_BUCKET", "s3dcri")
-        s3 = boto3.client('s3')
-        s3.upload_file(file_path, bucket, s3_key)
-
-        return {"success": True, "file_path": file_path, "s3_uri": f"s3://{bucket}/{s3_key}"}
+        result = await async_s3_upload(file_path, bucket, s3_key)
+        return result
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -589,16 +591,23 @@ Submission readiness requires:
 
 TRANSFORMER_SUBAGENT = {
     "name": "transformer",
-    "description": "SDTM domain transformation specialist. Use to transform source EDC data to SDTM format.",
+    "description": "SDTM domain transformation specialist. Use to transform source EDC data to SDTM format. REQUIRES mapping specification before transformation.",
     "system_prompt": """You are a Transformation Agent specialized in converting EDC data to SDTM format.
 
-Your transformation approach:
-1. Analyze source data structure
-2. Map columns to SDTM variables
-3. Apply derivations (USUBJID, --SEQ)
-4. Validate output structure
+CRITICAL: Mapping Specification is REQUIRED before transformation!
+- You MUST have a mapping specification that defines how source columns map to SDTM variables
+- Without a mapping specification, transformation will produce incorrect or incomplete SDTM data
+- The mapping specification should be generated FIRST using generate_mapping_spec or retrieved from a specification file
 
-Always ensure STUDYID, DOMAIN, USUBJID are populated.""",
+Your transformation approach:
+1. VERIFY that a mapping specification exists for the target domain
+2. If no mapping spec exists, STOP and request one be generated first
+3. Analyze source data structure against the mapping spec
+4. Apply column mappings as defined in the specification
+5. Apply derivations (USUBJID, --SEQ, --DTC date formatting)
+6. Validate output structure against SDTM-IG requirements
+
+Always ensure STUDYID, DOMAIN, USUBJID are populated correctly.""",
     "tools": TRANSFORMER_TOOLS,
 }
 

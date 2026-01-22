@@ -25,6 +25,13 @@ try:
 except ImportError:
     TAVILY_AVAILABLE = False
 
+# Firecrawl client (backup for Tavily)
+try:
+    from firecrawl import FirecrawlApp
+    FIRECRAWL_AVAILABLE = True
+except ImportError:
+    FIRECRAWL_AVAILABLE = False
+
 # OpenAI client for embeddings
 try:
     from openai import OpenAI
@@ -48,8 +55,13 @@ class SDTMKnowledgeRetriever:
     def __init__(self):
         self.pinecone_client = None
         self.tavily_client = None
+        self.firecrawl_client = None  # Backup for Tavily
         self.openai_client = None
         self.indexes = {}
+        self._tavily_disabled = False  # Flag to disable Tavily after rate limit
+        self._use_firecrawl = False    # Flag to switch to Firecrawl
+        self._firecrawl_disabled = False  # Flag to disable Firecrawl after rate limit
+        self._web_search_disabled = False  # Flag when both services are rate limited
         self._initialize_clients()
 
     def _initialize_clients(self):
@@ -90,6 +102,16 @@ class SDTMKnowledgeRetriever:
             except Exception as e:
                 print(f"  WARNING: Tavily initialization failed: {e}")
                 self.tavily_client = None
+
+        # Initialize Firecrawl (backup for Tavily)
+        if FIRECRAWL_AVAILABLE:
+            try:
+                firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY", "fc-4a39356cf081453f96726af430e24ae1")
+                self.firecrawl_client = FirecrawlApp(api_key=firecrawl_api_key)
+                print("  Firecrawl initialized (backup for Tavily)")
+            except Exception as e:
+                print(f"  WARNING: Firecrawl initialization failed: {e}")
+                self.firecrawl_client = None
 
     def _get_embedding(self, text: str, model: str = None) -> List[float]:
         """Generate embedding using OpenAI."""
@@ -170,6 +192,8 @@ class SDTMKnowledgeRetriever:
         """
         Search the web for SDTM-related information.
 
+        Uses Tavily by default, switches to Firecrawl after first Tavily failure.
+
         Args:
             query: Search query
             search_depth: "basic" or "advanced"
@@ -178,21 +202,115 @@ class SDTMKnowledgeRetriever:
         Returns:
             List of search results
         """
-        if not self.tavily_client:
+        # Skip if both services are rate limited
+        if self._web_search_disabled:
+            return []
+
+        # Use Firecrawl if switched after Tavily failure
+        if self._use_firecrawl and not self._firecrawl_disabled:
+            return self._search_firecrawl(query, max_results)
+
+        # Try Tavily first
+        if self.tavily_client and not self._tavily_disabled:
+            try:
+                response = self.tavily_client.search(
+                    query=query,
+                    search_depth=search_depth,
+                    max_results=max_results,
+                    include_domains=["cdisc.org", "fda.gov", "ich.org"],
+                    include_answer=True
+                )
+                return response.get("results", [])
+            except Exception as e:
+                error_msg = str(e).lower()
+
+                # On any Tavily error, switch to Firecrawl
+                if "usage limit" in error_msg or "rate limit" in error_msg or "quota" in error_msg:
+                    print(f"  Tavily rate limit exceeded, switching to Firecrawl")
+                else:
+                    print(f"  Tavily error: {e}, switching to Firecrawl")
+
+                self._tavily_disabled = True
+                self._use_firecrawl = True
+
+                # Try Firecrawl as fallback
+                return self._search_firecrawl(query, max_results)
+
+        # Fall back to Firecrawl if Tavily not available
+        return self._search_firecrawl(query, max_results)
+
+    def _search_firecrawl(
+        self,
+        query: str,
+        max_results: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Search using Firecrawl API.
+
+        Args:
+            query: Search query
+            max_results: Maximum number of results
+
+        Returns:
+            List of search results formatted like Tavily results
+        """
+        if not self.firecrawl_client or self._firecrawl_disabled:
             return []
 
         try:
-            response = self.tavily_client.search(
-                query=query,
-                search_depth=search_depth,
-                max_results=max_results,
-                include_domains=["cdisc.org", "fda.gov", "ich.org"],
-                include_answer=True
+            # Firecrawl search with SDTM-related domains
+            search_query = f"{query} site:cdisc.org OR site:fda.gov OR site:ich.org"
+
+            # Use Firecrawl's search endpoint
+            response = self.firecrawl_client.search(
+                query=search_query,
+                limit=max_results
             )
 
-            return response.get("results", [])
+            # Format results to match Tavily structure
+            results = []
+
+            # Handle Firecrawl v2 SearchData response (has .web attribute)
+            if hasattr(response, 'web') and response.web:
+                for item in response.web[:max_results]:
+                    results.append({
+                        "title": getattr(item, 'title', '') or '',
+                        "url": getattr(item, 'url', '') or '',
+                        "content": (getattr(item, 'description', '') or '')[:500],
+                        "source": "firecrawl"
+                    })
+            # Handle list response format
+            elif response and isinstance(response, list):
+                for item in response[:max_results]:
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "content": item.get("description", item.get("content", ""))[:500],
+                        "source": "firecrawl"
+                    })
+            # Handle dict response format
+            elif response and isinstance(response, dict):
+                data = response.get("data", response.get("results", []))
+                for item in data[:max_results]:
+                    results.append({
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "content": item.get("description", item.get("content", ""))[:500],
+                        "source": "firecrawl"
+                    })
+
+            return results
         except Exception as e:
-            print(f"  Tavily search error: {e}")
+            error_msg = str(e).lower()
+
+            # Check for rate limit errors
+            if "rate limit" in error_msg or "429" in error_msg:
+                self._firecrawl_disabled = True
+                self._web_search_disabled = True  # Both services now rate limited
+                print(f"  Firecrawl rate limit exceeded, web search disabled for this session")
+            else:
+                print(f"  Firecrawl search error: {e}")
+
             return []
 
     @lru_cache(maxsize=100)

@@ -1,132 +1,349 @@
-# SDTM Clinical Trial Data Transformation Pipeline
+# SDTM ETL Pipeline
 
-A production-ready LangGraph-based pipeline for transforming raw clinical trial data into CDISC SDTM (Study Data Tabulation Model) format with AI-powered mapping generation, automated validation, and code generation.
+An enterprise-grade, AI-powered ETL pipeline for transforming clinical trial EDC (Electronic Data Capture) data into CDISC SDTM (Study Data Tabulation Model) format. Built with LangGraph and DeepAgents architecture, featuring intelligent mapping, multi-layer validation, and automated code generation.
 
-## Features
+## Table of Contents
 
-| Feature | Description |
-|---------|-------------|
-| **LangGraph Architecture** | Async parallel node execution with state management |
-| **AI-Powered Mapping** | Claude generates SDTM mapping specifications from source data |
-| **Parallel Processing** | Concurrent validation, transformation, and code generation |
-| **LangSmith Observability** | Full tracing and monitoring at smith.langchain.com |
-| **Human-in-the-Loop** | Review checkpoints for quality control |
-| **Neo4j Integration** | Graph database storage with patient relationships |
-| **S3 Integration** | Cloud storage for processed outputs |
-| **Code Generation** | Auto-generated SAS and R programs |
+- [Overview](#overview)
+- [Architecture](#architecture)
+  - [High-Level Architecture](#high-level-architecture)
+  - [DeepAgents Architecture](#deepagents-architecture)
+  - [7-Phase ETL Pipeline](#7-phase-etl-pipeline)
+  - [Data Flow Diagram](#data-flow-diagram)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Pipeline](#running-the-pipeline)
+- [Usage Examples](#usage-examples)
+- [Output Structure](#output-structure)
+- [Project Structure](#project-structure)
+- [SDTM Domains Supported](#sdtm-domains-supported)
+- [Neo4j Graph Structure](#neo4j-graph-structure)
+- [LangSmith Observability](#langsmith-observability)
+- [API Reference](#api-reference)
+- [Troubleshooting](#troubleshooting)
+- [Technology Stack](#technology-stack)
+
+---
+
+## Overview
+
+This pipeline automates the complex process of transforming raw clinical trial data into FDA/CDISC-compliant SDTM datasets. It leverages:
+
+- **Claude AI (Anthropic)** for intelligent mapping and transformation decisions
+- **LangGraph** for orchestrating multi-phase ETL workflows
+- **DeepAgents** for specialized domain expertise via subagents and skills
+- **Pinecone** for vector-based SDTM knowledge retrieval
+- **Neo4j** for graph-based data relationships
+- **AWS S3** for cloud storage integration
 
 ---
 
 ## Architecture
 
+### High-Level Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SDTM LANGGRAPH PIPELINE                             │
-│                                                                             │
-│  ┌──────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────────┐   │
-│  │  Ingest  │───►│   Validate   │───►│  Generate   │───►│   Human      │   │
-│  │   Data   │    │   Raw Data   │    │  Mappings   │    │   Review     │   │
-│  └──────────┘    │  (Parallel)  │    │  (Parallel) │    │ (Checkpoint) │   │
-│                  └──────────────┘    └─────────────┘    └──────┬───────┘   │
-│                                                                 │           │
-│  ┌──────────┐    ┌──────────────┐    ┌─────────────┐           │           │
-│  │ Generate │◄───│   Validate   │◄───│  Transform  │◄──────────┘           │
-│  │   Code   │    │  SDTM Data   │    │  to SDTM    │                       │
-│  │(SAS + R) │    │  (Parallel)  │    │  (Parallel) │                       │
-│  └────┬─────┘    └──────────────┘    └─────────────┘                       │
-│       │                                                                     │
-│       ▼                                                                     │
-│  ┌──────────┐    ┌──────────────┐    ┌─────────────┐                       │
-│  │  Neo4j   │───►│   S3 Upload  │───►│   Report    │───► COMPLETE          │
-│  │  Load    │    │  (Processed) │    │ Generation  │                       │
-│  └──────────┘    └──────────────┘    └─────────────┘                       │
-│                                                                             │
-│  [All nodes traced with LangSmith @traceable decorator]                    │
+│                           SDTM ETL Pipeline                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
+│  │   EDC Data   │───▶│   Phase 1    │───▶│   Phase 2    │───▶│  Phase 3  │ │
+│  │   (S3/CSV)   │    │   Ingest     │    │   Validate   │    │  Mapping  │ │
+│  └──────────────┘    └──────────────┘    └──────────────┘    └───────────┘ │
+│                                                                      │      │
+│                                                                      ▼      │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌───────────┐ │
+│  │   Phase 7    │◀───│   Phase 6    │◀───│   Phase 5    │◀───│  Phase 4  │ │
+│  │  Warehouse   │    │   Validate   │    │   Generate   │    │ Transform │ │
+│  │   (Neo4j)    │    │    SDTM      │    │   Target     │    │  to SDTM  │ │
+│  └──────────────┘    └──────────────┘    └──────────────┘    └───────────┘ │
+│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### DeepAgents Architecture
+
+The pipeline uses a DeepAgents architecture with specialized subagents and progressive disclosure skills:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Main Orchestrator Agent                               │
+│                    (Claude claude-sonnet-4-5-20250929)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────── SKILLS (Progressive Disclosure) ─────────────────┐│
+│  │                                                                          ││
+│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      ││
+│  │  │  cdisc-standards │  │ sdtm-programming │  │   qa-validation  │      ││
+│  │  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤      ││
+│  │  │ • Domain specs   │  │ • Python patterns│  │ • Pinnacle 21    │      ││
+│  │  │ • Controlled     │  │ • SAS programs   │  │ • Define.xml     │      ││
+│  │  │   terminology    │  │ • R scripts      │  │ • Submission     │      ││
+│  │  │ • ISO 8601       │  │ • SQL extraction │  │   readiness      │      ││
+│  │  └──────────────────┘  └──────────────────┘  └──────────────────┘      ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ┌─────────────────────── SUBAGENTS (Delegated Tasks) ─────────────────────┐│
+│  │                                                                          ││
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐        ││
+│  │  │   SDTM     │  │ Validator  │  │Transformer │  │    Code    │        ││
+│  │  │   Expert   │  │            │  │            │  │  Generator │        ││
+│  │  └────────────┘  └────────────┘  └────────────┘  └────────────┘        ││
+│  │                                                                          ││
+│  │  ┌────────────┐                                                          ││
+│  │  │   Data     │                                                          ││
+│  │  │   Loader   │                                                          ││
+│  │  └────────────┘                                                          ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ┌─────────────────────── TOOLS (27 SDTM Operations) ──────────────────────┐│
+│  │                                                                          ││
+│  │  Data Ops        Transform Ops     Validate Ops      Output Ops         ││
+│  │  ──────────      ─────────────     ────────────      ──────────         ││
+│  │  • download_edc  • convert_domain  • validate_domain • upload_to_s3     ││
+│  │  • scan_files    • transform_sdtm  • validate_raw    • load_to_neo4j    ││
+│  │  • analyze_file  • apply_ct        • check_complete  • save_locally     ││
+│  │  • load_domain   • generate_spec   • score_conform   • gen_report       ││
+│  │                                                                          ││
+│  │  Knowledge Ops                                                           ││
+│  │  ─────────────                                                           ││
+│  │  • search_guidelines  • fetch_sdtmig  • fetch_ct  • search_internet     ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7-Phase ETL Pipeline
+
+The pipeline follows CDISC ETL best practices with 7 distinct phases:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          7-Phase SDTM ETL Pipeline                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Phase 1: DATA INGESTION (Extract)
+├── Download EDC exports from S3
+├── Extract ZIP archives
+├── Catalog available CSV files
+└── Create source data inventory
+         │
+         ▼
+Phase 2: RAW DATA VALIDATION (Business Checks)
+├── Data profiling (completeness, uniqueness)
+├── Business rule validation
+├── Mandatory field checks
+├── Range/format validation
+├── Cross-form consistency
+└── Flag suspicious records ──────────────────┐
+         │                                     │
+         ▼                                     │ HITL
+Phase 3: METADATA & SPECIFICATION PREP        │ Checkpoint
+├── Load EDC Data Dictionary                   │
+├── Load SDTM-IG specifications               │
+├── Load CDISC Controlled Terminology         │
+├── Create mapping specifications             │
+└── Define derivation rules ◀─────────────────┘
+         │
+         ▼
+Phase 4: SDTM TRANSFORMATION (Transform)
+├── Apply column mappings
+├── Reformat dates to ISO 8601
+├── Combine/split variables
+├── Derive new variables (VISITNUM, etc.)
+├── Transpose data (wide → long)
+└── Apply controlled terminology
+         │
+         ▼
+Phase 5: TARGET DATA GENERATION (Load)
+├── Generate final SDTM datasets
+├── Create Define.xml metadata
+├── Generate SAS programs
+├── Generate R scripts
+└── Package submission data
+         │
+         ▼
+Phase 6: TARGET DATA VALIDATION (Compliance)
+├── CDISC conformance validation
+├── SDTM-IG structural compliance
+├── Controlled terminology verification
+├── Define.xml validation
+└── Conformance scoring (≥95% = submission ready)
+         │                                     │
+         ▼                                     │ Self-correction
+Phase 7: DATA WAREHOUSE LOADING               │ loop if <95%
+├── Load to Neo4j graph database ◀────────────┘
+├── Upload to S3 processed bucket
+├── Create audit trails
+└── Generate submission package
+```
+
+### Data Flow Diagram
+
+```
+┌──────────────────┐
+│  EDC Raw Data    │
+│  (DEMO.csv,      │
+│   AEVENT.csv,    │
+│   VITALS.csv)    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐     ┌──────────────────┐
+│  S3 Incoming     │────▶│  Phase 1: Ingest │
+│  Bucket          │     │  (Extract files) │
+└──────────────────┘     └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Phase 2: Raw    │
+                         │  Validation      │
+                         └────────┬─────────┘
+                                  │
+         ┌────────────────────────┼────────────────────────┐
+         │                        │                        │
+         ▼                        ▼                        ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Pinecone        │     │  SDTM-IG         │     │  Controlled      │
+│  Vector DB       │     │  Reference       │     │  Terminology     │
+│  (Knowledge)     │     │  (Embedded)      │     │  (CT)            │
+└────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
+         │                        │                        │
+         └────────────────────────┼────────────────────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Phase 3: Map    │
+                         │  Specifications  │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Phase 4: SDTM   │
+                         │  Transformation  │
+                         └────────┬─────────┘
+                                  │
+    ┌─────────────────────────────┼─────────────────────────────┐
+    │                             │                             │
+    ▼                             ▼                             ▼
+┌──────────┐              ┌──────────────┐              ┌──────────────┐
+│ DM.csv   │              │    AE.csv    │              │   VS.csv     │
+│ (Demo-   │              │   (Adverse   │              │  (Vital      │
+│ graphics)│              │    Events)   │              │   Signs)     │
+└──────────┘              └──────────────┘              └──────────────┘
+    │                             │                             │
+    └─────────────────────────────┼─────────────────────────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Phase 5: Gen    │
+                         │  (Define.xml,    │
+                         │   SAS, R)        │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │  Phase 6: SDTM   │
+                         │  Validation      │
+                         │  (≥95% score)    │
+                         └────────┬─────────┘
+                                  │
+         ┌────────────────────────┼────────────────────────┐
+         │                        │                        │
+         ▼                        ▼                        ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Neo4j Graph     │     │  S3 Processed    │     │  Local Output    │
+│  Database        │     │  Bucket          │     │  Directory       │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
 ```
 
 ---
 
-## Supported SDTM Domains
+## Features
 
-| Source File | Target Domain | Description |
-|-------------|---------------|-------------|
-| DEMO.csv | DM | Demographics |
-| AEVENT.csv | AE | Adverse Events |
-| VITALS.csv | VS | Vital Signs |
-| CONMEDS.csv | CM | Concomitant Medications |
-| CHEMLAB.csv | LB | Laboratory (Chemistry) |
-| HEMLAB.csv | LB | Laboratory (Hematology) |
+### Core Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **AI-Powered Mapping** | Intelligent column discovery and SDTM variable mapping using Claude |
+| **63+ SDTM Domains** | Support for all SDTM domain classes (Interventions, Events, Findings, etc.) |
+| **Multi-Layer Validation** | Raw data validation + CDISC conformance checking |
+| **Code Generation** | Automatic SAS and R program generation |
+| **Define.xml** | Automated metadata documentation generation |
+| **Human-in-the-Loop** | Optional approval checkpoints at critical phases |
+| **LangGraph Architecture** | Async parallel node execution with state management |
+| **LangSmith Observability** | Full tracing and monitoring at smith.langchain.com |
+
+### Knowledge Integration
+
+- **Pinecone Vector Search**: SDTM guidelines and specifications retrieval
+- **SDTM-IG 3.4 Reference**: 45K+ lines of embedded specification
+- **Controlled Terminology**: CDISC CT mapping and validation
+- **Web Search Fallback**: Tavily + Firecrawl for extended knowledge
+
+### Enterprise Features
+
+- **Neo4j Integration**: Graph-based relationship loading
+- **S3 Storage**: Cloud-native data management
+- **Audit Trails**: Complete transformation lineage
+- **Conformance Scoring**: 95% threshold for submission readiness
+- **Self-Correction**: Automatic retry on validation failures
 
 ---
 
 ## Prerequisites
 
-- **Python** 3.11+
-- **Docker** (for Neo4j)
-- **AWS Account** (for S3 access)
-- **Anthropic API Key** (for Claude AI)
-- **LangSmith Account** (optional, for observability)
+- **Python**: 3.11+
+- **Docker**: For Neo4j (optional)
+- **API Keys**:
+  - Anthropic API Key (required)
+  - OpenAI API Key (for embeddings)
+  - Pinecone API Key (for vector search)
+  - AWS Credentials (for S3)
+- **Databases** (optional):
+  - Neo4j 5.x
+  - Pinecone index
 
 ---
 
 ## Installation
 
-### 1. Clone and Setup Virtual Environment
+### 1. Clone the Repository
 
 ```bash
-cd /path/to/ETL
+git clone https://github.com/your-org/sdtm-etl-pipeline.git
+cd sdtm-etl-pipeline
+```
 
-# Create virtual environment
+### 2. Create Virtual Environment
+
+```bash
 python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or: venv\Scripts\activate  # Windows
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-# Install dependencies
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Variables
-
-Create a `.env` file (copy from `.env.example`):
+### 4. Install Package in Editable Mode
 
 ```bash
-cp .env.example .env
+pip install -e .
 ```
 
-Edit `.env` with your credentials:
+### 5. Install LangGraph CLI
 
 ```bash
-# =============================================================================
-# ANTHROPIC API (Required)
-# =============================================================================
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-
-# =============================================================================
-# AWS S3 Configuration (Required for S3 upload)
-# =============================================================================
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_DEFAULT_REGION=us-east-1
-S3_ETL_BUCKET=your-bucket-name
-
-# =============================================================================
-# NEO4J Configuration (Required for graph database)
-# =============================================================================
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=password123
-NEO4J_DATABASE=neo4j
-
-# =============================================================================
-# LANGSMITH Configuration (Optional - for observability)
-# =============================================================================
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_PROJECT=sdtm-pipeline
-LANGCHAIN_API_KEY=lsv2_pt_your-langsmith-key
+pip install langgraph-cli
 ```
 
-### 3. Start Neo4j (Docker)
+### 6. Start Neo4j (Optional)
 
 ```bash
 docker run -d \
@@ -145,35 +362,182 @@ docker ps | grep neo4j
 
 ---
 
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# =============================================================================
+# ANTHROPIC API (Required)
+# =============================================================================
+ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+ANTHROPIC_MAX_TOKENS=64000
+ANTHROPIC_TEMPERATURE=0
+
+# =============================================================================
+# AWS S3 Configuration
+# =============================================================================
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_DEFAULT_REGION=us-east-1
+S3_ETL_BUCKET=your-bucket-name
+
+# S3 Folder Paths
+S3_INCOMING_PREFIX=incoming
+S3_FAILED_PREFIX=failed
+S3_PROCESSED_PREFIX=processed
+
+# =============================================================================
+# Neo4j Database Configuration
+# =============================================================================
+NEO4J_URI=neo4j://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
+NEO4J_DATABASE=neo4j
+
+# =============================================================================
+# OpenAI (Required for Pinecone embeddings)
+# =============================================================================
+OPENAI_API_KEY=sk-proj-...
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+
+# =============================================================================
+# Pinecone (Optional - for vector search)
+# =============================================================================
+PINECONE_API_KEY=pcsk_...
+PINECONE_ENVIRONMENT=us-east-1
+
+# =============================================================================
+# Web Search (Optional)
+# =============================================================================
+FIRECRAWL_API_KEY=fc-...
+
+# =============================================================================
+# LangChain/LangSmith (Optional - for tracing)
+# =============================================================================
+LANGCHAIN_API_KEY=lsv2_pt_...
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=sdtm-pipeline
+
+# =============================================================================
+# LangGraph Configuration
+# =============================================================================
+LANGGRAPH_RECURSION_LIMIT=100
+```
+
+### LangGraph Configuration
+
+The `langgraph.json` file defines available graphs:
+
+```json
+{
+  "dependencies": [".", "./requirements.txt"],
+  "graphs": {
+    "sdtm_agent": {
+      "path": "sdtm_pipeline.deepagents.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    },
+    "sdtm_deepagent": {
+      "path": "sdtm_pipeline.deepagents.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    },
+    "sdtm_pipeline": {
+      "path": "sdtm_pipeline.langgraph_agent.graph:graph",
+      "config": {
+        "recursion_limit": 100
+      }
+    }
+  },
+  "env": ".env"
+}
+```
+
+---
+
 ## Running the Pipeline
 
-### Option 1: LangGraph Dev Server (Recommended)
-
-Run the pipeline with the LangGraph development server and Studio UI:
+### Option 1: LangGraph Studio (Recommended for Development)
 
 ```bash
 # Activate virtual environment
 source venv/bin/activate
 
-# Install package in editable mode (first time only)
-pip install -e .
-
 # Start the LangGraph dev server
 langgraph dev
 ```
 
-This will start the server and open LangGraph Studio in your browser:
+This will start the server and open LangGraph Studio:
 - **API**: http://127.0.0.1:2024
 - **Studio UI**: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
 - **API Docs**: http://127.0.0.1:2024/docs
 
-In Studio, you can:
-1. View the pipeline graph visualization
-2. Create new threads and invoke the pipeline
-3. Monitor execution in real-time
-4. Inspect state at each node
+**Available Graphs:**
+- `sdtm_agent` - DeepAgents unified agent (recommended)
+- `sdtm_deepagent` - Alias for sdtm_agent
+- `sdtm_pipeline` - LangGraph multi-agent pipeline
 
-**Example Input** (in Studio):
+### Option 2: DeepAgents CLI
+
+```bash
+# Full pipeline with all features
+python run_sdtm_deepagent.py --study-id MAXIS-08
+
+# Interactive mode
+python run_sdtm_deepagent.py --interactive
+
+# Display architecture info
+python run_sdtm_deepagent.py --info
+
+# Disable optional features
+python run_sdtm_deepagent.py --study-id MAXIS-08 --no-hitl --no-neo4j
+
+# Custom workspace
+python run_sdtm_deepagent.py --study-id MAXIS-08 --workspace ./custom_workspace
+```
+
+### Option 3: LangGraph Pipeline
+
+```bash
+# Run the 7-phase pipeline
+python run_sdtm_langgraph.py
+```
+
+### Option 4: Programmatic API
+
+```python
+from sdtm_pipeline.deepagents.agent import SDTMAgentConfig, create_sdtm_agent
+
+# Configure the agent
+config = SDTMAgentConfig(
+    study_id="MAXIS-08",
+    workspace_dir="./sdtm_workspace",
+    output_dir="./sdtm_output",
+    enable_human_review=True,
+    enable_neo4j=True,
+    enable_s3=True,
+    recursion_limit=100
+)
+
+# Create and run
+agent = create_sdtm_agent(config)
+result = await agent.ainvoke({
+    "messages": [{"role": "user", "content": "Transform vitals data to SDTM VS domain"}]
+})
+```
+
+---
+
+## Usage Examples
+
+### Example Input in LangGraph Studio
+
 ```json
 {
   "study_id": "MAXIS-08",
@@ -183,35 +547,54 @@ In Studio, you can:
 }
 ```
 
-### Option 2: Python Script
+### Transform Specific Domains
 
-Run the pipeline directly with Python:
+```
+User: Transform the vitals data to SDTM VS domain only
 
-```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Run the pipeline
-python3 run_sdtm_langgraph.py
+Agent: I'll transform the vitals data to the SDTM VS (Vital Signs) domain.
+       [Downloads data, applies mappings, validates, generates output]
 ```
 
-### What Happens
+### Full Study Transformation
 
-1. **Downloads data from S3** - Fetches `EDC Data.zip` from your S3 bucket
-2. **Selects key clinical domains** - Identifies DEMO, AEVENT, VITALS, etc.
-3. **Runs LangGraph pipeline** with these async parallel nodes:
-   - **Ingest**: Scans and catalogs source files
-   - **Validate Raw**: Parallel validation of all source files
-   - **Generate Mappings**: AI generates SDTM mapping specs using Claude
-   - **Human Review**: Checkpoint for approval (auto-approved by default)
-   - **Transform**: Parallel transformation to SDTM format
-   - **Validate SDTM**: Parallel CDISC compliance checking
-   - **Generate Code**: Parallel SAS and R code generation
-   - **Load Neo4j**: Creates graph nodes and relationships
-   - **Upload S3**: Uploads all outputs to `processed/sdtm/{study_id}/`
-   - **Report**: Generates final pipeline report
+```
+User: Process all EDC data for study MAXIS-08 and generate submission package
 
-### Expected Output
+Agent: I'll process all domains for study MAXIS-08:
+       - Demographics (DM)
+       - Adverse Events (AE)
+       - Vital Signs (VS)
+       - Lab Results (LB)
+       - Concomitant Medications (CM)
+       ...
+       [Generates SDTM datasets, Define.xml, SAS programs]
+```
+
+### Validation Only
+
+```
+User: Validate the existing SDTM datasets for CDISC compliance
+
+Agent: Running CDISC conformance validation...
+       Conformance Score: 97.3%
+       Status: Submission Ready
+       Issues Found: 3 (non-critical)
+```
+
+### Generate Code
+
+```
+User: Generate SAS programs for the DM and AE transformations
+
+Agent: Generating SAS programs:
+       - setup.sas (library definitions)
+       - dm.sas (demographics transformation)
+       - ae.sas (adverse events transformation)
+       - driver.sas (master execution program)
+```
+
+### Expected Pipeline Output
 
 ```
 ======================================================================
@@ -284,22 +667,18 @@ sdtm_langgraph_output/
 │   ├── cm.sas                    # CM domain program
 │   └── lb.sas                    # LB domain program
 │
-├── r_programs/                   # Generated R scripts (pharmaverse)
+├── r_programs/                   # Generated R scripts
 │   ├── setup.R                   # Environment setup
 │   ├── driver.R                  # Main execution driver
 │   ├── dm.R                      # DM domain script
 │   ├── ae.R                      # AE domain script
-│   ├── vs.R                      # VS domain script
-│   ├── cm.R                      # CM domain script
-│   ├── lb.R                      # LB domain script
 │   └── validation.R              # SDTM validation script
 │
 ├── mapping_specs/                # JSON mapping specifications
 │   ├── DM_mapping.json
 │   ├── AE_mapping.json
 │   ├── VS_mapping.json
-│   ├── CM_mapping.json
-│   └── LB_mapping.json
+│   └── ...
 │
 ├── raw_validation/               # Raw data validation reports
 │   └── validation_report.json
@@ -307,29 +686,176 @@ sdtm_langgraph_output/
 ├── sdtm_validation/              # SDTM compliance reports
 │   └── validation_report.json
 │
+├── define_xml/                   # Define.xml metadata
+│   └── define.xml
+│
 └── reports/                      # Final pipeline report
     └── pipeline_report.json
 ```
 
 ---
 
-## LangSmith Observability
+## Project Structure
 
-The pipeline integrates with LangSmith for full observability. View traces at:
+```
+sdtm-etl-pipeline/
+├── langgraph.json              # LangGraph configuration
+├── pyproject.toml              # Python package config
+├── requirements.txt            # Dependencies
+├── .env                        # Environment variables
+├── run_sdtm_deepagent.py       # DeepAgents entry point
+├── run_sdtm_langgraph.py       # LangGraph entry point
+├── README.md                   # This file
+│
+├── sdtm_pipeline/              # Core package
+│   ├── __init__.py
+│   │
+│   ├── deepagents/             # DeepAgents architecture
+│   │   ├── agent.py            # Main orchestrator
+│   │   ├── graph.py            # LangGraph Studio export
+│   │   ├── subagents.py        # 5 specialized subagents
+│   │   ├── tools.py            # 27 SDTM tools
+│   │   ├── mapping_engine.py   # Spec-driven transformations
+│   │   ├── async_utils.py      # Async helpers
+│   │   └── skills/             # Progressive disclosure skills
+│   │       ├── cdisc-standards/    # SDTM knowledge, CT, protocols
+│   │       ├── sdtm-programming/   # Python/SAS/R patterns
+│   │       ├── qa-validation/      # Pinnacle 21 rules
+│   │       └── mapping-specifications/
+│   │
+│   ├── langgraph_agent/        # LangGraph multi-agent
+│   │   ├── graph.py            # 7-phase pipeline
+│   │   ├── state.py            # Pipeline state schema
+│   │   ├── async_nodes.py      # Parallel execution
+│   │   ├── supervisor.py       # Agent orchestration
+│   │   ├── tools.py            # Transformation tools
+│   │   ├── knowledge_tools.py  # Knowledge retrieval (Tavily/Firecrawl)
+│   │   ├── sdtmig_reference.py # SDTM-IG specs
+│   │   └── hybrid_search.py    # BM25 + semantic search
+│   │
+│   ├── transformers/           # Domain transformers
+│   │   ├── domain_transformers.py  # Base transformer classes
+│   │   ├── intelligent_mapper.py   # Dynamic column discovery
+│   │   ├── mapping_generator.py    # Spec generation
+│   │   └── additional_domains.py   # Extended domain support
+│   │
+│   ├── generators/             # Code generators
+│   │   ├── sas_generator.py        # SAS program generation
+│   │   ├── r_generator.py          # R script generation
+│   │   └── define_xml_generator.py # Define.xml creation
+│   │
+│   ├── validators/             # Validation engines
+│   │   ├── raw_data_validator.py   # Phase 2 business rules
+│   │   └── sdtm_validator.py       # Phase 6 CDISC compliance
+│   │
+│   ├── agents/                 # LangGraph agents
+│   │   ├── sdtm_expert.py          # SDTM specification agent
+│   │   ├── source_data_analyst.py  # Source data analysis
+│   │   ├── validator_agent.py      # Validation orchestrator
+│   │   ├── code_generator.py       # Code generation agent
+│   │   ├── protocol_compliance.py  # Protocol validation
+│   │   └── anomaly_detector.py     # Data quality detection
+│   │
+│   ├── models/                 # Data models
+│   │   ├── sdtm_models.py          # Core SDTM structures
+│   │   ├── pipeline_phases.py      # 7-phase definitions
+│   │   └── document_registry.py    # Document tracking
+│   │
+│   ├── scoring/                # Conformance scoring
+│   │   └── conformance_scorer.py   # CDISC compliance scoring
+│   │
+│   └── review/                 # Human-in-the-loop
+│       └── human_checkpoint.py     # Checkpoint management
+│
+├── sdtm_workspace/             # Intermediate files
+├── sdtm_langgraph_output/      # Pipeline output
+└── etl_neo4j/                  # Neo4j integration
+```
 
-**https://smith.langchain.com** (Project: `sdtm-pipeline`)
+---
 
-Each node is decorated with `@traceable` providing:
-- Execution timing per node
-- Input/output state tracking
-- Error tracing and debugging
-- Parallel execution visualization
+## SDTM Domains Supported
+
+The pipeline supports **63+ SDTM domains** across all domain classes:
+
+### Special Purpose Domains
+| Domain | Description |
+|--------|-------------|
+| **DM** | Demographics |
+| **CO** | Comments |
+| **SE** | Subject Elements |
+| **SV** | Subject Visits |
+
+### Interventions Class
+| Domain | Description |
+|--------|-------------|
+| **CM** | Concomitant Medications |
+| **EC** | Exposure as Collected |
+| **EX** | Exposure |
+| **SU** | Substance Use |
+| **PR** | Procedures |
+
+### Events Class
+| Domain | Description |
+|--------|-------------|
+| **AE** | Adverse Events |
+| **CE** | Clinical Events |
+| **DS** | Disposition |
+| **DV** | Protocol Deviations |
+| **HO** | Healthcare Encounters |
+| **MH** | Medical History |
+
+### Findings Class
+| Domain | Description |
+|--------|-------------|
+| **DA** | Drug Accountability |
+| **DD** | Death Details |
+| **EG** | ECG Test Results |
+| **IE** | Inclusion/Exclusion |
+| **IS** | Immunogenicity Specimen |
+| **LB** | Laboratory Test Results |
+| **MB** | Microbiology Specimen |
+| **MI** | Microscopic Findings |
+| **MK** | Musculoskeletal Findings |
+| **MS** | Microbiology Susceptibility |
+| **NV** | Nervous System Findings |
+| **OE** | Ophthalmic Examinations |
+| **PC** | Pharmacokinetics Concentrations |
+| **PE** | Physical Examination |
+| **PP** | Pharmacokinetics Parameters |
+| **QS** | Questionnaires |
+| **RP** | Reproductive System Findings |
+| **RS** | Disease Response |
+| **SC** | Subject Characteristics |
+| **SS** | Subject Status |
+| **TR** | Tumor/Lesion Results |
+| **TU** | Tumor/Lesion Identification |
+| **UR** | Urinary System Findings |
+| **VS** | Vital Signs |
+
+### Relationship Domains
+| Domain | Description |
+|--------|-------------|
+| **RELREC** | Related Records |
+| **RELSPEC** | Related Specimens |
+| **SUPPQUAL** | Supplemental Qualifiers |
+
+### Trial Design Domains
+| Domain | Description |
+|--------|-------------|
+| **TA** | Trial Arms |
+| **TD** | Trial Disease Assessments |
+| **TE** | Trial Elements |
+| **TI** | Trial Inclusion/Exclusion |
+| **TM** | Trial Disease Milestones |
+| **TS** | Trial Summary |
+| **TV** | Trial Visits |
 
 ---
 
 ## Neo4j Graph Structure
 
-The pipeline creates the following graph structure:
+The pipeline creates patient-centric graph relationships:
 
 ```
 (:SDTM_DM {USUBJID, SUBJID, AGE, SEX, RACE, ...})
@@ -366,99 +892,66 @@ RETURN DISTINCT p.USUBJID, count(DISTINCT ae) AS ae_count;
 
 ---
 
-## Project Structure
+## LangSmith Observability
 
-```
-ETL/
-├── run_sdtm_langgraph.py         # Main pipeline entry point
-├── requirements.txt              # Python dependencies
-├── .env                          # Environment configuration
-├── .env.example                  # Example configuration template
-├── README.md                     # This documentation
-│
-├── sdtm_pipeline/                # Core SDTM pipeline package
-│   ├── __init__.py
-│   │
-│   ├── langgraph_agent/          # LangGraph async agent
-│   │   ├── __init__.py
-│   │   ├── agent.py              # Main graph definition
-│   │   ├── state.py              # Pipeline state schema
-│   │   ├── async_nodes.py        # Async parallel node functions
-│   │   ├── supervisor.py         # Supervisor hierarchy pattern
-│   │   ├── tools.py              # LangChain tools
-│   │   └── config.py             # LangSmith/Neo4j/S3 config
-│   │
-│   ├── models/                   # Data models
-│   │   └── sdtm_models.py        # SDTM domain models
-│   │
-│   ├── validators/               # Validation components
-│   │   ├── raw_data_validator.py # Raw data quality checks
-│   │   └── sdtm_validator.py     # CDISC SDTM compliance
-│   │
-│   ├── transformers/             # Transformation components
-│   │   ├── mapping_generator.py  # AI mapping generation
-│   │   └── domain_transformers.py # Domain-specific transforms
-│   │
-│   └── generators/               # Code generation
-│       ├── sas_generator.py      # SAS program generation
-│       └── r_generator.py        # R script generation
-│
-├── etl_neo4j/                    # Neo4j loader module
-│   ├── __init__.py
-│   └── neo4j_loader.py           # Graph database operations
-│
-├── sdtm_langgraph_output/        # Pipeline outputs (generated)
-│
-└── venv/                         # Python virtual environment
-```
+The pipeline integrates with LangSmith for full observability. View traces at:
+
+**https://smith.langchain.com** (Project: `sdtm-pipeline`)
+
+Each node is decorated with `@traceable` providing:
+- Execution timing per node
+- Input/output state tracking
+- Error tracing and debugging
+- Parallel execution visualization
 
 ---
 
-## Configuration Options
+## API Reference
 
-### Pipeline Flags
+### DeepAgents Tools
 
-In `run_sdtm_langgraph.py`, you can configure:
-
-```python
-result = await run_sdtm_agent_pipeline(
-    study_id="MAXIS-08",           # Study identifier
-    raw_data_dir=data_dir,          # Source data directory
-    output_dir=output_dir,          # Output directory
-    api_key=api_key,                # Anthropic API key
-    source_files=selected_files,    # Files to process
-    human_decision="approve",       # Auto-approve or "reject"
-    enable_human_review=True,       # Enable review checkpoints
-    enable_neo4j=True,              # Enable Neo4j loading
-    enable_s3=True                  # Enable S3 upload
-)
-```
-
-### Disabling Features
-
-```python
-# Run without Neo4j
-enable_neo4j=False
-
-# Run without S3 upload
-enable_s3=False
-
-# Run without human review checkpoints (faster)
-enable_human_review=False
-```
+| Tool | Description |
+|------|-------------|
+| `download_edc_data()` | Download EDC exports from S3 |
+| `scan_source_files()` | Scan directory for source files |
+| `analyze_source_file()` | Profile source data |
+| `load_domain_data()` | Load CSV into memory |
+| `convert_domain()` | Transform to SDTM domain |
+| `transform_to_sdtm()` | Apply mapping specifications |
+| `generate_mapping_spec()` | AI-generate mappings |
+| `apply_controlled_terminology()` | Apply CT mappings |
+| `validate_domain()` | CDISC compliance check |
+| `validate_raw_data()` | Business rule validation |
+| `check_data_completeness()` | Mandatory field check |
+| `score_conformance()` | Calculate compliance score |
+| `generate_sas_program()` | Generate SAS code |
+| `generate_r_script()` | Generate R script |
+| `generate_define_xml()` | Generate Define.xml |
+| `upload_sdtm_to_s3()` | Upload to S3 |
+| `load_sdtm_to_neo4j()` | Load to Neo4j |
+| `save_sdtm_locally()` | Save to filesystem |
+| `generate_pipeline_report()` | Create summary report |
+| `search_sdtm_guidelines()` | Search Pinecone |
+| `fetch_sdtmig_specification()` | Get SDTM-IG spec |
+| `fetch_controlled_terminology()` | Get CT |
+| `search_internet()` | Web search (Tavily/Firecrawl) |
 
 ---
 
 ## Troubleshooting
 
+### Common Issues
+
 | Issue | Solution |
 |-------|----------|
+| `GraphRecursionError: Recursion limit of 25 reached` | Update `langgraph.json` with `"recursion_limit": 100` in each graph's config |
+| `Tavily rate limit exceeded` | System auto-falls back to Firecrawl. Ensure `FIRECRAWL_API_KEY` is set |
 | `ANTHROPIC_API_KEY not set` | Add key to `.env` file |
-| `Neo4j connection failed` | Ensure Docker container is running |
+| `Neo4j connection failed` | Ensure Docker container is running or use `--no-neo4j` |
 | `S3 upload error` | Verify AWS credentials and bucket permissions |
-| `No data files found` | Check S3 bucket contains `EDC Data.zip` |
-| `VS domain 0 records` | Source file may have different column names |
+| `No data files found` | Check S3 bucket contains source data |
 | `LangSmith traces not showing` | Verify `LANGCHAIN_API_KEY` is correct |
+| `Blocking call detected` | These are handled internally; ensure output dirs exist |
 
 ### View Logs
 
@@ -477,17 +970,29 @@ docker exec -it neo4j cypher-shell -u neo4j -p password123
 MATCH (n) RETURN labels(n)[0], count(n);
 ```
 
+### Restart LangGraph Dev Server
+
+After changing `langgraph.json`, restart the server:
+
+```bash
+# Stop with Ctrl+C, then restart
+langgraph dev
+```
+
 ---
 
 ## Technology Stack
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| **Orchestration** | LangGraph | 0.2.x |
-| **LLM** | Claude (Anthropic) | claude-sonnet-4-5-20250929 (configurable via ANTHROPIC_MODEL) |
-| **Observability** | LangSmith | - |
+| **Orchestration** | LangGraph | 1.0.6+ |
+| **LLM** | Claude (Anthropic) | claude-sonnet-4-5-20250929 |
+| **Observability** | LangSmith | Latest |
 | **Graph Database** | Neo4j | 5.27 |
+| **Vector Database** | Pinecone | 3.0+ |
 | **Cloud Storage** | AWS S3 | - |
+| **Data Processing** | Pandas/Polars | 2.2+/1.0+ |
+| **Web Search** | Tavily/Firecrawl | - |
 | **Language** | Python | 3.11+ |
 
 ---
@@ -499,3 +1004,22 @@ MATCH (n) RETURN labels(n)[0], count(n);
 - [LangSmith Documentation](https://docs.smith.langchain.com/)
 - [Anthropic Claude API](https://docs.anthropic.com/)
 - [Neo4j Python Driver](https://neo4j.com/docs/python-manual/current/)
+- [Pinecone Documentation](https://docs.pinecone.io/)
+
+---
+
+## License
+
+[Your License Here]
+
+---
+
+## Contributing
+
+[Contribution Guidelines]
+
+---
+
+## Support
+
+For issues and feature requests, please open a GitHub issue.
