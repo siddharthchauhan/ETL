@@ -1,7 +1,8 @@
 {
   "dependencies": [".", "./requirements.txt"],
   "graphs": {
-    "sdtm_chat": "sdtm_pipeline.langgraph_chat.graph:agent",
+    "sdtm_agent": "sdtm_pipeline.deepagents.graph:graph",
+    "sdtm_deepagent": "sdtm_pipeline.deepagents.graph:graph",
     "sdtm_pipeline": "sdtm_pipeline.langgraph_agent.graph:graph"
   },
   "env": ".env"
