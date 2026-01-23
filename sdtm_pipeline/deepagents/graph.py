@@ -33,7 +33,7 @@ load_dotenv()
 # So we patch the default at import time
 try:
     import langgraph.pregel.main as pregel_main
-    RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+    RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
     pregel_main.DEFAULT_RECURSION_LIMIT = RECURSION_LIMIT
     print(f"[SDTM Graph] Patched DEFAULT_RECURSION_LIMIT to {RECURSION_LIMIT}")
 except Exception as e:
@@ -68,7 +68,7 @@ SKILLS_DIR = Path(__file__).parent / "skills"
 # Recursion limit for complex SDTM pipelines
 # Default LangGraph limit is 25, but SDTM transformations with subagents,
 # skills, and multiple tool calls often need more steps
-RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
 
 
 # =============================================================================

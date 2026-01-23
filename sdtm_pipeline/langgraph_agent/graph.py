@@ -53,7 +53,7 @@ from pydantic import BaseModel, Field
 # So we patch the default at import time
 try:
     import langgraph.pregel.main as pregel_main
-    _RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+    _RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
     pregel_main.DEFAULT_RECURSION_LIMIT = _RECURSION_LIMIT
     print(f"[SDTM Pipeline] Patched DEFAULT_RECURSION_LIMIT to {_RECURSION_LIMIT}")
 except Exception as e:
@@ -668,7 +668,7 @@ def build_sdtm_graph() -> StateGraph:
 # ============================================================================
 
 # Recursion limit - increase from default 25 to handle complex pipelines
-RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "100"))
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
 
 # Build and compile the graph
 # Note: Do NOT pass checkpointer here - langgraph dev handles persistence automatically
