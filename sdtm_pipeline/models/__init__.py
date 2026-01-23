@@ -28,16 +28,6 @@ from .pipeline_phases import (
     PHASE_DETAILS
 )
 
-from .document_registry import (
-    DocumentType,
-    DocumentStatus,
-    DocumentSource,
-    DocumentRecord,
-    DocumentRegistry,
-    DOCUMENT_DEFINITIONS,
-    CDISC_VERSIONS
-)
-
 __all__ = [
     # Core SDTM models
     "SDTMDomain",
@@ -58,12 +48,4 @@ __all__ = [
     "BusinessRuleCategory",
     "PipelinePhaseTracker",
     "PHASE_DETAILS",
-    # Document registry
-    "DocumentType",
-    "DocumentStatus",
-    "DocumentSource",
-    "DocumentRecord",
-    "DocumentRegistry",
-    "DOCUMENT_DEFINITIONS",
-    "CDISC_VERSIONS"
 ]

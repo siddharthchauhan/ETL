@@ -12,12 +12,6 @@
       "config": {
         "recursion_limit": 250
       }
-    },
-    "sdtm_pipeline": {
-      "path": "sdtm_pipeline.langgraph_agent.graph:graph",
-      "config": {
-        "recursion_limit": 250
-      }
     }
   },
   "env": ".env"

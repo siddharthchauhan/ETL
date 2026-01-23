@@ -22,10 +22,9 @@ Commands:
 
 import os
 import sys
-import json
 import asyncio
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pathlib import Path
 
 import pandas as pd
@@ -34,7 +33,6 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
-from rich.syntax import Syntax
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich import box
 

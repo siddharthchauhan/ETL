@@ -28,7 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 from deepagents import create_deep_agent, SubAgent
-from deepagents.backends import FilesystemBackend, CompositeBackend, StateBackend
+from deepagents.backends import FilesystemBackend
 from dotenv import load_dotenv
 
 load_dotenv()

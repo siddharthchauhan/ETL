@@ -21,26 +21,21 @@ Use with:
 
 import os
 from pathlib import Path
+from typing import Any, Optional
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables FIRST
 load_dotenv()
 
 # =============================================================================
-# MONKEY-PATCH RECURSION LIMIT
+# RECURSION LIMIT CONFIGURATION
 # =============================================================================
-# The langgraph-api doesn't properly apply recursion_limit from langgraph.json
-# So we patch the default at import time
-try:
-    import langgraph.pregel.main as pregel_main
-    RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
-    pregel_main.DEFAULT_RECURSION_LIMIT = RECURSION_LIMIT
-    print(f"[SDTM Graph] Patched DEFAULT_RECURSION_LIMIT to {RECURSION_LIMIT}")
-except Exception as e:
-    print(f"[SDTM Graph] Warning: Could not patch recursion limit: {e}")
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
+print(f"[SDTM Graph] Using recursion_limit={RECURSION_LIMIT}")
 
 from deepagents import create_deep_agent, SubAgent
 from deepagents.backends import FilesystemBackend
+from langgraph.graph.state import CompiledStateGraph
 
 from .subagents import (
     SDTM_EXPERT_SUBAGENT,
@@ -62,21 +57,11 @@ SKILLS_DIR = Path(__file__).parent / "skills"
 
 
 # =============================================================================
-# CONFIGURATION
-# =============================================================================
-
-# Recursion limit for complex SDTM pipelines
-# Default LangGraph limit is 25, but SDTM transformations with subagents,
-# skills, and multiple tool calls often need more steps
-RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
-
-
-# =============================================================================
 # CREATE GRAPH FOR LANGGRAPH DEV
 # =============================================================================
 
 
-def create_graph():
+def create_graph() -> CompiledStateGraph:
     """
     Create the SDTM DeepAgent graph for LangGraph Studio.
 
@@ -85,7 +70,7 @@ def create_graph():
     - 5 specialized subagents
     - 3 skills for domain expertise (progressive disclosure)
     - Filesystem backend for context management
-    - Recursion limit of 100 (configurable via LANGGRAPH_RECURSION_LIMIT env var)
+    - Recursion limit of 250 (configurable via LANGGRAPH_RECURSION_LIMIT env var)
 
     Returns:
         Compiled StateGraph ready for langgraph dev
@@ -123,11 +108,12 @@ def create_graph():
         skills=skills_paths,
     )
 
-    print(f"[SDTM Graph] Creating agent with recursion_limit={RECURSION_LIMIT}")
+    print(f"[SDTM Graph] Created agent with model={model}")
     return agent
 
 
 # Export the graph for langgraph dev
 # This is what langgraph.json points to
-# Note: recursion_limit is set in langgraph.json config section
+# Recursion limit is controlled by LANGGRAPH_DEFAULT_RECURSION_LIMIT env var (set to 250)
 graph = create_graph()
+print(f"[SDTM Graph] Graph created. Recursion limit controlled by LANGGRAPH_DEFAULT_RECURSION_LIMIT env var.")
