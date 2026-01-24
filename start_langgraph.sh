@@ -63,4 +63,5 @@ echo "================================================"
 echo ""
 
 # Start langgraph dev with any additional arguments
-exec langgraph dev "$@"
+# --host 0.0.0.0 binds to all interfaces (required for external access from Flowise, etc.)
+exec langgraph dev --host 0.0.0.0 "$@"
