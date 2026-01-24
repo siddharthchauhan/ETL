@@ -108,12 +108,17 @@ def create_graph() -> CompiledStateGraph:
         skills=skills_paths,
     )
 
-    print(f"[SDTM Graph] Created agent with model={model}")
+    # Apply recursion limit - CRITICAL for complex SDTM pipelines
+    # Default LangGraph limit is 25, but SDTM transformations with
+    # subagents, skills, and multiple tool calls often need more steps
+    agent = agent.with_config(recursion_limit=RECURSION_LIMIT)
+
+    print(f"[SDTM Graph] Created agent with model={model}, recursion_limit={RECURSION_LIMIT}")
     return agent
 
 
 # Export the graph for langgraph dev
 # This is what langgraph.json points to
-# Recursion limit is controlled by LANGGRAPH_DEFAULT_RECURSION_LIMIT env var (set to 250)
+# Recursion limit is applied via .with_config() in create_graph()
 graph = create_graph()
-print(f"[SDTM Graph] Graph created. Recursion limit controlled by LANGGRAPH_DEFAULT_RECURSION_LIMIT env var.")
+print(f"[SDTM Graph] Graph exported with recursion_limit={RECURSION_LIMIT}")
