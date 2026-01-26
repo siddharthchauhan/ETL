@@ -1,15 +1,15 @@
 {
   "study_id": "MAXIS-08",
-  "created_at": "2026-01-21T13:22:25.021463",
+  "created_at": "2026-01-26T14:06:46.579405",
   "domains": [
-    "AE"
+    "VS"
   ],
-  "total_records": 826,
+  "total_records": 2184,
   "files": [
     {
-      "domain": "AE",
-      "path": "sdtm_chat_output/sdtm_data/ae.csv",
-      "records": 826
+      "domain": "VS",
+      "path": "sdtm_chat_output/sdtm_data/vs.csv",
+      "records": 2184
     }
   ]
 }
