@@ -46,6 +46,441 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# LAB TEST CODE MAPPING - For Horizontal to Vertical MELT Transformation
+# =============================================================================
+# This comprehensive dictionary maps common EDC column names to SDTM LB variables.
+# Used when source data is in horizontal format (one column per test).
+
+LAB_TEST_CODE_MAP = {
+    # HEMATOLOGY - Red Blood Cells
+    "HGB": {"LBTESTCD": "HGB", "LBTEST": "Hemoglobin", "LBCAT": "HEMATOLOGY", "LBSTRESU": "g/L", "LBSPEC": "WHOLE BLOOD"},
+    "HEMOGLOBIN": {"LBTESTCD": "HGB", "LBTEST": "Hemoglobin", "LBCAT": "HEMATOLOGY", "LBSTRESU": "g/L", "LBSPEC": "WHOLE BLOOD"},
+    "HB": {"LBTESTCD": "HGB", "LBTEST": "Hemoglobin", "LBCAT": "HEMATOLOGY", "LBSTRESU": "g/L", "LBSPEC": "WHOLE BLOOD"},
+    "HCT": {"LBTESTCD": "HCT", "LBTEST": "Hematocrit", "LBCAT": "HEMATOLOGY", "LBSTRESU": "FRACTION", "LBSPEC": "WHOLE BLOOD"},
+    "HEMATOCRIT": {"LBTESTCD": "HCT", "LBTEST": "Hematocrit", "LBCAT": "HEMATOLOGY", "LBSTRESU": "FRACTION", "LBSPEC": "WHOLE BLOOD"},
+    "RBC": {"LBTESTCD": "RBC", "LBTEST": "Erythrocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^12/L", "LBSPEC": "WHOLE BLOOD"},
+    "ERYTHROCYTES": {"LBTESTCD": "RBC", "LBTEST": "Erythrocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^12/L", "LBSPEC": "WHOLE BLOOD"},
+    "MCV": {"LBTESTCD": "MCV", "LBTEST": "Ery. Mean Corpuscular Volume", "LBCAT": "HEMATOLOGY", "LBSTRESU": "fL", "LBSPEC": "WHOLE BLOOD"},
+    "MCH": {"LBTESTCD": "MCH", "LBTEST": "Ery. Mean Corpuscular Hemoglobin", "LBCAT": "HEMATOLOGY", "LBSTRESU": "pg", "LBSPEC": "WHOLE BLOOD"},
+    "MCHC": {"LBTESTCD": "MCHC", "LBTEST": "Ery. Mean Corpuscular HGB Concentration", "LBCAT": "HEMATOLOGY", "LBSTRESU": "g/L", "LBSPEC": "WHOLE BLOOD"},
+    "RDW": {"LBTESTCD": "RDW", "LBTEST": "Erythrocyte Distribution Width", "LBCAT": "HEMATOLOGY", "LBSTRESU": "%", "LBSPEC": "WHOLE BLOOD"},
+
+    # HEMATOLOGY - White Blood Cells
+    "WBC": {"LBTESTCD": "WBC", "LBTEST": "Leukocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "LEUKOCYTES": {"LBTESTCD": "WBC", "LBTEST": "Leukocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "NEUT": {"LBTESTCD": "NEUT", "LBTEST": "Neutrophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "NEUTROPHILS": {"LBTESTCD": "NEUT", "LBTEST": "Neutrophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "LYMPH": {"LBTESTCD": "LYMPH", "LBTEST": "Lymphocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "LYMPHOCYTES": {"LBTESTCD": "LYMPH", "LBTEST": "Lymphocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "MONO": {"LBTESTCD": "MONO", "LBTEST": "Monocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "MONOCYTES": {"LBTESTCD": "MONO", "LBTEST": "Monocytes", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "EOS": {"LBTESTCD": "EOS", "LBTEST": "Eosinophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "EOSINOPHILS": {"LBTESTCD": "EOS", "LBTEST": "Eosinophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "BASO": {"LBTESTCD": "BASO", "LBTEST": "Basophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "BASOPHILS": {"LBTESTCD": "BASO", "LBTEST": "Basophils", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+
+    # HEMATOLOGY - Platelets & Coagulation
+    "PLAT": {"LBTESTCD": "PLAT", "LBTEST": "Platelets", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "PLATELETS": {"LBTESTCD": "PLAT", "LBTEST": "Platelets", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "PLT": {"LBTESTCD": "PLAT", "LBTEST": "Platelets", "LBCAT": "HEMATOLOGY", "LBSTRESU": "10^9/L", "LBSPEC": "WHOLE BLOOD"},
+    "MPV": {"LBTESTCD": "MPV", "LBTEST": "Mean Platelet Volume", "LBCAT": "HEMATOLOGY", "LBSTRESU": "fL", "LBSPEC": "WHOLE BLOOD"},
+    "PT": {"LBTESTCD": "PT", "LBTEST": "Prothrombin Time", "LBCAT": "COAGULATION", "LBSTRESU": "sec", "LBSPEC": "PLASMA"},
+    "INR": {"LBTESTCD": "INR", "LBTEST": "International Normalized Ratio", "LBCAT": "COAGULATION", "LBSTRESU": "RATIO", "LBSPEC": "PLASMA"},
+    "APTT": {"LBTESTCD": "APTT", "LBTEST": "Activated Partial Thromboplastin Time", "LBCAT": "COAGULATION", "LBSTRESU": "sec", "LBSPEC": "PLASMA"},
+    "PTT": {"LBTESTCD": "APTT", "LBTEST": "Activated Partial Thromboplastin Time", "LBCAT": "COAGULATION", "LBSTRESU": "sec", "LBSPEC": "PLASMA"},
+    "FIBRINO": {"LBTESTCD": "FIBRINO", "LBTEST": "Fibrinogen", "LBCAT": "COAGULATION", "LBSTRESU": "g/L", "LBSPEC": "PLASMA"},
+    "FIBRINOGEN": {"LBTESTCD": "FIBRINO", "LBTEST": "Fibrinogen", "LBCAT": "COAGULATION", "LBSTRESU": "g/L", "LBSPEC": "PLASMA"},
+
+    # CHEMISTRY - Liver Function
+    "ALT": {"LBTESTCD": "ALT", "LBTEST": "Alanine Aminotransferase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "SGPT": {"LBTESTCD": "ALT", "LBTEST": "Alanine Aminotransferase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "AST": {"LBTESTCD": "AST", "LBTEST": "Aspartate Aminotransferase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "SGOT": {"LBTESTCD": "AST", "LBTEST": "Aspartate Aminotransferase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "ALP": {"LBTESTCD": "ALP", "LBTEST": "Alkaline Phosphatase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "ALKPHOS": {"LBTESTCD": "ALP", "LBTEST": "Alkaline Phosphatase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "GGT": {"LBTESTCD": "GGT", "LBTEST": "Gamma Glutamyl Transferase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "BILI": {"LBTESTCD": "BILI", "LBTEST": "Bilirubin", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "BILIRUBIN": {"LBTESTCD": "BILI", "LBTEST": "Bilirubin", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "TBILI": {"LBTESTCD": "BILI", "LBTEST": "Bilirubin", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "DBILI": {"LBTESTCD": "DBILI", "LBTEST": "Direct Bilirubin", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "IBILI": {"LBTESTCD": "IBILI", "LBTEST": "Indirect Bilirubin", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "ALB": {"LBTESTCD": "ALB", "LBTEST": "Albumin", "LBCAT": "CHEMISTRY", "LBSTRESU": "g/L", "LBSPEC": "SERUM"},
+    "ALBUMIN": {"LBTESTCD": "ALB", "LBTEST": "Albumin", "LBCAT": "CHEMISTRY", "LBSTRESU": "g/L", "LBSPEC": "SERUM"},
+    "PROT": {"LBTESTCD": "PROT", "LBTEST": "Protein", "LBCAT": "CHEMISTRY", "LBSTRESU": "g/L", "LBSPEC": "SERUM"},
+    "PROTEIN": {"LBTESTCD": "PROT", "LBTEST": "Protein", "LBCAT": "CHEMISTRY", "LBSTRESU": "g/L", "LBSPEC": "SERUM"},
+    "TPROT": {"LBTESTCD": "PROT", "LBTEST": "Protein", "LBCAT": "CHEMISTRY", "LBSTRESU": "g/L", "LBSPEC": "SERUM"},
+
+    # CHEMISTRY - Kidney Function
+    "CREAT": {"LBTESTCD": "CREAT", "LBTEST": "Creatinine", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "CREATININE": {"LBTESTCD": "CREAT", "LBTEST": "Creatinine", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "BUN": {"LBTESTCD": "BUN", "LBTEST": "Blood Urea Nitrogen", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "UREA": {"LBTESTCD": "UREA", "LBTEST": "Urea", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "URIC": {"LBTESTCD": "URATE", "LBTEST": "Urate", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "URATE": {"LBTESTCD": "URATE", "LBTEST": "Urate", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "GFR": {"LBTESTCD": "GFR", "LBTEST": "Glomerular Filtration Rate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mL/min/1.73m2", "LBSPEC": "SERUM", "LBDRVFL": "Y"},
+    "EGFR": {"LBTESTCD": "GFR", "LBTEST": "Glomerular Filtration Rate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mL/min/1.73m2", "LBSPEC": "SERUM", "LBDRVFL": "Y"},
+
+    # CHEMISTRY - Electrolytes
+    "SODIUM": {"LBTESTCD": "SODIUM", "LBTEST": "Sodium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "NA": {"LBTESTCD": "SODIUM", "LBTEST": "Sodium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "POTASSIUM": {"LBTESTCD": "K", "LBTEST": "Potassium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "K": {"LBTESTCD": "K", "LBTEST": "Potassium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CHLORIDE": {"LBTESTCD": "CL", "LBTEST": "Chloride", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CL": {"LBTESTCD": "CL", "LBTEST": "Chloride", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "BICARB": {"LBTESTCD": "BICARB", "LBTEST": "Bicarbonate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CO2": {"LBTESTCD": "BICARB", "LBTEST": "Bicarbonate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CA": {"LBTESTCD": "CA", "LBTEST": "Calcium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CALCIUM": {"LBTESTCD": "CA", "LBTEST": "Calcium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "MG": {"LBTESTCD": "MG", "LBTEST": "Magnesium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "MAGNESIUM": {"LBTESTCD": "MG", "LBTEST": "Magnesium", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "PHOS": {"LBTESTCD": "PHOS", "LBTEST": "Phosphate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "PHOSPHATE": {"LBTESTCD": "PHOS", "LBTEST": "Phosphate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "PHOSPHORUS": {"LBTESTCD": "PHOS", "LBTEST": "Phosphate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+
+    # CHEMISTRY - Glucose/Metabolic
+    "GLUC": {"LBTESTCD": "GLUC", "LBTEST": "Glucose", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "GLUCOSE": {"LBTESTCD": "GLUC", "LBTEST": "Glucose", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "HBA1C": {"LBTESTCD": "HBA1C", "LBTEST": "Hemoglobin A1C", "LBCAT": "CHEMISTRY", "LBSTRESU": "%", "LBSPEC": "WHOLE BLOOD"},
+    "A1C": {"LBTESTCD": "HBA1C", "LBTEST": "Hemoglobin A1C", "LBCAT": "CHEMISTRY", "LBSTRESU": "%", "LBSPEC": "WHOLE BLOOD"},
+    "INSULIN": {"LBTESTCD": "INSULIN", "LBTEST": "Insulin", "LBCAT": "CHEMISTRY", "LBSTRESU": "pmol/L", "LBSPEC": "SERUM"},
+
+    # CHEMISTRY - Lipids
+    "CHOL": {"LBTESTCD": "CHOL", "LBTEST": "Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "CHOLESTEROL": {"LBTESTCD": "CHOL", "LBTEST": "Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "TCHOL": {"LBTESTCD": "CHOL", "LBTEST": "Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "HDL": {"LBTESTCD": "HDL", "LBTEST": "HDL Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "HDLC": {"LBTESTCD": "HDL", "LBTEST": "HDL Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "LDL": {"LBTESTCD": "LDL", "LBTEST": "LDL Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM", "LBDRVFL": "Y"},
+    "LDLC": {"LBTESTCD": "LDL", "LBTEST": "LDL Cholesterol", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM", "LBDRVFL": "Y"},
+    "TRIG": {"LBTESTCD": "TRIG", "LBTEST": "Triglycerides", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "TRIGLYCERIDES": {"LBTESTCD": "TRIG", "LBTEST": "Triglycerides", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+    "TG": {"LBTESTCD": "TRIG", "LBTEST": "Triglycerides", "LBCAT": "CHEMISTRY", "LBSTRESU": "mmol/L", "LBSPEC": "SERUM"},
+
+    # CHEMISTRY - Other
+    "LDH": {"LBTESTCD": "LDH", "LBTEST": "Lactate Dehydrogenase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "CK": {"LBTESTCD": "CK", "LBTEST": "Creatine Kinase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "CPK": {"LBTESTCD": "CK", "LBTEST": "Creatine Kinase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "AMYLASE": {"LBTESTCD": "AMYLASE", "LBTEST": "Amylase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "LIPASE": {"LBTESTCD": "LIPASE", "LBTEST": "Lipase", "LBCAT": "CHEMISTRY", "LBSTRESU": "U/L", "LBSPEC": "SERUM"},
+    "IRON": {"LBTESTCD": "IRON", "LBTEST": "Iron", "LBCAT": "CHEMISTRY", "LBSTRESU": "umol/L", "LBSPEC": "SERUM"},
+    "FERRITIN": {"LBTESTCD": "FERRITN", "LBTEST": "Ferritin", "LBCAT": "CHEMISTRY", "LBSTRESU": "ug/L", "LBSPEC": "SERUM"},
+    "CRP": {"LBTESTCD": "CRP", "LBTEST": "C-Reactive Protein", "LBCAT": "CHEMISTRY", "LBSTRESU": "mg/L", "LBSPEC": "SERUM"},
+    "ESR": {"LBTESTCD": "ESR", "LBTEST": "Erythrocyte Sedimentation Rate", "LBCAT": "CHEMISTRY", "LBSTRESU": "mm/h", "LBSPEC": "WHOLE BLOOD"},
+
+    # CHEMISTRY - Thyroid
+    "TSH": {"LBTESTCD": "TSH", "LBTEST": "Thyrotropin", "LBCAT": "CHEMISTRY", "LBSTRESU": "mIU/L", "LBSPEC": "SERUM"},
+    "T3": {"LBTESTCD": "T3", "LBTEST": "Triiodothyronine", "LBCAT": "CHEMISTRY", "LBSTRESU": "nmol/L", "LBSPEC": "SERUM"},
+    "T4": {"LBTESTCD": "T4", "LBTEST": "Thyroxine", "LBCAT": "CHEMISTRY", "LBSTRESU": "nmol/L", "LBSPEC": "SERUM"},
+    "FT3": {"LBTESTCD": "FT3", "LBTEST": "Free Triiodothyronine", "LBCAT": "CHEMISTRY", "LBSTRESU": "pmol/L", "LBSPEC": "SERUM"},
+    "FT4": {"LBTESTCD": "FT4", "LBTEST": "Free Thyroxine", "LBCAT": "CHEMISTRY", "LBSTRESU": "pmol/L", "LBSPEC": "SERUM"},
+
+    # CHEMISTRY - Cardiac Markers
+    "TROP": {"LBTESTCD": "TROP", "LBTEST": "Troponin", "LBCAT": "CHEMISTRY", "LBSTRESU": "ng/L", "LBSPEC": "SERUM"},
+    "TROPONIN": {"LBTESTCD": "TROP", "LBTEST": "Troponin", "LBCAT": "CHEMISTRY", "LBSTRESU": "ng/L", "LBSPEC": "SERUM"},
+    "BNP": {"LBTESTCD": "BNP", "LBTEST": "Brain Natriuretic Peptide", "LBCAT": "CHEMISTRY", "LBSTRESU": "pg/mL", "LBSPEC": "SERUM"},
+
+    # URINALYSIS
+    "UPROT": {"LBTESTCD": "UPROT", "LBTEST": "Protein Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+    "UGLUC": {"LBTESTCD": "UGLUC", "LBTEST": "Glucose Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+    "UKET": {"LBTESTCD": "UKET", "LBTEST": "Ketones Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+    "UBLOOD": {"LBTESTCD": "UBLOOD", "LBTEST": "Blood Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+    "UPH": {"LBTESTCD": "UPH", "LBTEST": "pH Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+    "USPECGR": {"LBTESTCD": "USPECGR", "LBTEST": "Specific Gravity Urine", "LBCAT": "URINALYSIS", "LBSPEC": "URINE", "LBSTRESU": ""},
+}
+
+# Patterns for detecting lab test columns (partial matches)
+LAB_TEST_PATTERNS = [
+    "HEMOGLOBIN", "HEMATOCRIT", "ERYTHRO", "LEUKO", "PLATELET",
+    "NEUTRO", "LYMPHO", "MONO", "EOSINO", "BASO",
+    "BILIRU", "CREATIN", "ALBUMIN", "PROTEIN", "GLUCOSE",
+    "CHOLEST", "TRIGLYC", "SODIUM", "POTASSIUM", "CHLORIDE",
+    "CALCIUM", "MAGNESIUM", "PHOSPH", "ALANINE", "ASPARTATE",
+    "ALKALINE", "GAMMA", "UREA", "URIC", "IRON", "FERRITIN",
+    "PROTHROMBIN", "FIBRINOGEN", "THYRO", "INSULIN",
+    "TROPONIN", "AMYLASE", "LIPASE", "LACTATE",
+]
+
+
+def detect_horizontal_lab_format(df: pd.DataFrame) -> Tuple[bool, List[str], List[str]]:
+    """
+    Detect if lab source data is in horizontal format (needs MELT).
+
+    Horizontal format: One row per subject/visit, multiple columns for tests
+    Vertical format: One row per test result, with LBTESTCD column
+
+    Args:
+        df: Source DataFrame
+
+    Returns:
+        Tuple of (is_horizontal, test_columns, id_columns)
+    """
+    # Check for vertical format indicators (columns that suggest already vertical)
+    vertical_indicators = [
+        "LBTESTCD", "TESTCD", "LABTEST", "LPARM",
+        "ANALYTE", "PARAMETER", "LBTEST"
+    ]
+
+    for col in df.columns:
+        col_upper = col.upper().strip()
+        if col_upper in vertical_indicators:
+            logger.info(f"Detected VERTICAL format - found column: {col}")
+            return (False, [], list(df.columns))
+
+    # Columns that should NEVER be treated as lab tests (identifiers and timing)
+    id_column_patterns = [
+        "STUDYID", "STUDY", "USUBJID", "SUBJID", "SUBJECT", "PATIENT",
+        "PT", "PAT", "SUBJ", "SITEID", "SITE", "INVID", "INVNAM",
+        "VISIT", "VISITNUM", "VISNUM", "VISITDY", "EPOCH", "PHASE", "PERIOD",
+        "DATE", "DTC", "DT", "DATETIME", "TIME", "DAY", "WEEK", "MONTH",
+        "SEQ", "SPID", "GRPID", "REFID", "LNKID", "LNKGRP",
+        "AGE", "SEX", "RACE", "ETHNIC", "COUNTRY", "ARM", "ARMCD",
+        "DOMAIN", "RFSTDTC", "RFENDTC", "BRTHDTC", "DTHDTC",
+        "COLLECTION", "COLLECTED", "SPECIMEN", "SPEC", "SAMPLE",
+        "UNIT", "UNITS", "NORMAL", "REFERENCE", "RANGE", "LOW", "HIGH",
+        "FLAG", "STATUS", "STAT", "REASON", "COMMENT", "NOTE",
+    ]
+
+    # Check for horizontal format - find lab test columns
+    test_columns = []
+    id_columns = []
+
+    for col in df.columns:
+        col_upper = col.upper().strip()
+
+        # First check if this is definitely an identifier column
+        is_id_col = any(
+            col_upper == pattern or
+            col_upper.startswith(pattern + "_") or
+            col_upper.endswith("_" + pattern) or
+            pattern in col_upper.split("_")
+            for pattern in id_column_patterns
+        )
+
+        if is_id_col:
+            id_columns.append(col)
+            continue
+
+        # Remove common prefixes/suffixes for lab test matching
+        col_clean = re.sub(r'^(LAB_?|LB_?|TEST_?)', '', col_upper)
+        col_clean = re.sub(r'(_?RESULT|_?VALUE|_?RES)$', '', col_clean)
+
+        # Check if column is a known lab test (exact match)
+        if col_upper in LAB_TEST_CODE_MAP or col_clean in LAB_TEST_CODE_MAP:
+            test_columns.append(col)
+        # Check if column matches lab test patterns (partial match)
+        elif any(pattern in col_upper for pattern in LAB_TEST_PATTERNS):
+            test_columns.append(col)
+        else:
+            id_columns.append(col)
+
+    # If we found multiple test columns (>= 3), it's likely horizontal format
+    is_horizontal = len(test_columns) >= 3
+
+    if is_horizontal:
+        logger.info(f"Detected HORIZONTAL format with {len(test_columns)} test columns")
+        logger.info(f"Test columns: {test_columns[:10]}...")
+    else:
+        logger.info(f"Detected format uncertain - found {len(test_columns)} potential test columns")
+
+    return (is_horizontal, test_columns, id_columns)
+
+
+def melt_horizontal_to_vertical_lb(
+    df: pd.DataFrame,
+    test_columns: List[str],
+    id_columns: List[str],
+    study_id: str
+) -> pd.DataFrame:
+    """
+    Transform horizontal lab data to SDTM LB vertical format using MELT.
+
+    Args:
+        df: Source DataFrame in horizontal format
+        test_columns: List of columns containing test results
+        id_columns: List of identifier columns to keep
+        study_id: Study identifier
+
+    Returns:
+        DataFrame in vertical SDTM LB format
+    """
+    logger.info(f"MELT transformation: {len(df)} rows x {len(test_columns)} tests -> vertical format")
+
+    lb_records = []
+
+    for idx, row in df.iterrows():
+        # Get subject identifier
+        usubjid = None
+        for col in ["USUBJID", "SUBJID", "PT", "SUBJECT_ID", "PATIENT_ID", "SUBJECT", "PATIENT"]:
+            if col in row.index and pd.notna(row[col]):
+                usubjid = str(row[col])
+                break
+
+        if not usubjid:
+            # Try case-insensitive search
+            for col in row.index:
+                if col.upper() in ["USUBJID", "SUBJID", "PT", "SUBJECT_ID", "PATIENT_ID"]:
+                    if pd.notna(row[col]):
+                        usubjid = str(row[col])
+                        break
+
+        if not usubjid:
+            continue
+
+        # Get visit info
+        visitnum = None
+        visit = ""
+        for col in ["VISITNUM", "VISNUM", "VISIT_NUMBER"]:
+            if col in row.index and pd.notna(row[col]):
+                try:
+                    visitnum = int(float(row[col]))
+                except (ValueError, TypeError):
+                    visitnum = row[col]
+                break
+
+        for col in ["VISIT", "VISNAME", "VISIT_NAME"]:
+            if col in row.index and pd.notna(row[col]):
+                visit = str(row[col])
+                break
+
+        # Get date info
+        lbdtc = ""
+        for col in ["LBDTC", "DATE", "VISITDT", "COLLDT", "SPECDT", "LABDT", "COLLECTION_DATE"]:
+            if col in row.index and pd.notna(row[col]):
+                lbdtc = _convert_date_for_melt(row[col])
+                break
+
+        # Get epoch
+        epoch = ""
+        for col in ["EPOCH", "PHASE", "PERIOD"]:
+            if col in row.index and pd.notna(row[col]):
+                epoch = str(row[col]).upper()
+                break
+
+        seq = 0
+
+        # Create one record per test
+        for test_col in test_columns:
+            if test_col not in row.index or pd.isna(row[test_col]):
+                continue
+
+            seq += 1
+            result = row[test_col]
+
+            # Get test mapping
+            test_col_upper = test_col.upper().strip()
+            # Clean the column name
+            test_col_clean = re.sub(r'^(LAB_?|LB_?|TEST_?)', '', test_col_upper)
+            test_col_clean = re.sub(r'(_?RESULT|_?VALUE|_?RES)$', '', test_col_clean)
+
+            # Look up in mapping dictionary
+            test_info = LAB_TEST_CODE_MAP.get(test_col_upper)
+            if not test_info:
+                test_info = LAB_TEST_CODE_MAP.get(test_col_clean)
+
+            # If not found by exact match, try partial match
+            if not test_info:
+                for pattern, info in LAB_TEST_CODE_MAP.items():
+                    if pattern in test_col_upper or test_col_upper in pattern:
+                        test_info = info
+                        break
+
+            # Default mapping if not found
+            if not test_info:
+                test_info = {
+                    "LBTESTCD": test_col_clean[:8] if test_col_clean else test_col_upper[:8],
+                    "LBTEST": test_col.replace("_", " ").title(),
+                    "LBCAT": "UNKNOWN",
+                    "LBSTRESU": "",
+                    "LBSPEC": "BLOOD"
+                }
+
+            # Build USUBJID with study prefix if needed
+            final_usubjid = usubjid
+            if not usubjid.startswith(study_id):
+                final_usubjid = f"{study_id}-{usubjid}"
+
+            lb_record = {
+                "STUDYID": study_id,
+                "DOMAIN": "LB",
+                "USUBJID": final_usubjid,
+                "LBSEQ": seq,
+                "LBTESTCD": test_info.get("LBTESTCD", test_col_upper[:8]),
+                "LBTEST": test_info.get("LBTEST", test_col),
+                "LBCAT": test_info.get("LBCAT", ""),
+                "LBSCAT": "",
+                "LBORRES": str(result),
+                "LBORRESU": test_info.get("LBSTRESU", ""),
+                "LBORNRLO": "",
+                "LBORNRHI": "",
+                "LBSTRESC": str(result),
+                "LBSTRESN": None,
+                "LBSTRESU": test_info.get("LBSTRESU", ""),
+                "LBSTNRLO": None,
+                "LBSTNRHI": None,
+                "LBNRIND": "",
+                "LBSTAT": "",
+                "LBREASND": "",
+                "LBNAM": "",
+                "LBSPEC": test_info.get("LBSPEC", "BLOOD"),
+                "LBMETHOD": "",
+                "LBBLFL": "",
+                "LBFAST": "",
+                "LBDRVFL": test_info.get("LBDRVFL", ""),
+                "LBTOX": "",
+                "LBTOXGR": "",
+                "VISITNUM": visitnum,
+                "VISIT": visit,
+                "EPOCH": epoch,
+                "LBDTC": lbdtc,
+                "LBDY": None,
+            }
+
+            # Try to parse numeric result
+            try:
+                numeric_val = float(result)
+                lb_record["LBSTRESN"] = numeric_val
+            except (ValueError, TypeError):
+                # Keep as character result
+                pass
+
+            lb_records.append(lb_record)
+
+    result_df = pd.DataFrame(lb_records)
+
+    logger.info(f"MELT complete: Created {len(result_df)} LB records")
+
+    return result_df
+
+
+def _convert_date_for_melt(date_value) -> str:
+    """Convert various date formats to ISO 8601 for MELT transformation."""
+    if pd.isna(date_value):
+        return ""
+
+    date_str = str(date_value)
+
+    # Already ISO format
+    if len(date_str) >= 10 and date_str[4:5] == '-' and date_str[7:8] == '-':
+        return date_str[:10]
+
+    # Try various formats
+    formats = [
+        "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d",
+        "%d-%b-%Y", "%d %b %Y", "%b %d, %Y",
+        "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(date_str[:min(len(date_str), 19)], fmt)
+            return dt.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            continue
+
+    return date_str
+
+
 class BaseDomainTransformer(ABC):
     """Base class for SDTM domain transformers with intelligent mapping capabilities."""
 
@@ -1797,7 +2232,12 @@ class VSTransformer(BaseDomainTransformer):
 
 
 class LBTransformer(BaseDomainTransformer):
-    """Laboratory domain transformer - FULL SDTM-IG 3.4 compliant (43 variables)."""
+    """Laboratory domain transformer - FULL SDTM-IG 3.4 compliant (43 variables).
+
+    Enhanced with automatic detection of horizontal vs vertical source format.
+    If horizontal format detected (test values as columns), automatically performs
+    MELT/UNPIVOT transformation to vertical SDTM format.
+    """
 
     def __init__(self, study_id: str, mapping_spec: Optional[MappingSpecification] = None):
         super().__init__(study_id, mapping_spec)
@@ -1806,6 +2246,10 @@ class LBTransformer(BaseDomainTransformer):
     def transform(self, source_df: pd.DataFrame) -> pd.DataFrame:
         """
         Transform laboratory data to SDTM LB domain per SDTMIG 3.4.
+
+        ENHANCED: Automatically detects horizontal vs vertical source format.
+        - If HORIZONTAL (columns like HGB, WBC, ALT): Performs MELT transformation
+        - If VERTICAL (has LBTESTCD column): Uses standard transformation
 
         Implements ALL 43 LB variables including:
         - Required (6): STUDYID, DOMAIN, USUBJID, LBSEQ, LBTESTCD, LBTEST
@@ -1816,6 +2260,28 @@ class LBTransformer(BaseDomainTransformer):
                             LBSPCCND, LBMETHOD, LBFAST, LBDRVFL, LBTOX, LBTOXGR, etc.
         """
         self.log("Transforming to LB domain - FULL SDTM-IG 3.4 compliance (43 variables)")
+
+        # =====================================================================
+        # STEP 0: Detect source data format (HORIZONTAL vs VERTICAL)
+        # =====================================================================
+        is_horizontal, test_columns, id_columns = detect_horizontal_lab_format(source_df)
+
+        if is_horizontal:
+            self.log(f"DETECTED HORIZONTAL FORMAT - {len(test_columns)} test columns found")
+            self.log(f"Test columns: {', '.join(test_columns[:15])}...")
+            self.log("Performing MELT transformation to vertical format")
+
+            # Perform MELT transformation
+            melted_df = melt_horizontal_to_vertical_lb(
+                source_df, test_columns, id_columns, self.study_id
+            )
+
+            self.log(f"MELT complete: {len(source_df)} source rows -> {len(melted_df)} LB records")
+
+            # The melted data already has SDTM structure, finalize it
+            return self._finalize_lb_dataset(melted_df)
+
+        self.log("DETECTED VERTICAL FORMAT - using standard transformation")
 
         lb_records = []
         subject_seq = {}
@@ -2160,6 +2626,67 @@ class LBTransformer(BaseDomainTransformer):
         # Log compliance summary
         self.log(f"Created {len(result_df)} LB records with {len(result_df.columns)} SDTM-IG 3.4 variables")
         self.log(f"Columns: {', '.join(result_df.columns.tolist())}")
+        return result_df
+
+    def _finalize_lb_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Finalize LB dataset after MELT transformation.
+
+        This method takes the melted/vertical data and ensures:
+        1. Correct column ordering per SDTM-IG 3.4
+        2. SEQ numbers are recalculated per subject
+        3. All required columns exist
+        4. Data types are correct
+
+        Args:
+            df: DataFrame with LB data in vertical format (from MELT)
+
+        Returns:
+            Finalized SDTM LB DataFrame
+        """
+        self.log("Finalizing LB dataset after MELT transformation")
+
+        if df.empty:
+            self.log("Warning: Empty dataset after MELT transformation")
+            return df
+
+        # Recalculate LBSEQ per subject
+        df = df.sort_values(['USUBJID', 'VISITNUM', 'LBTESTCD']).reset_index(drop=True)
+        df['LBSEQ'] = df.groupby('USUBJID').cumcount() + 1
+
+        # Ensure column order per SDTM-IG 3.4
+        lb_column_order = [
+            "STUDYID", "DOMAIN", "USUBJID", "LBSEQ", "LBTESTCD", "LBTEST",
+            "LBCAT", "LBSCAT", "LBORRES", "LBORRESU", "LBORNRLO", "LBORNRHI",
+            "LBSTRESC", "LBSTRESN", "LBSTRESU", "LBSTNRLO", "LBSTNRHI", "LBNRIND",
+            "LBSTAT", "LBREASND", "LBNAM", "LBSPEC", "LBMETHOD", "LBBLFL",
+            "LBFAST", "LBDRVFL", "LBTOX", "LBTOXGR", "VISITNUM", "VISIT", "EPOCH",
+            "LBDTC", "LBDY"
+        ]
+
+        # Add any missing required columns with empty values
+        for col in lb_column_order:
+            if col not in df.columns:
+                if col in ['LBSEQ', 'VISITNUM', 'LBSTRESN', 'LBSTNRLO', 'LBSTNRHI', 'LBDY']:
+                    df[col] = None  # Numeric
+                else:
+                    df[col] = ""  # Character
+
+        ordered_cols = [c for c in lb_column_order if c in df.columns]
+        extra_cols = [c for c in df.columns if c not in lb_column_order]
+        result_df = df[ordered_cols + extra_cols]
+
+        # Ensure STUDYID and DOMAIN are populated
+        result_df['STUDYID'] = result_df['STUDYID'].fillna(self.study_id)
+        result_df['DOMAIN'] = 'LB'
+
+        # Log summary
+        non_empty_tests = result_df['LBTESTCD'].notna().sum()
+        non_empty_results = result_df['LBORRES'].notna().sum()
+        self.log(f"Finalized LB dataset: {len(result_df)} records, {non_empty_tests} with test codes, {non_empty_results} with results")
+        self.log(f"Test codes found: {', '.join(result_df['LBTESTCD'].dropna().unique()[:20])}")
+        self.log(f"Columns: {', '.join(result_df.columns.tolist())}")
+
         return result_df
 
 

@@ -38,6 +38,70 @@ def get_study_id() -> str:
     return _study_id
 
 
+# =============================================================================
+# TASK PROGRESS TRACKING (write_todos)
+# =============================================================================
+# This tool emits task progress that the frontend displays in the TaskProgressBar.
+# The frontend extracts todos from on_tool_start events for 'write_todos'.
+
+class TodoItem(BaseModel):
+    """A single task/todo item for progress tracking."""
+    id: str = Field(description="Unique identifier for the task")
+    content: str = Field(description="Title/description of the task")
+    status: str = Field(default="pending", description="Status: pending, in_progress, completed, error")
+
+
+class WriteTodosInput(BaseModel):
+    """Input for write_todos tool."""
+    todos: List[TodoItem] = Field(description="List of task items to track progress")
+
+
+@tool
+def write_todos(todos: List[Dict[str, str]]) -> str:
+    """
+    Update the task progress list. Use this to show the user what steps are being performed.
+
+    Call this tool to:
+    1. Create a plan at the start of a multi-step operation
+    2. Update task status as you progress through steps
+    3. Mark tasks as completed when done
+
+    Args:
+        todos: List of task dictionaries with 'id', 'content', and 'status' keys.
+               - id: Unique identifier (e.g., "1", "step_1", "load_data")
+               - content: Task title/description shown to user
+               - status: One of "pending", "in_progress", "completed", "error"
+
+    Example:
+        write_todos([
+            {"id": "1", "content": "Load data from S3", "status": "completed"},
+            {"id": "2", "content": "Generate mapping specification", "status": "in_progress"},
+            {"id": "3", "content": "Transform to SDTM", "status": "pending"},
+            {"id": "4", "content": "Validate results", "status": "pending"}
+        ])
+
+    Returns:
+        Confirmation message with task count
+    """
+    # Validate and normalize todos
+    normalized = []
+    for i, todo in enumerate(todos):
+        normalized.append({
+            "id": str(todo.get("id", str(i))),
+            "content": str(todo.get("content", todo.get("title", "Task"))),
+            "status": str(todo.get("status", "pending")).lower()
+        })
+
+    # Count by status
+    status_counts = {}
+    for t in normalized:
+        status = t["status"]
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    summary = ", ".join(f"{count} {status}" for status, count in status_counts.items())
+    return f"Task progress updated: {len(normalized)} tasks ({summary})"
+
+
 class LoadDataInput(BaseModel):
     """Input for load_data_from_s3 tool."""
     bucket: str = Field(default="s3dcri", description="S3 bucket name")
@@ -471,6 +535,884 @@ def convert_domain(domain: str) -> str:
     except Exception as e:
         import traceback
         return f"Error converting {domain}: {str(e)}\n\n{traceback.format_exc()}"
+
+
+@tool
+def convert_all_domains() -> str:
+    """
+    Convert ALL available domains from EDC to SDTM format in a single batch operation.
+
+    This is more efficient than converting domains one by one, as it:
+    - Converts all detected domains in one tool call
+    - Reduces agent iterations/recursion
+    - Provides a summary of all conversions
+
+    Use this when the user asks to "convert all domains" or "convert everything".
+
+    Returns detailed results for each domain converted.
+    """
+    global _sdtm_data
+
+    if not _source_data:
+        return "No data loaded. Please use load_data_from_s3 first."
+
+    # Find all available domains
+    domain_files: Dict[str, List[str]] = {}
+    for filename in _source_data:
+        domain = _determine_domain(filename)
+        if domain != "UNKNOWN":
+            if domain not in domain_files:
+                domain_files[domain] = []
+            domain_files[domain].append(filename)
+
+    if not domain_files:
+        return "No convertible domains found in the loaded data."
+
+    output = f"## Converting All Domains ({len(domain_files)} total)\n\n"
+    output += f"**Study ID:** {_study_id}\n"
+    output += f"**Domains to convert:** {', '.join(sorted(domain_files.keys()))}\n\n"
+
+    successful = []
+    failed = []
+    total_records = 0
+
+    # Import once for all conversions
+    try:
+        from sdtm_pipeline.transformers.mapping_generator import MappingSpecificationGenerator
+        from sdtm_pipeline.transformers.domain_transformers import get_transformer
+        from sdtm_pipeline.validators.sdtm_validator import SDTMValidator
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return "Error: ANTHROPIC_API_KEY not set"
+
+        generator = MappingSpecificationGenerator(
+            api_key=api_key,
+            study_id=_study_id,
+            use_knowledge_tools=True
+        )
+        validator = SDTMValidator(study_id=_study_id, use_knowledge_tools=True)
+
+        # Get Pinecone retriever once
+        pinecone_retriever = None
+        try:
+            from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+            pinecone_retriever = get_knowledge_retriever()
+        except Exception:
+            pass
+
+        # Process each domain
+        for domain in sorted(domain_files.keys()):
+            source_files = domain_files[domain]
+            output += f"### {domain} Domain\n\n"
+
+            try:
+                # Get first source file
+                source_file = source_files[0]
+                df = _source_data[source_file]
+
+                output += f"**Source:** {source_file} ({len(df)} records)\n"
+
+                # Generate mapping
+                spec = generator.generate_mapping(
+                    df=df,
+                    source_name=source_file,
+                    target_domain=domain
+                )
+
+                # Combine all source files for this domain
+                combined_df = pd.concat(
+                    [_source_data[f] for f in source_files],
+                    ignore_index=True
+                )
+
+                # Transform
+                transformer = get_transformer(
+                    domain_code=domain,
+                    study_id=_study_id,
+                    mapping_spec=spec,
+                    pinecone_retriever=pinecone_retriever
+                )
+
+                sdtm_df = transformer.transform(combined_df)
+                _sdtm_data[domain] = sdtm_df
+
+                # Quick validation
+                result = validator.validate_domain(sdtm_df, domain)
+
+                # Record results
+                status = "✓" if result.is_valid else f"⚠️ ({result.error_count}E/{result.warning_count}W)"
+                output += f"**Records:** {len(sdtm_df)} | **Variables:** {len(sdtm_df.columns)} | **Status:** {status}\n\n"
+
+                successful.append({
+                    "domain": domain,
+                    "records": len(sdtm_df),
+                    "variables": len(sdtm_df.columns),
+                    "errors": result.error_count,
+                    "warnings": result.warning_count
+                })
+                total_records += len(sdtm_df)
+
+            except Exception as e:
+                output += f"**Error:** {str(e)[:100]}\n\n"
+                failed.append({"domain": domain, "error": str(e)[:100]})
+
+        # Summary
+        output += "---\n\n"
+        output += "## Conversion Summary\n\n"
+        output += f"**Total Domains:** {len(successful)}/{len(domain_files)} successful\n"
+        output += f"**Total Records:** {total_records:,}\n\n"
+
+        if successful:
+            output += "### Converted Domains\n\n"
+            output += "| Domain | Records | Variables | Status |\n"
+            output += "|--------|---------|-----------|--------|\n"
+            for s in successful:
+                status = "✓ Valid" if s["errors"] == 0 else f"⚠️ {s['errors']}E/{s['warnings']}W"
+                output += f"| {s['domain']} | {s['records']:,} | {s['variables']} | {status} |\n"
+
+        if failed:
+            output += "\n### Failed Domains\n\n"
+            for f in failed:
+                output += f"- **{f['domain']}**: {f['error']}\n"
+
+        output += "\n**Next steps:** Use `upload_sdtm_to_s3` to upload all converted domains, or `validate_domain` for detailed validation.\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error in batch conversion: {str(e)}\n\n{traceback.format_exc()}"
+
+
+# =============================================================================
+# SPECIFICATION-DRIVEN WORKFLOW TOOLS
+# =============================================================================
+
+@tool
+def generate_mapping_specification(
+    domain: str,
+    output_dir: str = "./sdtm_workspace/mapping_specs"
+) -> str:
+    """
+    Generate a comprehensive SDTM mapping specification for a domain.
+
+    This tool performs DETAILED analysis of raw EDC data against CDISC SDTM-IG 3.4
+    specifications and generates a complete mapping specification that defines:
+
+    **Domain-Level Analysis:**
+    - Source file identification and structure
+    - Target SDTM domain determination
+    - Record count and column inventory
+
+    **Variable-Level Mappings with Transformation Types:**
+    - DIRECT: Direct column copy (source → target)
+    - ASSIGN: Constant value assignment
+    - CONCAT: Concatenate multiple columns (e.g., USUBJID = STUDY + SITE + SUBJ)
+    - SEQUENCE: Generate sequence numbers per subject
+    - DATE_FORMAT: Convert dates to ISO 8601
+    - MAP: Apply controlled terminology lookup
+    - DERIVE: Calculate derived values (e.g., study day)
+    - TRANSPOSE: Vertical to horizontal restructuring
+
+    **Output Files:**
+    - JSON specification (for programmatic transformation)
+    - Excel workbook (for human review with multiple sheets)
+
+    **Use this BEFORE convert_domain to review and customize the mapping!**
+
+    Args:
+        domain: SDTM domain code (DM, AE, VS, LB, CM, EX, etc.)
+        output_dir: Directory to save specification files
+    """
+    domain = domain.upper()
+
+    if not _source_data:
+        return "No data loaded. Please use load_data_from_s3 first."
+
+    # Find source files for this domain
+    source_files = [f for f in _source_data if _determine_domain(f) == domain]
+    if not source_files:
+        available = set(_determine_domain(f) for f in _source_data)
+        return f"No source files found for domain: {domain}. Available: {', '.join(available)}"
+
+    output = f"## Generating Mapping Specification for {domain} Domain\n\n"
+
+    try:
+        from pathlib import Path
+        import json
+
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Get source data
+        source_file = source_files[0]
+        df = _source_data[source_file]
+
+        output += f"**Source File:** {source_file}\n"
+        output += f"**Records:** {len(df):,}\n"
+        output += f"**Columns:** {len(df.columns)}\n\n"
+
+        # Step 1: Fetch SDTM-IG 3.4 Specification
+        output += "### Step 1: Fetching CDISC SDTM-IG 3.4 Specification\n\n"
+
+        sdtm_spec = None
+        try:
+            from sdtm_pipeline.transformers.sdtm_web_reference import get_sdtm_web_reference
+            ref = get_sdtm_web_reference()
+            sdtm_spec = ref.get_domain_specification(domain)
+
+            if sdtm_spec:
+                variables = sdtm_spec.get("variables", {})
+                req_count = len(variables.get("required", []))
+                exp_count = len(variables.get("expected", []))
+                perm_count = len(variables.get("permissible", []))
+                output += f"✓ Retrieved: {req_count} Required, {exp_count} Expected, {perm_count} Permissible variables\n\n"
+        except Exception as e:
+            output += f"⚠ SDTM-IG lookup: {str(e)[:50]}\n\n"
+
+        # Step 2: Analyze Source Data
+        output += "### Step 2: Analyzing Source Data Structure\n\n"
+
+        source_analysis = {
+            "filename": source_file,
+            "records": len(df),
+            "columns": [],
+        }
+
+        for col in df.columns:
+            col_info = {
+                "name": col,
+                "dtype": str(df[col].dtype),
+                "non_null": int(df[col].notna().sum()),
+                "unique": int(df[col].nunique()),
+                "samples": [str(v)[:50] for v in df[col].dropna().head(3).tolist()]
+            }
+            source_analysis["columns"].append(col_info)
+
+        output += f"**Source Columns ({len(df.columns)}):**\n"
+        output += "| Column | Type | Non-Null | Unique | Sample Values |\n"
+        output += "|--------|------|----------|--------|---------------|\n"
+        for col_info in source_analysis["columns"][:15]:
+            samples = ", ".join(col_info["samples"][:2])[:30]
+            output += f"| {col_info['name'][:20]} | {col_info['dtype'][:8]} | {col_info['non_null']} | {col_info['unique']} | {samples} |\n"
+        if len(source_analysis["columns"]) > 15:
+            output += f"\n*... and {len(source_analysis['columns']) - 15} more columns*\n"
+        output += "\n"
+
+        # Step 3: Generate Variable Mappings
+        output += "### Step 3: Generating Variable Mappings\n\n"
+
+        # Use the MappingSpecificationGenerator
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return "Error: ANTHROPIC_API_KEY not set"
+
+        from sdtm_pipeline.transformers.mapping_generator import MappingSpecificationGenerator
+        generator = MappingSpecificationGenerator(
+            api_key=api_key,
+            study_id=_study_id,
+            use_knowledge_tools=True
+        )
+
+        # Generate the mapping specification
+        mapping_spec = generator.generate_mapping(
+            df=df,
+            source_name=source_file,
+            target_domain=domain
+        )
+
+        # Enhance the specification with detailed transformation types
+        enhanced_spec = _enhance_mapping_specification(
+            mapping_spec, df, domain, sdtm_spec, _study_id
+        )
+
+        # Step 4: Save JSON Specification
+        output += "### Step 4: Saving Specification Files\n\n"
+
+        json_path = output_path / f"{domain.lower()}_mapping_specification.json"
+        with open(json_path, 'w') as f:
+            json.dump(enhanced_spec, f, indent=2)
+        output += f"✓ **JSON:** `{json_path}`\n"
+
+        # Step 5: Save Excel Specification
+        excel_path = output_path / f"{domain.lower()}_mapping_specification.xlsx"
+        _save_mapping_excel(enhanced_spec, str(excel_path))
+        output += f"✓ **Excel:** `{excel_path}`\n\n"
+
+        # Step 6: Summary
+        output += "### Mapping Specification Summary\n\n"
+
+        var_mappings = enhanced_spec.get("variable_mappings", [])
+        output += f"**Total Variables Mapped:** {len(var_mappings)}\n\n"
+
+        # Count by transformation type
+        transform_counts = {}
+        for vm in var_mappings:
+            t_type = vm.get("transformation_type", "UNKNOWN")
+            transform_counts[t_type] = transform_counts.get(t_type, 0) + 1
+
+        output += "**Transformation Types:**\n"
+        output += "| Type | Count | Description |\n"
+        output += "|------|-------|-------------|\n"
+        type_desc = {
+            "ASSIGN": "Constant value assignment",
+            "COPY": "Direct column copy",
+            "CONCAT": "Concatenate multiple columns",
+            "SEQUENCE": "Generate sequence numbers",
+            "DATE_FORMAT": "Convert to ISO 8601",
+            "MAP": "Controlled terminology lookup",
+            "DERIVE": "Calculated derivation",
+            "TRANSPOSE": "Reshape data structure",
+        }
+        for t_type, count in sorted(transform_counts.items(), key=lambda x: -x[1]):
+            desc = type_desc.get(t_type, t_type)
+            output += f"| {t_type} | {count} | {desc} |\n"
+
+        output += "\n### Sample Variable Mappings\n\n"
+        output += "| SDTM Variable | Source | Transformation | Type |\n"
+        output += "|---------------|--------|----------------|------|\n"
+        for vm in var_mappings[:10]:
+            sdtm_var = vm.get("sdtm_variable", "")
+            source = vm.get("source_column", "")
+            if isinstance(source, list):
+                source = "+".join(source)
+            source = str(source)[:20] if source else "[derived]"
+            transform = vm.get("transformation", "")[:25]
+            t_type = vm.get("transformation_type", "")
+            output += f"| {sdtm_var} | {source} | {transform} | {t_type} |\n"
+
+        if len(var_mappings) > 10:
+            output += f"\n*... and {len(var_mappings) - 10} more variables*\n"
+
+        # Controlled Terminology
+        ct = enhanced_spec.get("controlled_terminologies", {})
+        if ct:
+            output += f"\n**Controlled Terminology Codelists:** {len(ct)}\n"
+            for codelist, values in list(ct.items())[:5]:
+                vals = values if isinstance(values, list) else values.get("valid_values", [])
+                output += f"- `{codelist}`: {', '.join(str(v) for v in vals[:4])}"
+                if len(vals) > 4:
+                    output += f"... (+{len(vals)-4} more)"
+                output += "\n"
+
+        output += "\n---\n\n"
+        output += "**Next Steps:**\n"
+        output += f"1. Review the Excel file at `{excel_path}`\n"
+        output += "2. Modify mappings if needed\n"
+        output += f"3. Use `transform_with_specification('{domain}', '{json_path}')` to transform\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error generating mapping specification: {str(e)}\n\n{traceback.format_exc()}"
+
+
+def _enhance_mapping_specification(
+    mapping_spec, source_df: pd.DataFrame, domain: str, sdtm_spec: dict, study_id: str
+) -> dict:
+    """Enhance the mapping specification with detailed transformation types."""
+
+    enhanced = {
+        "metadata": {
+            "study_id": study_id,
+            "source_domain": mapping_spec.source_domain,
+            "target_domain": domain,
+            "sdtm_version": "SDTM-IG 3.4",
+            "created_by": "SDTM Mapping Generator",
+            "created_date": datetime.now().isoformat(),
+            "description": f"Mapping specification for {domain} domain transformation"
+        },
+        "source_files": [{
+            "filename": mapping_spec.source_domain,
+            "records": len(source_df),
+            "columns": len(source_df.columns),
+        }],
+        "variable_mappings": [],
+        "derivation_rules": mapping_spec.derivation_rules or {},
+        "controlled_terminologies": mapping_spec.controlled_terminologies or {},
+        "data_quality_rules": []
+    }
+
+    # Build variable mappings with transformation types
+    for cm in mapping_spec.column_mappings:
+        transformation_type = _determine_transformation_type(cm, domain)
+
+        var_mapping = {
+            "sdtm_variable": cm.target_variable,
+            "label": _get_variable_label(cm.target_variable, domain, sdtm_spec),
+            "type": _get_variable_type(cm.target_variable, domain),
+            "core": _get_variable_core(cm.target_variable, domain, sdtm_spec),
+            "source_column": cm.source_column,
+            "transformation": cm.transformation or cm.derivation_rule or f"COPY({cm.source_column})" if cm.source_column else None,
+            "transformation_type": transformation_type,
+            "controlled_terminology": cm.controlled_terminology,
+            "comments": cm.comments or ""
+        }
+        enhanced["variable_mappings"].append(var_mapping)
+
+    # Add standard derivations if missing
+    standard_vars = ["STUDYID", "DOMAIN", "USUBJID", f"{domain}SEQ"]
+    existing_vars = [vm["sdtm_variable"] for vm in enhanced["variable_mappings"]]
+
+    for std_var in standard_vars:
+        if std_var not in existing_vars:
+            if std_var == "STUDYID":
+                enhanced["variable_mappings"].insert(0, {
+                    "sdtm_variable": "STUDYID",
+                    "label": "Study Identifier",
+                    "type": "Char",
+                    "core": "Req",
+                    "source_column": None,
+                    "transformation": f"ASSIGN('{study_id}')",
+                    "transformation_type": "ASSIGN",
+                    "controlled_terminology": None,
+                    "comments": "Study identifier constant"
+                })
+            elif std_var == "DOMAIN":
+                enhanced["variable_mappings"].insert(1, {
+                    "sdtm_variable": "DOMAIN",
+                    "label": "Domain Abbreviation",
+                    "type": "Char",
+                    "core": "Req",
+                    "source_column": None,
+                    "transformation": f"ASSIGN('{domain}')",
+                    "transformation_type": "ASSIGN",
+                    "controlled_terminology": None,
+                    "comments": "Domain identifier constant"
+                })
+
+    return enhanced
+
+
+def _determine_transformation_type(cm, domain: str) -> str:
+    """Determine the transformation type from the column mapping."""
+    if cm.transformation:
+        t = cm.transformation.upper()
+        if t.startswith("ASSIGN"): return "ASSIGN"
+        if t.startswith("COPY"): return "COPY"
+        if t.startswith("CONCAT"): return "CONCAT"
+        if t.startswith("SEQUENCE"): return "SEQUENCE"
+        if t.startswith("DATE_FORMAT"): return "DATE_FORMAT"
+        if t.startswith("MAP"): return "MAP"
+        if t.startswith("STUDY_DAY"): return "DERIVE"
+        if t.startswith("IF"): return "DERIVE"
+
+    if cm.derivation_rule:
+        rule = cm.derivation_rule.upper()
+        if "||" in rule or "CONCAT" in rule: return "CONCAT"
+        if "ROW_NUMBER" in rule: return "SEQUENCE"
+        if "DATE" in rule: return "DATE_FORMAT"
+        return "DERIVE"
+
+    if cm.source_column:
+        return "COPY"
+
+    return "DERIVE"
+
+
+def _get_variable_label(var_name: str, domain: str, sdtm_spec: dict) -> str:
+    """Get SDTM variable label from spec."""
+    if sdtm_spec:
+        for level in ["required", "expected", "permissible"]:
+            for var in sdtm_spec.get("variables", {}).get(level, []):
+                if var.get("name") == var_name:
+                    return var.get("label", var_name)
+    return var_name
+
+
+def _get_variable_type(var_name: str, domain: str) -> str:
+    """Get SDTM variable type."""
+    numeric_suffixes = ["SEQ", "CD", "DY", "STRESN", "ORRESU", "STNRLO", "STNRHI"]
+    if any(var_name.endswith(s) for s in numeric_suffixes):
+        return "Num"
+    return "Char"
+
+
+def _get_variable_core(var_name: str, domain: str, sdtm_spec: dict) -> str:
+    """Get SDTM variable core status (Req/Exp/Perm)."""
+    if sdtm_spec:
+        for level, abbr in [("required", "Req"), ("expected", "Exp"), ("permissible", "Perm")]:
+            for var in sdtm_spec.get("variables", {}).get(level, []):
+                if var.get("name") == var_name:
+                    return abbr
+    return "Perm"
+
+
+def _save_mapping_excel(spec: dict, output_path: str):
+    """Save mapping specification to Excel with multiple sheets."""
+    import pandas as pd
+
+    # Sheet 1: Variable Mappings
+    mappings_data = []
+    for vm in spec.get("variable_mappings", []):
+        source = vm.get("source_column", "")
+        if isinstance(source, list):
+            source = " + ".join(source)
+        mappings_data.append({
+            "SDTM Variable": vm.get("sdtm_variable"),
+            "Label": vm.get("label"),
+            "Type": vm.get("type"),
+            "Core": vm.get("core"),
+            "Source Column(s)": source or "[derived]",
+            "Transformation": vm.get("transformation"),
+            "Transformation Type": vm.get("transformation_type"),
+            "Controlled Terminology": vm.get("controlled_terminology"),
+            "Comments": vm.get("comments")
+        })
+    mappings_df = pd.DataFrame(mappings_data)
+
+    # Sheet 2: Metadata
+    metadata = spec.get("metadata", {})
+    metadata_df = pd.DataFrame([{
+        "Property": k,
+        "Value": str(v)
+    } for k, v in metadata.items()])
+
+    # Sheet 3: Derivation Rules
+    derivations = spec.get("derivation_rules", {})
+    derivation_df = pd.DataFrame([{
+        "Variable": k,
+        "Derivation Rule": v
+    } for k, v in derivations.items()])
+
+    # Sheet 4: Controlled Terminology
+    ct = spec.get("controlled_terminologies", {})
+    ct_data = []
+    for codelist, values in ct.items():
+        if isinstance(values, dict):
+            vals = values.get("valid_values", [])
+        else:
+            vals = values
+        for val in vals:
+            ct_data.append({"Codelist": codelist, "Valid Value": val})
+    ct_df = pd.DataFrame(ct_data)
+
+    # Sheet 5: Source Files
+    source_df = pd.DataFrame(spec.get("source_files", []))
+
+    # Write to Excel
+    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+        mappings_df.to_excel(writer, sheet_name='Variable Mappings', index=False)
+        metadata_df.to_excel(writer, sheet_name='Metadata', index=False)
+        if not derivation_df.empty:
+            derivation_df.to_excel(writer, sheet_name='Derivation Rules', index=False)
+        if not ct_df.empty:
+            ct_df.to_excel(writer, sheet_name='Controlled Terminology', index=False)
+        if not source_df.empty:
+            source_df.to_excel(writer, sheet_name='Source Files', index=False)
+
+
+@tool
+def transform_with_specification(
+    domain: str,
+    spec_path: str = ""
+) -> str:
+    """
+    Transform raw EDC data to SDTM using a previously generated mapping specification.
+
+    This tool reads a JSON mapping specification and applies all the defined
+    transformations to convert raw data to SDTM format.
+
+    **Workflow:**
+    1. First run `generate_mapping_specification(domain)` to create the spec
+    2. Review/modify the Excel file if needed
+    3. Run this tool to apply the transformations
+
+    Args:
+        domain: SDTM domain code (DM, AE, VS, LB, CM, etc.)
+        spec_path: Path to the JSON mapping specification file.
+                   If empty, looks in ./sdtm_workspace/mapping_specs/{domain}_mapping_specification.json
+    """
+    global _sdtm_data
+    domain = domain.upper()
+
+    if not _source_data:
+        return "No data loaded. Please use load_data_from_s3 first."
+
+    # Find spec file
+    if not spec_path:
+        spec_path = f"./sdtm_workspace/mapping_specs/{domain.lower()}_mapping_specification.json"
+
+    output = f"## Transforming {domain} Domain Using Specification\n\n"
+
+    try:
+        from pathlib import Path
+        import json
+
+        # Load specification
+        spec_file = Path(spec_path)
+        if not spec_file.exists():
+            return f"Specification file not found: {spec_path}\n\nRun `generate_mapping_specification('{domain}')` first."
+
+        with open(spec_file, 'r') as f:
+            spec = json.load(f)
+
+        output += f"**Specification:** `{spec_path}`\n"
+        output += f"**Study:** {spec.get('metadata', {}).get('study_id', 'UNKNOWN')}\n"
+        output += f"**Variables to Map:** {len(spec.get('variable_mappings', []))}\n\n"
+
+        # Find source files
+        source_files = [f for f in _source_data if _determine_domain(f) == domain]
+        if not source_files:
+            return f"No source files found for domain: {domain}"
+
+        # Combine source data
+        combined_df = pd.concat(
+            [_source_data[f] for f in source_files],
+            ignore_index=True
+        )
+        output += f"**Source Records:** {len(combined_df):,}\n\n"
+
+        # Apply transformations
+        output += "### Applying Transformations\n\n"
+
+        sdtm_records = []
+        subject_sequences = {}
+
+        for idx, row in combined_df.iterrows():
+            record = {}
+
+            for vm in spec.get("variable_mappings", []):
+                sdtm_var = vm.get("sdtm_variable")
+                source_col = vm.get("source_column")
+                transformation = vm.get("transformation", "")
+                t_type = vm.get("transformation_type", "")
+
+                try:
+                    if t_type == "ASSIGN":
+                        # Extract constant value from ASSIGN('value')
+                        if "ASSIGN(" in transformation:
+                            value = transformation.split("'")[1] if "'" in transformation else transformation.split("(")[1].rstrip(")")
+                            record[sdtm_var] = value
+                        else:
+                            record[sdtm_var] = transformation
+
+                    elif t_type == "COPY" and source_col:
+                        col = source_col[0] if isinstance(source_col, list) else source_col
+                        record[sdtm_var] = row.get(col, "")
+
+                    elif t_type == "CONCAT":
+                        # Handle concatenation
+                        if isinstance(source_col, list):
+                            parts = [str(row.get(c, "")) for c in source_col]
+                            record[sdtm_var] = "-".join(p for p in parts if p)
+                        else:
+                            record[sdtm_var] = str(row.get(source_col, ""))
+
+                    elif t_type == "SEQUENCE":
+                        # Generate sequence per subject
+                        usubjid = record.get("USUBJID", str(idx))
+                        subject_sequences[usubjid] = subject_sequences.get(usubjid, 0) + 1
+                        record[sdtm_var] = subject_sequences[usubjid]
+
+                    elif t_type == "DATE_FORMAT" and source_col:
+                        col = source_col[0] if isinstance(source_col, list) else source_col
+                        date_val = row.get(col, "")
+                        record[sdtm_var] = _convert_to_iso8601(date_val)
+
+                    elif t_type == "MAP" and source_col:
+                        col = source_col[0] if isinstance(source_col, list) else source_col
+                        record[sdtm_var] = row.get(col, "")
+
+                    elif source_col:
+                        # Default: try to copy
+                        col = source_col[0] if isinstance(source_col, list) else source_col
+                        record[sdtm_var] = row.get(col, "")
+                    else:
+                        record[sdtm_var] = ""
+
+                except Exception:
+                    record[sdtm_var] = ""
+
+            sdtm_records.append(record)
+
+        # Create DataFrame
+        sdtm_df = pd.DataFrame(sdtm_records)
+        _sdtm_data[domain] = sdtm_df
+
+        output += f"**Records Transformed:** {len(sdtm_df):,}\n"
+        output += f"**SDTM Variables:** {len(sdtm_df.columns)}\n\n"
+
+        # Validate
+        output += "### Validation\n\n"
+        try:
+            from sdtm_pipeline.validators.sdtm_validator import SDTMValidator
+            validator = SDTMValidator(study_id=_study_id, use_knowledge_tools=True)
+            result = validator.validate_domain(sdtm_df, domain)
+
+            status = "✓ VALID" if result.is_valid else "⚠️ ISSUES FOUND"
+            output += f"**Status:** {status}\n"
+            output += f"**Errors:** {result.error_count}\n"
+            output += f"**Warnings:** {result.warning_count}\n"
+
+            if result.issues:
+                output += "\n**Issues:**\n"
+                for issue in result.issues[:5]:
+                    output += f"- {issue.severity.value.upper()}: {issue.message}\n"
+                if len(result.issues) > 5:
+                    output += f"- *... and {len(result.issues) - 5} more*\n"
+        except Exception as e:
+            output += f"Validation skipped: {str(e)[:50]}\n"
+
+        # Sample output
+        output += "\n### Sample Output\n\n"
+        sample_cols = ['STUDYID', 'DOMAIN', 'USUBJID', f'{domain}SEQ'] + [c for c in sdtm_df.columns if c not in ['STUDYID', 'DOMAIN', 'USUBJID', f'{domain}SEQ']][:3]
+        sample_cols = [c for c in sample_cols if c in sdtm_df.columns]
+
+        output += "| " + " | ".join(sample_cols) + " |\n"
+        output += "|" + "|".join(["---"] * len(sample_cols)) + "|\n"
+        for _, row in sdtm_df.head(3).iterrows():
+            values = [str(row.get(c, ''))[:15] for c in sample_cols]
+            output += "| " + " | ".join(values) + " |\n"
+
+        output += f"\n**Transformation complete!** Use `upload_sdtm_to_s3` or `save_sdtm_locally` to save.\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error transforming with specification: {str(e)}\n\n{traceback.format_exc()}"
+
+
+def _convert_to_iso8601(date_val) -> str:
+    """Convert various date formats to ISO 8601."""
+    if pd.isna(date_val) or date_val == "":
+        return ""
+
+    date_str = str(date_val).strip()
+
+    # Already ISO 8601
+    if len(date_str) >= 10 and date_str[4] == '-' and date_str[7] == '-':
+        return date_str[:10]
+
+    # YYYYMMDD format
+    if len(date_str) == 8 and date_str.isdigit():
+        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+
+    # YYYYMM format (partial date)
+    if len(date_str) == 6 and date_str.isdigit():
+        return f"{date_str[:4]}-{date_str[4:6]}"
+
+    return date_str
+
+
+@tool
+def generate_all_mapping_specifications(output_dir: str = "./sdtm_workspace/mapping_specs") -> str:
+    """
+    Generate mapping specifications for ALL available domains at once.
+
+    Creates JSON and Excel specification files for each domain found in the
+    loaded source data. Use this before batch conversion to review all mappings.
+
+    Args:
+        output_dir: Directory to save all specification files
+    """
+    if not _source_data:
+        return "No data loaded. Please use load_data_from_s3 first."
+
+    # Find all domains
+    domain_files: Dict[str, List[str]] = {}
+    for filename in _source_data:
+        domain = _determine_domain(filename)
+        if domain != "UNKNOWN":
+            if domain not in domain_files:
+                domain_files[domain] = []
+            domain_files[domain].append(filename)
+
+    if not domain_files:
+        return "No convertible domains found in the loaded data."
+
+    output = f"## Generating Mapping Specifications for All Domains\n\n"
+    output += f"**Domains Found:** {', '.join(sorted(domain_files.keys()))}\n"
+    output += f"**Output Directory:** `{output_dir}`\n\n"
+
+    successful = []
+    failed = []
+
+    for domain in sorted(domain_files.keys()):
+        output += f"### {domain} Domain\n"
+        try:
+            # Call the single domain generator (but capture result differently)
+            from pathlib import Path
+            import json
+
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+            source_file = domain_files[domain][0]
+            df = _source_data[source_file]
+
+            api_key = os.getenv("ANTHROPIC_API_KEY", "")
+            from sdtm_pipeline.transformers.mapping_generator import MappingSpecificationGenerator
+            generator = MappingSpecificationGenerator(
+                api_key=api_key,
+                study_id=_study_id,
+                use_knowledge_tools=True
+            )
+
+            mapping_spec = generator.generate_mapping(
+                df=df,
+                source_name=source_file,
+                target_domain=domain
+            )
+
+            # Get SDTM spec
+            sdtm_spec = None
+            try:
+                from sdtm_pipeline.transformers.sdtm_web_reference import get_sdtm_web_reference
+                ref = get_sdtm_web_reference()
+                sdtm_spec = ref.get_domain_specification(domain)
+            except:
+                pass
+
+            enhanced_spec = _enhance_mapping_specification(
+                mapping_spec, df, domain, sdtm_spec, _study_id
+            )
+
+            # Save files
+            json_path = Path(output_dir) / f"{domain.lower()}_mapping_specification.json"
+            excel_path = Path(output_dir) / f"{domain.lower()}_mapping_specification.xlsx"
+
+            with open(json_path, 'w') as f:
+                json.dump(enhanced_spec, f, indent=2)
+
+            _save_mapping_excel(enhanced_spec, str(excel_path))
+
+            var_count = len(enhanced_spec.get("variable_mappings", []))
+            output += f"✓ Generated: {var_count} variables mapped\n"
+            output += f"  - JSON: `{json_path}`\n"
+            output += f"  - Excel: `{excel_path}`\n\n"
+
+            successful.append({"domain": domain, "variables": var_count})
+
+        except Exception as e:
+            output += f"✗ Error: {str(e)[:50]}\n\n"
+            failed.append({"domain": domain, "error": str(e)[:50]})
+
+    # Summary
+    output += "---\n\n"
+    output += "## Summary\n\n"
+    output += f"**Successful:** {len(successful)}/{len(domain_files)}\n\n"
+
+    if successful:
+        output += "| Domain | Variables Mapped |\n"
+        output += "|--------|------------------|\n"
+        for s in successful:
+            output += f"| {s['domain']} | {s['variables']} |\n"
+
+    if failed:
+        output += "\n**Failed:**\n"
+        for f in failed:
+            output += f"- {f['domain']}: {f['error']}\n"
+
+    output += f"\n**Next Steps:**\n"
+    output += "1. Review Excel files in the output directory\n"
+    output += "2. Modify mappings as needed\n"
+    output += "3. Use `convert_all_domains()` or `transform_with_specification(domain)` to transform\n"
+
+    return output
 
 
 @tool
@@ -1586,12 +2528,19 @@ def save_sdtm_locally(output_dir: str = "./sdtm_chat_output") -> str:
 
 # Export all tools
 SDTM_TOOLS = [
+    # Task Progress Tracking
+    write_todos,  # Updates task progress shown in frontend TaskProgressBar
     # Data loading
     load_data_from_s3,
     list_available_domains,
     preview_source_file,
-    # Conversion
+    # Specification-Driven Workflow (RECOMMENDED)
+    generate_mapping_specification,      # Step 1: Generate JSON + Excel spec for review
+    generate_all_mapping_specifications, # Step 1b: Generate specs for ALL domains
+    transform_with_specification,        # Step 2: Transform using the reviewed spec
+    # Direct Conversion (uses internal mapping)
     convert_domain,
+    convert_all_domains,  # Batch conversion - more efficient for "convert all"
     validate_domain,
     get_conversion_status,
     # Output/Storage

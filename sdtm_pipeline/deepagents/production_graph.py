@@ -544,6 +544,8 @@ class ProductionGraph:
         if thread_id:
             invoke_config["configurable"] = invoke_config.get("configurable", {})
             invoke_config["configurable"]["thread_id"] = thread_id
+        # Apply recursion limit for complex SDTM workflows
+        invoke_config["recursion_limit"] = invoke_config.get("recursion_limit", RECURSION_LIMIT)
 
         return await self._graph.ainvoke(input_data, config=invoke_config)
 

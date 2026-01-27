@@ -1,0 +1,21 @@
+{
+  "study_id": "MAXIS-08",
+  "created_at": "2026-01-27T16:25:47.018237",
+  "domains": [
+    "AE",
+    "VS"
+  ],
+  "total_records": 3010,
+  "files": [
+    {
+      "domain": "AE",
+      "path": "sdtm_workspace/mapping_specs/sdtm_data/ae.csv",
+      "records": 826
+    },
+    {
+      "domain": "VS",
+      "path": "sdtm_workspace/mapping_specs/sdtm_data/vs.csv",
+      "records": 2184
+    }
+  ]
+}

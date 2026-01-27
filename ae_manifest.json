@@ -1,0 +1,37 @@
+{
+  "study_id": "MAXIS-08",
+  "domain": "AE",
+  "mapping_specification": {
+    "file": "AE_Mapping_Specification.md",
+    "s3_location": "s3://s3dcri/processed/MAXIS-08/mapping_specifications/AE_Mapping_Specification.md",
+    "format": "Markdown",
+    "size_bytes": 23293
+  },
+  "sdtm_data": {
+    "file": "ae.csv",
+    "s3_location": "s3://s3dcri/processed/MAXIS-08/sdtm_data/ae.csv",
+    "records": 826,
+    "variables": 36
+  },
+  "source_files": [
+    {
+      "name": "AEVENT.csv",
+      "records": 550,
+      "columns": 38
+    },
+    {
+      "name": "AEVENTC.csv",
+      "records": 276,
+      "columns": 36
+    }
+  ],
+  "transformation_summary": {
+    "sdtm_ig_version": "3.4",
+    "domain_class": "Events",
+    "mapping_method": "AI-powered intelligent mapping",
+    "total_records_transformed": 826,
+    "validation_status": "ISSUES_FOUND",
+    "errors": 5,
+    "warnings": 3
+  }
+}

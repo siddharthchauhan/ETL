@@ -25,6 +25,13 @@ load_dotenv()
 
 
 # =============================================================================
+# RECURSION LIMIT CONFIGURATION
+# =============================================================================
+# SDTM transformations with subagents, skills, and multiple tool calls often need more steps
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
+
+
+# =============================================================================
 # SESSION STORAGE CONFIGURATION
 # =============================================================================
 
@@ -299,6 +306,8 @@ class SessionManager:
         stream_config = config or {}
         stream_config["configurable"] = stream_config.get("configurable", {})
         stream_config["configurable"]["thread_id"] = thread_id
+        # Apply recursion limit for complex SDTM workflows
+        stream_config["recursion_limit"] = stream_config.get("recursion_limit", RECURSION_LIMIT)
 
         position = 0
         current_thinking = []

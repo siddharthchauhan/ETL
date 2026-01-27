@@ -1,0 +1,402 @@
+{
+  "metadata": {
+    "study_id": "MAXIS-08",
+    "source_domain": "DEMO.csv",
+    "target_domain": "DM",
+    "sdtm_version": "SDTM-IG 3.4",
+    "created_by": "SDTM Mapping Generator",
+    "created_date": "2026-01-27T16:40:16.487498",
+    "description": "Mapping specification for DM domain transformation"
+  },
+  "source_files": [
+    {
+      "filename": "DEMO.csv",
+      "records": 16,
+      "columns": 12
+    }
+  ],
+  "variable_mappings": [
+    {
+      "sdtm_variable": "STUDYID",
+      "label": "Study Identifier",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Study identifier from source STUDY column (MAXIS-08)"
+    },
+    {
+      "sdtm_variable": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Required constant value for Demographics domain"
+    },
+    {
+      "sdtm_variable": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "PT",
+      "transformation": "Parse PT to extract site and subject, concatenate with STUDY",
+      "transformation_type": "CONCAT",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier derived from STUDY + parsed PT field (format: MAXIS-08-01-01)"
+    },
+    {
+      "sdtm_variable": "SUBJID",
+      "label": "Subject Identifier for the Study",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "PT",
+      "transformation": "Extract subject number from PT after hyphen",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Subject identifier extracted from PT field (second component)"
+    },
+    {
+      "sdtm_variable": "SITEID",
+      "label": "Study Site Identifier",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "PT",
+      "transformation": "Extract site number from PT before hyphen",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Site identifier extracted from PT field (first component)"
+    },
+    {
+      "sdtm_variable": "SEX",
+      "label": "Sex",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "GENDER",
+      "transformation": "Direct mapping to CDISC SEX codelist",
+      "transformation_type": "COPY",
+      "controlled_terminology": "SEX (M=Male, F=Female, U=Unknown)",
+      "comments": "Map source GENDER (M/F) directly to SEX using CDISC controlled terminology"
+    },
+    {
+      "sdtm_variable": "ARMCD",
+      "label": "Planned Arm Code",
+      "type": "Num",
+      "core": "Exp",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Required variable - needs to be populated from separate randomization/treatment assignment dataset"
+    },
+    {
+      "sdtm_variable": "ARM",
+      "label": "Description of Planned Arm",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Required variable - description of planned arm, needs to be populated from separate dataset"
+    },
+    {
+      "sdtm_variable": "COUNTRY",
+      "label": "Country",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "INVSITE",
+      "transformation": "Extract country code from INVSITE and map to ISO 3166 3-character code",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "ISO 3166 (3-character country codes)",
+      "comments": "Country derived from INVSITE field, requires mapping to ISO 3166 standard (e.g., USA, GBR, CAN)"
+    },
+    {
+      "sdtm_variable": "RFSTDTC",
+      "label": "Subject Reference Start Date/Time",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Required - Subject reference start date, typically date of first dose or first visit, needs external data"
+    },
+    {
+      "sdtm_variable": "RFENDTC",
+      "label": "Subject Reference End Date/Time",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Required - Subject reference end date, typically date of last contact, needs external data"
+    },
+    {
+      "sdtm_variable": "RFXSTDTC",
+      "label": "Date/Time of First Study Treatment",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Expected variable - date/time of first study treatment, derive from EX domain"
+    },
+    {
+      "sdtm_variable": "RFXENDTC",
+      "label": "Date/Time of Last Study Treatment",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Expected variable - date/time of last study treatment, derive from EX domain"
+    },
+    {
+      "sdtm_variable": "RFICDTC",
+      "label": "Date/Time of Informed Consent",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Expected variable - date/time of informed consent, needs to be sourced from enrollment records"
+    },
+    {
+      "sdtm_variable": "RFPENDTC",
+      "label": "Date/Time of End of Participation",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Expected variable - date/time of end of participation, derive from DS domain"
+    },
+    {
+      "sdtm_variable": "DTHDTC",
+      "label": "Date/Time of Death",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Expected variable - date/time of death if applicable, derive from DS or AE domains"
+    },
+    {
+      "sdtm_variable": "DTHFL",
+      "label": "Subject Death Flag",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "NY (Y=Yes, N=No)",
+      "comments": "Expected variable - death flag, set to Y if subject died during study"
+    },
+    {
+      "sdtm_variable": "AGE",
+      "label": "Age",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "DOB",
+      "transformation": "Calculate age using DOB and RFSTDTC",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Calculate age in years from DOB (format: YYYYMMDD) to reference start date, requires RFSTDTC"
+    },
+    {
+      "sdtm_variable": "AGEU",
+      "label": "Age Units",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "AGEU (YEARS, MONTHS, WEEKS, DAYS)",
+      "comments": "Age units - set to 'YEARS' as standard for adult studies"
+    },
+    {
+      "sdtm_variable": "RACE",
+      "label": "Race",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "RCE",
+      "transformation": "Map source race values to CDISC RACE codelist",
+      "transformation_type": "MAP",
+      "controlled_terminology": "RACE (WHITE, BLACK OR AFRICAN AMERICAN, ASIAN, AMERICAN INDIAN OR ALASKA NATIVE, NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER, MULTIPLE, OTHER, UNKNOWN)",
+      "comments": "Map source RCE to CDISC race codelist. Note: HISPANIC is typically ethnicity not race - may need data clarification"
+    },
+    {
+      "sdtm_variable": "ETHNIC",
+      "label": "Ethnicity",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "RCE",
+      "transformation": "Map HISPANIC values from RCE to ethnicity, others to NOT HISPANIC OR LATINO",
+      "transformation_type": "MAP",
+      "controlled_terminology": "ETHNIC (HISPANIC OR LATINO, NOT HISPANIC OR LATINO, NOT REPORTED, UNKNOWN)",
+      "comments": "Expected variable - derive ethnicity, particularly if RCE contains HISPANIC which is ethnicity not race"
+    },
+    {
+      "sdtm_variable": "ACTARMCD",
+      "label": "Actual Arm Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Expected variable - actual arm code, derive from treatment exposure or disposition data"
+    },
+    {
+      "sdtm_variable": "ACTARM",
+      "label": "Description of Actual Arm",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Expected variable - description of actual arm, derive from treatment exposure or disposition data"
+    },
+    {
+      "sdtm_variable": "INVID",
+      "label": "Investigator Identifier",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "INVSITE",
+      "transformation": "Extract investigator identifier from INVSITE",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Permissible variable - investigator identifier extracted from INVSITE (component after underscore)"
+    },
+    {
+      "sdtm_variable": "INVNAM",
+      "label": "Investigator Name",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Permissible variable - investigator name, needs to be sourced from site/investigator reference data"
+    },
+    {
+      "sdtm_variable": "BRTHDTC",
+      "label": "Date/Time of Birth",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "DOB",
+      "transformation": "Convert DOB from YYYYMMDD integer to ISO 8601 format YYYY-MM-DD",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Permissible variable - convert date of birth from integer format to ISO 8601 string format"
+    },
+    {
+      "sdtm_variable": "DMDTC",
+      "label": "Date/Time of Collection",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Permissible variable - date/time of demographics data collection, typically baseline visit date"
+    },
+    {
+      "sdtm_variable": "DMDY",
+      "label": "Study Day of Collection",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Permissible variable - study day of demographics collection relative to RFSTDTC"
+    },
+    {
+      "sdtm_variable": "DMSEQ",
+      "label": "DMSEQ",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Sequence number for DM domain - always 1 as there is one record per subject"
+    }
+  ],
+  "derivation_rules": {
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "AGE": "floor((RFSTDTC - BRTHDTC) / 365.25)",
+    "DOMAIN": "'DM'",
+    "AGEU": "'YEARS'",
+    "STUDYID": "Use value from STUDY column",
+    "SUBJID": "Parse PT='01-01' to extract '01' as SUBJID (characters after hyphen)",
+    "SITEID": "Parse PT='01-01' to extract '01' as SITEID (characters before hyphen)",
+    "ARMCD": "To be derived from randomization or treatment assignment data (not available in demographics source)",
+    "ARM": "To be derived from randomization or treatment assignment data (not available in demographics source)",
+    "COUNTRY": "Parse INVSITE='C008_408' where 'C008' likely represents country code, map to ISO 3166-1 alpha-3 format",
+    "RFSTDTC": "To be derived from first study activity date (typically from exposure or visit domains)",
+    "RFENDTC": "To be derived from last study activity date (typically from disposition or visit domains)",
+    "RFXSTDTC": "To be derived from exposure domain - date of first study treatment",
+    "RFXENDTC": "To be derived from exposure domain - date of last study treatment",
+    "RFICDTC": "To be derived from informed consent date in enrollment/disposition data",
+    "RFPENDTC": "To be derived from disposition domain - date of end of participation",
+    "DTHDTC": "To be derived from disposition or adverse events if death occurred, otherwise null",
+    "DTHFL": "Set to 'Y' if DTHDTC is not null, otherwise null",
+    "RACE": "Map RCE values: 'BLACK' -> 'BLACK OR AFRICAN AMERICAN', 'ASIAN' -> 'ASIAN', 'HISPANIC' -> Check if ethnicity or race context",
+    "ETHNIC": "If RCE='HISPANIC' then 'HISPANIC OR LATINO', else 'NOT HISPANIC OR LATINO' or null if unknown",
+    "ACTARMCD": "To be derived from actual treatment received (may differ from planned ARM)",
+    "ACTARM": "To be derived from actual treatment received (may differ from planned ARM)",
+    "INVID": "Parse INVSITE='C008_408' to extract '_408' as investigator ID",
+    "INVNAM": "To be sourced from investigator master data or site information",
+    "BRTHDTC": "Transform DOB=19740918 to '1974-09-18' format",
+    "DMDTC": "Typically same as visit date for BASELINE visit, needs to be sourced from visit data",
+    "DMDY": "Calculate study day: DMDTC - RFSTDTC + 1 if DMDTC >= RFSTDTC, else DMDTC - RFSTDTC",
+    "DMSEQ": "Set to 1 for single demographics record per subject"
+  },
+  "controlled_terminologies": {
+    "SEX": [
+      "M",
+      "F",
+      "U",
+      "UNDIFFERENTIATED"
+    ],
+    "RACE": [
+      "AMERICAN INDIAN OR ALASKA NATIVE",
+      "ASIAN",
+      "BLACK OR AFRICAN AMERICAN",
+      "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER",
+      "WHITE",
+      "MULTIPLE",
+      "NOT REPORTED",
+      "UNKNOWN",
+      "OTHER"
+    ],
+    "ETHNIC": [
+      "HISPANIC OR LATINO",
+      "NOT HISPANIC OR LATINO",
+      "NOT REPORTED",
+      "UNKNOWN"
+    ],
+    "AGEU": [
+      "YEARS",
+      "MONTHS",
+      "WEEKS",
+      "DAYS",
+      "HOURS"
+    ]
+  },
+  "data_quality_rules": []
+}

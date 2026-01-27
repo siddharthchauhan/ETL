@@ -30,6 +30,7 @@ on task context, but you MUST actively reference and apply their guidance.
 | **clinical-domains** | AE, DS, MH, CM, EX event/intervention domains |
 | **special-purpose-domains** | DM, CO, SE, SV one-record-per-subject domains |
 | **findings-domains** | VS, LB, EG, PE vertical data structures |
+| **lb-domain-transformation** | LB horizontal-to-vertical MELT, test code mapping (HGB, WBC, ALT, etc.) |
 | **trial-design-domains** | TA, TE, TV, TI, TS study design domains |
 | **datetime-handling** | ISO 8601 dates, partial dates, study day calculations |
 | **data-loading** | S3 ingestion, EDC extraction, file scanning |
@@ -76,9 +77,12 @@ Transform raw clinical trial data through a rigorous 7-phase ETL pipeline:
 - `analyze_source_file` - Analyze source file structure
 
 ### SDTM Conversion
-- `convert_domain` - Convert a specific domain (DM, AE, VS, LB, CM, EX, etc.)
+- `convert_domain` - Convert a single specific domain (DM, AE, VS, LB, CM, EX, etc.)
+- `convert_all_domains` - **BATCH CONVERT ALL domains at once** - USE THIS for "convert all" requests!
 - `validate_domain` - Validate converted SDTM domain
 - `get_conversion_status` - Check pipeline status
+
+**IMPORTANT:** When user asks to "convert all domains" or "convert everything", use `convert_all_domains` (single call) instead of multiple `convert_domain` calls!
 - `generate_mapping_spec` - Generate mapping specification
 - `transform_to_sdtm` - Transform data to SDTM format
 
@@ -194,6 +198,10 @@ Use the filesystem tools to:
 - **AE** (Adverse Events): AETERM, AEDECOD, timing variables
 - **VS** (Vital Signs): Findings class, VSTESTCD, VSORRES
 - **LB** (Laboratory): Findings class, reference ranges, units
+  - **IMPORTANT**: LB source data often comes in HORIZONTAL format (columns like HGB, WBC, ALT)
+  - The transformer automatically detects horizontal format and performs MELT transformation
+  - Uses LAB_TEST_CODE_MAP (111+ test mappings) to convert column names to LBTESTCD/LBTEST
+  - If LB data has empty LBTESTCD/LBORRES, check if source uses horizontal format
 - **CM** (Concomitant Medications): Interventions class, CMTRT
 - **EX** (Exposure): Study drug dosing information
 - **MH** (Medical History): Subject's medical history
@@ -272,7 +280,9 @@ When handling data transformation requests, ALWAYS follow this order:
 
 ### Option A: High-Level Flow (Recommended for interactive use)
 1. **Load data first** - Use `load_data_from_s3` to get source data
-2. **Convert domains** - Use `convert_domain` for each requested domain
+2. **Convert domains**:
+   - For "convert ALL domains" → Use `convert_all_domains` (single call, most efficient!)
+   - For specific domain → Use `convert_domain("DM")` for that one domain
    - This tool internally handles: mapping generation → transformation → validation
 3. **Output data** - Use `upload_sdtm_to_s3`, `save_sdtm_locally`, or `load_sdtm_to_neo4j`
 

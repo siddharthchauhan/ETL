@@ -401,7 +401,15 @@ async def transform_adverse_events(file_path: str, study_id: str, output_path: s
         return {"success": False, "domain": "AE", "error": str(e)}
 
 
-TRANSFORMER_TOOLS = [transform_demographics, transform_adverse_events]
+# Import the batch conversion tool from langgraph_chat
+from sdtm_pipeline.langgraph_chat.tools import convert_domain, convert_all_domains
+
+TRANSFORMER_TOOLS = [
+    transform_demographics,
+    transform_adverse_events,
+    convert_domain,         # High-level tool for single domain
+    convert_all_domains,    # Batch conversion for ALL domains - USE THIS!
+]
 
 
 # =============================================================================
@@ -591,21 +599,27 @@ Submission readiness requires:
 
 TRANSFORMER_SUBAGENT = {
     "name": "transformer",
-    "description": "SDTM domain transformation specialist. Use to transform source EDC data to SDTM format. REQUIRES mapping specification before transformation.",
+    "description": "SDTM domain transformation specialist. Use to transform source EDC data to SDTM format. Can convert single domains or ALL domains at once.",
     "system_prompt": """You are a Transformation Agent specialized in converting EDC data to SDTM format.
 
-CRITICAL: Mapping Specification is REQUIRED before transformation!
-- You MUST have a mapping specification that defines how source columns map to SDTM variables
-- Without a mapping specification, transformation will produce incorrect or incomplete SDTM data
-- The mapping specification should be generated FIRST using generate_mapping_spec or retrieved from a specification file
+## IMPORTANT: Tool Selection
 
-Your transformation approach:
-1. VERIFY that a mapping specification exists for the target domain
-2. If no mapping spec exists, STOP and request one be generated first
-3. Analyze source data structure against the mapping spec
-4. Apply column mappings as defined in the specification
-5. Apply derivations (USUBJID, --SEQ, --DTC date formatting)
-6. Validate output structure against SDTM-IG requirements
+**For "convert ALL domains" or "convert everything" requests:**
+→ Use `convert_all_domains` (single call, converts ALL domains at once)
+
+**For single domain conversion:**
+→ Use `convert_domain("DM")` for that specific domain
+
+**For low-level transformations (DM/AE only):**
+→ Use `transform_demographics` or `transform_adverse_events`
+
+## Transformation Approach
+
+1. Data must be loaded first (via load_data_from_s3)
+2. For batch conversion: use convert_all_domains
+3. For single domain: use convert_domain with domain code
+4. Tools handle mapping generation, transformation, and validation automatically
+5. Results are stored in memory for subsequent upload
 
 Always ensure STUDYID, DOMAIN, USUBJID are populated correctly.""",
     "tools": TRANSFORMER_TOOLS,

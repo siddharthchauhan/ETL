@@ -52,8 +52,13 @@ from sdtm_pipeline.langgraph_chat.tools import (
     load_data_from_s3,
     list_available_domains,
     preview_source_file,
-    # Conversion
+    # Specification-Driven Workflow (RECOMMENDED)
+    generate_mapping_specification,       # Generate JSON + Excel spec for review
+    generate_all_mapping_specifications,  # Generate specs for ALL domains
+    transform_with_specification,         # Transform using reviewed spec
+    # Direct Conversion
     convert_domain,
+    convert_all_domains,  # Batch conversion - more efficient for "convert all"
     validate_domain,
     get_conversion_status,
     # Output/Storage
@@ -6060,8 +6065,13 @@ CHAT_TOOLS = [
     load_data_from_s3,
     list_available_domains,
     preview_source_file,
-    # Conversion (high-level)
+    # Specification-Driven Workflow (RECOMMENDED)
+    generate_mapping_specification,       # Generate JSON + Excel spec
+    generate_all_mapping_specifications,  # Generate specs for ALL domains
+    transform_with_specification,         # Transform using spec
+    # Direct Conversion (high-level)
     convert_domain,
+    convert_all_domains,  # Batch conversion - more efficient for "convert all"
     validate_domain,
     get_conversion_status,
     # Output/Storage

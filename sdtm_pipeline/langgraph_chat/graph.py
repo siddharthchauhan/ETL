@@ -3,11 +3,16 @@ SDTM Chat Agent Graph
 =====================
 LangGraph-based conversational agent for SDTM conversion.
 
+Now includes skills from the deepagents/skills directory, consolidated into
+a single system message to avoid the "non-consecutive system messages" error.
+
 Run with: langgraph dev
 """
 
 import os
-from typing import Annotated, Literal
+import re
+from pathlib import Path
+from typing import Annotated, Literal, List, Dict, Optional
 from typing_extensions import TypedDict
 
 # Load environment variables
@@ -19,6 +24,157 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, Tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
+
+# =============================================================================
+# RECURSION LIMIT CONFIGURATION
+# =============================================================================
+# SDTM transformations with multiple tool calls often need more than the default 25 steps
+RECURSION_LIMIT = int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250"))
+print(f"[SDTM Chat] Using recursion_limit={RECURSION_LIMIT}")
+
+# =============================================================================
+# SKILLS LOADING
+# =============================================================================
+# Load skills from deepagents/skills directory and consolidate into system prompt
+
+SKILLS_DIR = Path(__file__).parent.parent / "deepagents" / "skills"
+
+
+def load_skill(skill_path: Path) -> Optional[Dict[str, str]]:
+    """
+    Load a single skill from its SKILL.md file and any reference documents.
+
+    Returns:
+        Dict with 'name', 'description', and 'content' keys, or None if invalid.
+    """
+    skill_file = skill_path / "SKILL.md"
+    if not skill_file.exists():
+        return None
+
+    try:
+        content = skill_file.read_text(encoding="utf-8")
+
+        # Parse YAML frontmatter (between --- markers)
+        frontmatter_match = re.match(r'^---\s*\n(.*?)\n---\s*\n(.*)$', content, re.DOTALL)
+
+        if frontmatter_match:
+            frontmatter = frontmatter_match.group(1)
+            body = frontmatter_match.group(2)
+
+            # Extract name and description from frontmatter
+            name_match = re.search(r'^name:\s*(.+)$', frontmatter, re.MULTILINE)
+            desc_match = re.search(r'^description:\s*(.+)$', frontmatter, re.MULTILINE)
+
+            name = name_match.group(1).strip() if name_match else skill_path.name
+            description = desc_match.group(1).strip() if desc_match else ""
+
+            # Load reference files if they exist
+            references_dir = skill_path / "references"
+            references_content = ""
+            if references_dir.exists() and references_dir.is_dir():
+                ref_files = sorted(references_dir.glob("*.md"))
+                if ref_files:
+                    references_content = "\n\n## REFERENCE DOCUMENTS\n\n"
+                    for ref_file in ref_files:
+                        try:
+                            ref_text = ref_file.read_text(encoding="utf-8")
+                            references_content += f"### {ref_file.stem.upper().replace('-', ' ')}\n\n"
+                            references_content += ref_text.strip()
+                            references_content += "\n\n---\n\n"
+                        except Exception as ref_e:
+                            print(f"[SDTM Chat] Warning: Failed to load reference {ref_file.name}: {ref_e}")
+
+            return {
+                "name": name,
+                "description": description,
+                "content": body.strip() + references_content
+            }
+        else:
+            # No frontmatter, use entire content
+            return {
+                "name": skill_path.name,
+                "description": "",
+                "content": content.strip()
+            }
+    except Exception as e:
+        print(f"[SDTM Chat] Warning: Failed to load skill {skill_path.name}: {e}")
+        return None
+
+
+def load_all_skills() -> List[Dict[str, str]]:
+    """
+    Load all skills from the skills directory.
+
+    Returns:
+        List of skill dictionaries with 'name', 'description', and 'content'.
+    """
+    skills = []
+
+    if not SKILLS_DIR.exists():
+        print(f"[SDTM Chat] Skills directory not found: {SKILLS_DIR}")
+        return skills
+
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if skill_dir.is_dir():
+            skill = load_skill(skill_dir)
+            if skill:
+                skills.append(skill)
+
+    return skills
+
+
+def build_skills_prompt(skills: List[Dict[str, str]]) -> str:
+    """
+    Build a consolidated skills section for the system prompt.
+
+    Args:
+        skills: List of loaded skill dictionaries.
+
+    Returns:
+        Formatted string containing all skills content.
+    """
+    if not skills:
+        return ""
+
+    sections = [
+        "\n\n# ═══════════════════════════════════════════════════════════════════════════",
+        "# DOMAIN EXPERTISE SKILLS",
+        "# ═══════════════════════════════════════════════════════════════════════════",
+        "",
+        "The following skills provide specialized domain expertise for SDTM conversion.",
+        "Use the relevant knowledge from these skills based on the task context.",
+        "",
+        "## Available Skills",
+        ""
+    ]
+
+    # Add skill index
+    for i, skill in enumerate(skills, 1):
+        sections.append(f"{i}. **{skill['name']}**: {skill['description']}")
+
+    sections.append("")
+    sections.append("---")
+    sections.append("")
+
+    # Add full skill content
+    for skill in skills:
+        sections.append(f"## SKILL: {skill['name'].upper()}")
+        sections.append("")
+        sections.append(skill['content'])
+        sections.append("")
+        sections.append("---")
+        sections.append("")
+
+    return "\n".join(sections)
+
+
+# Load skills at module initialization
+LOADED_SKILLS = load_all_skills()
+SKILLS_PROMPT = build_skills_prompt(LOADED_SKILLS)
+
+if LOADED_SKILLS:
+    skill_names = [s['name'] for s in LOADED_SKILLS]
+    print(f"[SDTM Chat] Loaded {len(LOADED_SKILLS)} skills: {', '.join(skill_names)}")
 
 try:
     from .tools import SDTM_TOOLS
@@ -53,15 +209,62 @@ Primary Sources:
 4. **For Pinecone KB**: Call `get_sdtm_guidance(domain)` or `search_knowledge_base(query)`
 5. **For validation rules**: Call `get_validation_rules(domain)`
 
+## CRITICAL: Task Progress Tracking
+
+**ALWAYS use `write_todos` to show task progress for multi-step operations!**
+
+When performing any multi-step task (data loading, conversion, validation, etc.):
+1. **At the START**: Call `write_todos` with your planned steps (all status="pending")
+2. **During execution**: Call `write_todos` to update the current step to "in_progress"
+3. **After each step**: Call `write_todos` to mark completed steps and show progress
+4. **On error**: Call `write_todos` to mark the failed step with status="error"
+
+Example for "Generate mapping specification for AE":
+```
+write_todos([
+    {"id": "1", "content": "Fetch SDTM-IG 3.4 specification", "status": "in_progress"},
+    {"id": "2", "content": "Analyze source data structure", "status": "pending"},
+    {"id": "3", "content": "Generate variable mappings", "status": "pending"},
+    {"id": "4", "content": "Save specification files", "status": "pending"}
+])
+```
+
+This shows users a visual progress bar of your work. ALWAYS use it!
+
 ## Your Capabilities
+
+### Task Progress
+0. **Track Progress**: Update task progress bar (`write_todos`) - USE THIS FOR ALL MULTI-STEP TASKS
 
 ### Data Operations
 1. **Load Data**: Load EDC data from S3 (`load_data_from_s3`)
 2. **List Domains**: Show available SDTM domains (`list_available_domains`)
 3. **Preview Files**: Preview source data files (`preview_source_file`)
-4. **Convert Domains**: Transform EDC data to SDTM format (`convert_domain`)
-5. **Validate Data**: Validate SDTM datasets against CDISC standards (`validate_domain`)
-6. **Check Status**: Get pipeline status (`get_conversion_status`)
+
+### Specification-Driven Workflow (RECOMMENDED for production)
+Use this when user asks to "generate mapping specification" or wants to review mappings before transformation:
+
+4. **Generate Mapping Spec**: Create detailed JSON + Excel specification (`generate_mapping_specification`)
+   - Analyzes raw data structure
+   - Fetches CDISC SDTM-IG 3.4 specifications
+   - Identifies transformation types: DIRECT, ASSIGN, CONCAT, SEQUENCE, DATE_FORMAT, MAP, DERIVE
+   - Outputs JSON (for transformation) + Excel (for human review)
+
+5. **Generate ALL Specs**: Create specs for all domains at once (`generate_all_mapping_specifications`)
+
+6. **Transform with Spec**: Apply a reviewed specification (`transform_with_specification`)
+
+### Direct Conversion (Quick conversion without spec review)
+7. **Convert Single Domain**: Transform one domain directly (`convert_domain`)
+8. **Convert ALL Domains**: Batch convert all domains (`convert_all_domains`)
+
+9. **Validate Data**: Validate SDTM datasets (`validate_domain`)
+10. **Check Status**: Get pipeline status (`get_conversion_status`)
+
+**WORKFLOW GUIDANCE:**
+- For "generate mapping specification" → Use `generate_mapping_specification` or `generate_all_mapping_specifications`
+- For "convert all domains" without spec → Use `convert_all_domains`
+- For careful/reviewed conversion → Generate spec first, then `transform_with_specification`
 
 ### Output & Storage Operations
 7. **Upload to S3**: Upload converted SDTM data to S3 bucket (`upload_sdtm_to_s3`)
@@ -89,7 +292,11 @@ Primary Sources:
 
 | User Request | Tools to Call (in order) |
 |--------------|--------------------------|
-| "Convert AE domain" | `fetch_sdtmig_specification("AE")` → `get_sdtm_guidance("AE")` → `convert_domain` |
+| "Generate mapping specification for AE" | `generate_mapping_specification("AE")` |
+| "Generate mapping specs for all domains" | `generate_all_mapping_specifications()` |
+| "Transform AE using specification" | `transform_with_specification("AE")` |
+| "Convert AE domain" (quick) | `convert_domain("AE")` |
+| "Convert all domains" (quick) | `convert_all_domains()` |
 | "What variables are in DM?" | `fetch_sdtmig_specification("DM")` |
 | "How do I map AEVERB?" | `get_mapping_guidance_from_web("AEVERB", "AE")` |
 | "What's valid for AEREL?" | `fetch_controlled_terminology("REL")` |
@@ -151,6 +358,9 @@ When showing results:
 Be helpful, proactive, and guide the user through the SDTM conversion process.
 REMEMBER: Use SDTM-IG 3.4 specifications for accurate, compliant SDTM generation!"""
 
+# Combine base prompt with skills
+FULL_SYSTEM_PROMPT = SYSTEM_PROMPT + SKILLS_PROMPT
+
 
 def create_agent():
     """Create the SDTM chat agent."""
@@ -178,9 +388,12 @@ def create_agent():
         """Main chatbot node that processes messages."""
         messages = state["messages"]
 
-        # Add system message if not present
-        if not any(isinstance(m, SystemMessage) for m in messages):
-            messages = [SystemMessage(content=SYSTEM_PROMPT)] + list(messages)
+        # CRITICAL: Remove ALL existing system messages and add our single consolidated one
+        # This prevents "multiple non-consecutive system messages" error from LangGraph Studio
+        non_system_messages = [m for m in messages if not isinstance(m, SystemMessage)]
+
+        # Always use our consolidated system prompt (includes all 16 skills)
+        messages = [SystemMessage(content=FULL_SYSTEM_PROMPT)] + non_system_messages
 
         response = llm_with_tools.invoke(messages)
         return {"messages": [response]}
@@ -210,11 +423,14 @@ def create_agent():
     graph.add_edge("tools", "chatbot")
 
     # Compile without checkpointer - LangGraph API handles persistence automatically
-    return graph.compile()
+    # Apply recursion limit for complex SDTM workflows
+    compiled_graph = graph.compile()
+    return compiled_graph.with_config(recursion_limit=RECURSION_LIMIT)
 
 
 # Create the agent instance for langgraph dev
 agent = create_agent()
+print(f"[SDTM Chat] Graph exported with recursion_limit={RECURSION_LIMIT}, skills={len(LOADED_SKILLS)}")
 
 
 # For langgraph dev - expose the graph
