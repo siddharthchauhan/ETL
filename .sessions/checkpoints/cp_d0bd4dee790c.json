@@ -1,0 +1,21 @@
+{
+  "checkpoint_id": "cp_d0bd4dee790c",
+  "parent_checkpoint_id": "cp_8ba16af03930",
+  "thread_id": "demo_reasoning_004026",
+  "timestamp": "2026-01-27T05:40:26.283917",
+  "state": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Convert DM domain"
+      },
+      {
+        "role": "assistant",
+        "content": "DM domain converted with 100 records"
+      }
+    ]
+  },
+  "message_count": 2,
+  "description": "After DM conversion",
+  "branch_name": "main"
+}

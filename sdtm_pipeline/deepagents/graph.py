@@ -6,12 +6,25 @@ Entry point for LangGraph Studio (langgraph dev).
 This module exports a unified SDTM agent that combines:
 - DeepAgents architecture (planning, subagent delegation, filesystem backend)
 - SDTM Chat capabilities (interactive conversion, knowledge base, web search)
-- Skills for progressive disclosure of domain expertise
+- 16 Skills for progressive disclosure of domain expertise
+- Pinecone knowledge base integration for semantic search
 
-Skills:
+Skills (16 total - automatically loaded based on task context):
 - cdisc-standards: SDTM domain knowledge, controlled terminology, protocols
 - sdtm-programming: Python/SAS/R transformation patterns, ETL design
 - qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring
+- mapping-specifications: Transformation DSL, mapping spec parsing
+- mapping-scenarios: 9 fundamental SDTM mapping patterns
+- clinical-domains: AE, DS, MH, CM, EX event/intervention domains
+- special-purpose-domains: DM, CO, SE, SV one-record domains
+- findings-domains: VS, LB, EG, PE vertical data structures
+- trial-design-domains: TA, TE, TV, TI, TS study design
+- datetime-handling: ISO 8601, partial dates, study day calculations
+- data-loading: S3 ingestion, EDC extraction, file scanning
+- neo4j-s3-integration: Graph loading, S3 uploads
+- knowledge-base: Pinecone queries, CDISC guidance retrieval
+- pipeline-orchestration: 7-phase ETL flow, subagent delegation
+- validation-best-practices: Error resolution, compliance strategies
 
 Use with:
 - langgraph dev (local development UI)
@@ -67,8 +80,9 @@ def create_graph() -> CompiledStateGraph:
 
     The agent is equipped with:
     - 27 SDTM-specific tools
-    - 5 specialized subagents
-    - 3 skills for domain expertise (progressive disclosure)
+    - 5 specialized subagents (SDTM Expert, Validator, Transformer, Code Generator, Data Loader)
+    - 16 skills for domain expertise (progressive disclosure)
+    - Pinecone knowledge base integration
     - Filesystem backend for context management
     - Recursion limit of 250 (configurable via LANGGRAPH_RECURSION_LIMIT env var)
 
@@ -97,6 +111,13 @@ def create_graph() -> CompiledStateGraph:
     # Setup skills - provides progressive disclosure of domain expertise
     # Skills are only loaded when relevant to the current task
     skills_paths = [str(SKILLS_DIR)] if SKILLS_DIR.is_dir() else []
+
+    # Count available skills
+    skills_count = 0
+    if SKILLS_DIR.is_dir():
+        skills_count = sum(1 for d in SKILLS_DIR.iterdir() if d.is_dir() and (d / "SKILL.md").exists())
+        skill_names = [d.name for d in SKILLS_DIR.iterdir() if d.is_dir() and (d / "SKILL.md").exists()]
+        print(f"[SDTM Graph] Found {skills_count} skills: {', '.join(sorted(skill_names))}")
 
     # Create the deep agent with skills
     agent = create_deep_agent(

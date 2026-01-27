@@ -13,19 +13,38 @@ This skill provides expertise in querying the SDTM knowledge base powered by Pin
 
 ### Pinecone Indexes
 
-The knowledge base consists of multiple specialized indexes:
+The knowledge base consists of five specialized indexes:
 
 | Index | Content | Use Case |
 |-------|---------|----------|
-| `sdtm-guidelines` | SDTM-IG specifications, domain structures | Domain structure questions |
-| `business-rules` | Transformation business rules | Mapping logic |
-| `validation-rules` | Pinnacle 21 / FDA validation rules | Compliance checks |
-| `controlled-terminology` | CDISC CT codelists | Value standardization |
-| `mapping-specs` | Historical mapping specifications | Pattern matching |
+| `sdtmig` | SDTM-IG 3.4 domain specifications, variable definitions | Domain structure, variable requirements |
+| `sdtmct` | CDISC Controlled Terminology codelists | SEX, RACE, AESEV, NY valid values |
+| `businessrules` | Transformation business rules by domain | Derivation logic, mapping rules |
+| `validationrules` | Pinnacle 21 and FDA validation rules | Compliance checks, error rules |
+| `sdtmmetadata` | SDTM variable metadata | Core/Expected/Permissible status |
+
+### Setup the Knowledge Base
+
+Before using Pinecone queries, ensure the indexes are populated:
+
+```bash
+# Set environment variables
+export PINECONE_API_KEY=your_pinecone_key
+export OPENAI_API_KEY=your_openai_key
+
+# Run the setup script
+python -m sdtm_pipeline.knowledge_base.setup_pinecone
+```
+
+The setup script populates indexes with:
+- 100+ SDTM domain/variable specifications
+- 50+ controlled terminology codelists
+- 40+ validation rules (error and warning)
+- 30+ business rules for transformations
 
 ### Embedding Model
 
-Documents are embedded using OpenAI's text-embedding-ada-002 model for semantic similarity search.
+Documents are embedded using OpenAI's text-embedding-3-large model (3072 dimensions) for high-quality semantic similarity search.
 
 ## Core Competencies
 

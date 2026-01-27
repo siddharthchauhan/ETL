@@ -1,0 +1,12 @@
+{
+  "checkpoint_id": "cp_4889ff870e64",
+  "parent_checkpoint_id": "cp_6333d2842837",
+  "thread_id": "test_integration_001",
+  "timestamp": "2026-01-27T05:38:48.266999",
+  "state": {
+    "messages": []
+  },
+  "message_count": 0,
+  "description": "Branch 'test-branch' from cp_6333d2842837",
+  "branch_name": "test-branch"
+}

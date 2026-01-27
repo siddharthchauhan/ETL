@@ -1,0 +1,53 @@
+{
+  "test_integration_001": {
+    "thread_id": "test_integration_001",
+    "created_at": "2026-01-27T05:38:48.266414",
+    "updated_at": "2026-01-27T05:38:48.267195",
+    "status": "active",
+    "checkpoints": [
+      "cp_3de67934dba0",
+      "cp_6333d2842837",
+      "cp_4889ff870e64"
+    ],
+    "branches": {
+      "main": "cp_3de67934dba0",
+      "test-branch": "cp_4889ff870e64"
+    },
+    "current_branch": "test-branch",
+    "current_checkpoint_id": "cp_4889ff870e64",
+    "metadata": {
+      "study": "MAXIS-08"
+    },
+    "last_stream_position": 0,
+    "pending_chunks": [],
+    "reconnect_token": "c3c0841d3ff805e575649c3886b43916"
+  },
+  "demo_reasoning_004026": {
+    "thread_id": "demo_reasoning_004026",
+    "created_at": "2026-01-27T05:40:26.150517",
+    "updated_at": "2026-01-27T05:40:26.285250",
+    "status": "paused",
+    "checkpoints": [
+      "cp_ebe1bcb5f820",
+      "cp_8ba16af03930",
+      "cp_d0bd4dee790c",
+      "cp_53f05dd40dbf",
+      "cp_3cf7b0c71afa",
+      "cp_1a99a5458650",
+      "cp_70a4dab12b28"
+    ],
+    "branches": {
+      "main": "cp_ebe1bcb5f820",
+      "aggressive-fix": "cp_1a99a5458650",
+      "conservative-fix": "cp_70a4dab12b28"
+    },
+    "current_branch": "conservative-fix",
+    "current_checkpoint_id": "cp_70a4dab12b28",
+    "metadata": {
+      "demo": "reasoning"
+    },
+    "last_stream_position": 0,
+    "pending_chunks": [],
+    "reconnect_token": "18459e8f240fc343f80cadf77979f2be"
+  }
+}

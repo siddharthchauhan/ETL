@@ -521,6 +521,15 @@ class DMTransformer(BaseDomainTransformer):
         """
         self.log("Transforming to DM domain - FULL SDTM-IG 3.4 compliance (28 variables)")
 
+        # CRITICAL: Discover intelligent mappings FIRST if mapper available
+        if self.intelligent_mapper and not self._discovered_mapping:
+            self.log("Discovering intelligent column mappings...")
+            self.discover_mappings(source_df)
+            if self._discovered_mapping:
+                self.log(f"Found {len(self._discovered_mapping.mappings)} intelligent mappings")
+                for m in self._discovered_mapping.mappings[:10]:
+                    self.log(f"  Mapping: {m.source_column} -> {m.sdtm_variable} ({m.confidence:.0%})")
+
         dm_records = []
 
         for idx, row in source_df.iterrows():
@@ -564,113 +573,178 @@ class DMTransformer(BaseDomainTransformer):
                 "DMDY": None,
             }
 
-            # SITEID (Required)
-            siteid_raw = row.get("INVSITE", row.get("SITEID", ""))
-            dm_record["SITEID"] = str(siteid_raw).split("_")[-1] if siteid_raw else ""
+            # SITEID (Required) - Use intelligent mapping first
+            siteid_col = self.get_source_column("SITEID", source_df, ["INVSITE", "SITEID", "SITE", "SITE_ID", "CENTER"])
+            if siteid_col and siteid_col in row.index and pd.notna(row[siteid_col]):
+                siteid_raw = row[siteid_col]
+                dm_record["SITEID"] = str(siteid_raw).split("_")[-1] if siteid_raw else ""
+            else:
+                # Fallback to old pattern
+                siteid_raw = row.get("INVSITE", row.get("SITEID", ""))
+                dm_record["SITEID"] = str(siteid_raw).split("_")[-1] if siteid_raw else ""
 
-            # SEX (Required) - with controlled terminology
-            for sex_col in ["GENDER", "GENDRL", "SEX", "GNDR"]:
-                if sex_col in row and pd.notna(row[sex_col]):
-                    dm_record["SEX"] = self._map_sex(row[sex_col])
-                    break
-            if "SEX" not in dm_record:
+            # SEX (Required) - Use intelligent mapping first, then fallback patterns
+            sex_col = self.get_source_column("SEX", source_df, ["GENDER", "GENDRL", "SEX", "GNDR", "GEND"])
+            if sex_col and sex_col in row.index and pd.notna(row[sex_col]):
+                dm_record["SEX"] = self._map_sex(row[sex_col])
+            else:
+                # Fallback to checking all patterns manually
+                for sex_col_fb in ["GENDER", "GENDRL", "SEX", "GNDR"]:
+                    if sex_col_fb in row and pd.notna(row[sex_col_fb]):
+                        dm_record["SEX"] = self._map_sex(row[sex_col_fb])
+                        break
+            if not dm_record.get("SEX"):
                 dm_record["SEX"] = "U"  # Unknown if not provided
 
-            # ARMCD/ARM (Required) - Planned Arm Code and Description
-            for arm_col in ["ARMCD", "ARM", "TRT", "TREATMENT", "TRTGRP"]:
-                if arm_col in row and pd.notna(row[arm_col]):
-                    arm_value = str(row[arm_col])
-                    dm_record["ARM"] = arm_value
-                    dm_record["ARMCD"] = arm_value[:8].upper().replace(" ", "")  # ARMCD max 8 chars
-                    break
-            if "ARM" not in dm_record:
+            # ARMCD/ARM (Required) - Use intelligent mapping first
+            arm_col = self.get_source_column("ARM", source_df, ["ARMCD", "ARM", "TRT", "TREATMENT", "TRTGRP", "TRTCD"])
+            if arm_col and arm_col in row.index and pd.notna(row[arm_col]):
+                arm_value = str(row[arm_col])
+                dm_record["ARM"] = arm_value
+                dm_record["ARMCD"] = arm_value[:8].upper().replace(" ", "")  # ARMCD max 8 chars
+            else:
+                # Fallback to checking all patterns manually
+                for arm_col_fb in ["ARMCD", "ARM", "TRT", "TREATMENT", "TRTGRP"]:
+                    if arm_col_fb in row and pd.notna(row[arm_col_fb]):
+                        arm_value = str(row[arm_col_fb])
+                        dm_record["ARM"] = arm_value
+                        dm_record["ARMCD"] = arm_value[:8].upper().replace(" ", "")
+                        break
+            if not dm_record.get("ARM"):
                 dm_record["ARM"] = "NOT ASSIGNED"
                 dm_record["ARMCD"] = "NOTASSGN"
 
-            # COUNTRY (Required) - ISO 3166-1 alpha-3
-            for country_col in ["COUNTRY", "CTRY", "NATION", "CNT"]:
-                if country_col in row and pd.notna(row[country_col]):
-                    country_val = str(row[country_col]).upper().strip()
-                    # Map common country names to ISO codes
-                    country_map = {
-                        "UNITED STATES": "USA", "US": "USA", "AMERICA": "USA",
-                        "UNITED KINGDOM": "GBR", "UK": "GBR", "ENGLAND": "GBR",
-                        "CANADA": "CAN", "GERMANY": "DEU", "FRANCE": "FRA",
-                        "JAPAN": "JPN", "CHINA": "CHN", "INDIA": "IND",
-                        "AUSTRALIA": "AUS", "SPAIN": "ESP", "ITALY": "ITA"
-                    }
-                    dm_record["COUNTRY"] = country_map.get(country_val, country_val[:3])
-                    break
-            if "COUNTRY" not in dm_record:
+            # COUNTRY (Required) - Use intelligent mapping first
+            country_col = self.get_source_column("COUNTRY", source_df, ["COUNTRY", "CTRY", "NATION", "CNT"])
+            country_val = None
+            if country_col and country_col in row.index and pd.notna(row[country_col]):
+                country_val = str(row[country_col]).upper().strip()
+            else:
+                # Fallback
+                for country_col_fb in ["COUNTRY", "CTRY", "NATION", "CNT"]:
+                    if country_col_fb in row and pd.notna(row[country_col_fb]):
+                        country_val = str(row[country_col_fb]).upper().strip()
+                        break
+            if country_val:
+                # Map common country names to ISO codes
+                country_map = {
+                    "UNITED STATES": "USA", "US": "USA", "AMERICA": "USA",
+                    "UNITED KINGDOM": "GBR", "UK": "GBR", "ENGLAND": "GBR",
+                    "CANADA": "CAN", "GERMANY": "DEU", "FRANCE": "FRA",
+                    "JAPAN": "JPN", "CHINA": "CHN", "INDIA": "IND",
+                    "AUSTRALIA": "AUS", "SPAIN": "ESP", "ITALY": "ITA"
+                }
+                dm_record["COUNTRY"] = country_map.get(country_val, country_val[:3])
+            else:
                 dm_record["COUNTRY"] = "USA"
 
             # === EXPECTED RECORD QUALIFIER VARIABLES ===
+            # Use intelligent mapping for all date fields
 
             # RFSTDTC - Subject Reference Start Date/Time (first dose or enrollment)
-            for ref_col in ["RFSTDTC", "RFSTDT", "FIRSTDOSE", "TRTSTDT", "DSSTDT", "ENROLLDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFSTDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rfstdtc_col = self.get_source_column("RFSTDTC", source_df, ["RFSTDTC", "RFSTDT", "FIRSTDOSE", "TRTSTDT", "DSSTDT", "ENROLLDT", "FIRST_DOSE_DATE"])
+            if rfstdtc_col and rfstdtc_col in row.index and pd.notna(row[rfstdtc_col]):
+                dm_record["RFSTDTC"] = self._convert_date_to_iso(row[rfstdtc_col])
+            else:
+                for ref_col in ["RFSTDTC", "RFSTDT", "FIRSTDOSE", "TRTSTDT", "DSSTDT", "ENROLLDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFSTDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
 
             # RFENDTC - Subject Reference End Date/Time (last dose or study completion)
-            for ref_col in ["RFENDTC", "RFENDT", "LASTDOSE", "TRTENDT", "DSENDT", "COMPDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFENDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rfendtc_col = self.get_source_column("RFENDTC", source_df, ["RFENDTC", "RFENDT", "LASTDOSE", "TRTENDT", "DSENDT", "COMPDT", "LAST_DOSE_DATE"])
+            if rfendtc_col and rfendtc_col in row.index and pd.notna(row[rfendtc_col]):
+                dm_record["RFENDTC"] = self._convert_date_to_iso(row[rfendtc_col])
+            else:
+                for ref_col in ["RFENDTC", "RFENDT", "LASTDOSE", "TRTENDT", "DSENDT", "COMPDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFENDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
 
             # RFXSTDTC - Date/Time of First Study Treatment
-            for ref_col in ["RFXSTDTC", "TRTSTDT", "FIRSTTRT", "EXSTDT", "TRTDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFXSTDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rfxstdtc_col = self.get_source_column("RFXSTDTC", source_df, ["RFXSTDTC", "TRTSTDT", "FIRSTTRT", "EXSTDT", "TRTDT"])
+            if rfxstdtc_col and rfxstdtc_col in row.index and pd.notna(row[rfxstdtc_col]):
+                dm_record["RFXSTDTC"] = self._convert_date_to_iso(row[rfxstdtc_col])
+            else:
+                for ref_col in ["RFXSTDTC", "TRTSTDT", "FIRSTTRT", "EXSTDT", "TRTDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFXSTDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
             # If not found, use RFSTDTC as fallback
-            if "RFXSTDTC" not in dm_record and dm_record.get("RFSTDTC"):
+            if not dm_record.get("RFXSTDTC") and dm_record.get("RFSTDTC"):
                 dm_record["RFXSTDTC"] = dm_record["RFSTDTC"]
 
             # RFXENDTC - Date/Time of Last Study Treatment
-            for ref_col in ["RFXENDTC", "TRTENDT", "LASTTRT", "EXENDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFXENDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rfxendtc_col = self.get_source_column("RFXENDTC", source_df, ["RFXENDTC", "TRTENDT", "LASTTRT", "EXENDT"])
+            if rfxendtc_col and rfxendtc_col in row.index and pd.notna(row[rfxendtc_col]):
+                dm_record["RFXENDTC"] = self._convert_date_to_iso(row[rfxendtc_col])
+            else:
+                for ref_col in ["RFXENDTC", "TRTENDT", "LASTTRT", "EXENDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFXENDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
             # If not found, use RFENDTC as fallback
-            if "RFXENDTC" not in dm_record and dm_record.get("RFENDTC"):
+            if not dm_record.get("RFXENDTC") and dm_record.get("RFENDTC"):
                 dm_record["RFXENDTC"] = dm_record["RFENDTC"]
 
             # RFICDTC - Date/Time of Informed Consent
-            for ref_col in ["RFICDTC", "ICDT", "CONSENTDT", "ICDATE", "INFCONDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFICDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rficdtc_col = self.get_source_column("RFICDTC", source_df, ["RFICDTC", "ICDT", "CONSENTDT", "ICDATE", "INFCONDT", "INFORMED_CONSENT_DATE"])
+            if rficdtc_col and rficdtc_col in row.index and pd.notna(row[rficdtc_col]):
+                dm_record["RFICDTC"] = self._convert_date_to_iso(row[rficdtc_col])
+            else:
+                for ref_col in ["RFICDTC", "ICDT", "CONSENTDT", "ICDATE", "INFCONDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFICDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
 
             # RFPENDTC - Date/Time of End of Participation
-            for ref_col in ["RFPENDTC", "EOSDT", "ENDSTDT", "COMPDT", "LASTVISDT"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["RFPENDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            rfpendtc_col = self.get_source_column("RFPENDTC", source_df, ["RFPENDTC", "EOSDT", "ENDSTDT", "COMPDT", "LASTVISDT"])
+            if rfpendtc_col and rfpendtc_col in row.index and pd.notna(row[rfpendtc_col]):
+                dm_record["RFPENDTC"] = self._convert_date_to_iso(row[rfpendtc_col])
+            else:
+                for ref_col in ["RFPENDTC", "EOSDT", "ENDSTDT", "COMPDT", "LASTVISDT"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["RFPENDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
 
             # DTHDTC - Date/Time of Death
-            for ref_col in ["DTHDTC", "DTHDT", "DEATHDT", "DTHDATE"]:
-                if ref_col in row and pd.notna(row[ref_col]):
-                    dm_record["DTHDTC"] = self._convert_date_to_iso(row[ref_col])
-                    break
+            dthdtc_col = self.get_source_column("DTHDTC", source_df, ["DTHDTC", "DTHDT", "DEATHDT", "DTHDATE", "DEATH_DATE"])
+            if dthdtc_col and dthdtc_col in row.index and pd.notna(row[dthdtc_col]):
+                dm_record["DTHDTC"] = self._convert_date_to_iso(row[dthdtc_col])
+            else:
+                for ref_col in ["DTHDTC", "DTHDT", "DEATHDT", "DTHDATE"]:
+                    if ref_col in row and pd.notna(row[ref_col]):
+                        dm_record["DTHDTC"] = self._convert_date_to_iso(row[ref_col])
+                        break
 
             # DTHFL - Subject Death Flag (Y or null per SDTM-IG)
-            for dth_col in ["DTHFL", "DEATH", "DIED", "DTHIND"]:
-                if dth_col in row and pd.notna(row[dth_col]):
-                    val = str(row[dth_col]).upper()
-                    if val in ["Y", "YES", "1", "TRUE", "DIED"]:
-                        dm_record["DTHFL"] = "Y"
-                    break
+            dthfl_col = self.get_source_column("DTHFL", source_df, ["DTHFL", "DEATH", "DIED", "DTHIND", "DEATH_FLAG"])
+            if dthfl_col and dthfl_col in row.index and pd.notna(row[dthfl_col]):
+                val = str(row[dthfl_col]).upper()
+                if val in ["Y", "YES", "1", "TRUE", "DIED"]:
+                    dm_record["DTHFL"] = "Y"
+            else:
+                for dth_col in ["DTHFL", "DEATH", "DIED", "DTHIND"]:
+                    if dth_col in row and pd.notna(row[dth_col]):
+                        val = str(row[dth_col]).upper()
+                        if val in ["Y", "YES", "1", "TRUE", "DIED"]:
+                            dm_record["DTHFL"] = "Y"
+                        break
             # Set DTHFL if death date is present
-            if "DTHFL" not in dm_record and dm_record.get("DTHDTC"):
+            if not dm_record.get("DTHFL") and dm_record.get("DTHDTC"):
                 dm_record["DTHFL"] = "Y"
 
             # AGE - Derived from BRTHDTC and RFSTDTC
-            # First get birth date
-            for dob_col in ["DOB", "BRTHDTC", "BIRTHDT", "BRTHDT", "BIRTHDATE"]:
-                if dob_col in row and pd.notna(row[dob_col]):
-                    dm_record["BRTHDTC"] = self._convert_date_to_iso(row[dob_col])
-                    break
+            # First get birth date - Use intelligent mapping
+            dob_col = self.get_source_column("BRTHDTC", source_df, ["DOB", "BRTHDTC", "BIRTHDT", "BRTHDT", "BIRTHDATE", "BIRTH_DATE", "DATE_OF_BIRTH"])
+            if dob_col and dob_col in row.index and pd.notna(row[dob_col]):
+                dm_record["BRTHDTC"] = self._convert_date_to_iso(row[dob_col])
+            else:
+                # Fallback to checking all patterns manually
+                for dob_col_fb in ["DOB", "BRTHDTC", "BIRTHDT", "BRTHDT", "BIRTHDATE"]:
+                    if dob_col_fb in row and pd.notna(row[dob_col_fb]):
+                        dm_record["BRTHDTC"] = self._convert_date_to_iso(row[dob_col_fb])
+                        break
 
             # Calculate AGE if birth date available
             if dm_record.get("BRTHDTC"):
@@ -686,30 +760,54 @@ class DMTransformer(BaseDomainTransformer):
                     dm_record["AGEU"] = "YEARS"
                 except Exception:
                     pass
-            # Try direct AGE column
-            if "AGE" not in dm_record:
-                for age_col in ["AGE", "AGEY", "AGEATCONS"]:
-                    if age_col in row and pd.notna(row[age_col]):
-                        try:
-                            dm_record["AGE"] = int(float(row[age_col]))
-                            dm_record["AGEU"] = "YEARS"
-                        except (ValueError, TypeError):
-                            pass
+            # Try direct AGE column - Use intelligent mapping
+            if not dm_record.get("AGE"):
+                age_col = self.get_source_column("AGE", source_df, ["AGE", "AGEY", "AGEATCONS", "SUBJECT_AGE", "PATIENT_AGE"])
+                if age_col and age_col in row.index and pd.notna(row[age_col]):
+                    try:
+                        dm_record["AGE"] = int(float(row[age_col]))
+                        dm_record["AGEU"] = "YEARS"
+                    except (ValueError, TypeError):
+                        pass
+                else:
+                    # Fallback
+                    for age_col_fb in ["AGE", "AGEY", "AGEATCONS"]:
+                        if age_col_fb in row and pd.notna(row[age_col_fb]):
+                            try:
+                                dm_record["AGE"] = int(float(row[age_col_fb]))
+                                dm_record["AGEU"] = "YEARS"
+                            except (ValueError, TypeError):
+                                pass
+                            break
+
+            # RACE (Expected) - Use intelligent mapping first
+            race_col = self.get_source_column("RACE", source_df, ["RCE", "RACE", "RACEN", "PATIENT_RACE", "SUBJECT_RACE"])
+            if race_col and race_col in row.index and pd.notna(row[race_col]):
+                dm_record["RACE"] = self._map_race(row[race_col])
+            else:
+                # Fallback
+                for race_col_fb in ["RCE", "RACE", "RACEN"]:
+                    if race_col_fb in row and pd.notna(row[race_col_fb]):
+                        dm_record["RACE"] = self._map_race(row[race_col_fb])
                         break
 
-            # RACE (Expected)
-            for race_col in ["RCE", "RACE", "RACEN"]:
-                if race_col in row and pd.notna(row[race_col]):
-                    dm_record["RACE"] = self._map_race(row[race_col])
-                    break
+            # ETHNIC (Expected) - Use intelligent mapping first
+            race_val = ""
+            if race_col and race_col in row.index and pd.notna(row[race_col]):
+                race_val = str(row[race_col]).upper()
+            else:
+                race_val = str(row.get("RCE", row.get("RACE", ""))).upper()
 
-            # ETHNIC (Expected)
-            race_val = str(row.get("RCE", row.get("RACE", ""))).upper()
-            for ethnic_col in ["ETHNIC", "ETHNICITY", "ETHGRP"]:
-                if ethnic_col in row and pd.notna(row[ethnic_col]):
-                    dm_record["ETHNIC"] = self._map_ethnicity(row[ethnic_col])
-                    break
-            if "ETHNIC" not in dm_record:
+            ethnic_col = self.get_source_column("ETHNIC", source_df, ["ETHNIC", "ETHNICITY", "ETHGRP", "ETHNIC_GROUP"])
+            if ethnic_col and ethnic_col in row.index and pd.notna(row[ethnic_col]):
+                dm_record["ETHNIC"] = self._map_ethnicity(row[ethnic_col])
+            else:
+                # Fallback
+                for ethnic_col_fb in ["ETHNIC", "ETHNICITY", "ETHGRP"]:
+                    if ethnic_col_fb in row and pd.notna(row[ethnic_col_fb]):
+                        dm_record["ETHNIC"] = self._map_ethnicity(row[ethnic_col_fb])
+                        break
+            if not dm_record.get("ETHNIC"):
                 if "HISPANIC" in race_val or "LATINO" in race_val:
                     dm_record["ETHNIC"] = "HISPANIC OR LATINO"
                 else:
@@ -808,6 +906,15 @@ class AETransformer(BaseDomainTransformer):
         All Required and Expected variables are ALWAYS included in output (even if null).
         """
         self.log("Transforming to AE domain - FULL SDTM-IG 3.4 compliance (46 variables)")
+
+        # CRITICAL: Discover intelligent mappings FIRST if mapper available
+        if self.intelligent_mapper and not self._discovered_mapping:
+            self.log("Discovering intelligent column mappings for AE domain...")
+            self.discover_mappings(source_df)
+            if self._discovered_mapping:
+                self.log(f"Found {len(self._discovered_mapping.mappings)} intelligent mappings")
+                for m in self._discovered_mapping.mappings[:10]:
+                    self.log(f"  Mapping: {m.source_column} -> {m.sdtm_variable} ({m.confidence:.0%})")
 
         ae_records = []
 

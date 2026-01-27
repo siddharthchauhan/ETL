@@ -12,6 +12,12 @@
       "config": {
         "recursion_limit": 250
       }
+    },
+    "sdtm_production": {
+      "path": "sdtm_pipeline.deepagents.production_graph:graph",
+      "config": {
+        "recursion_limit": 250
+      }
     }
   },
   "env": ".env"

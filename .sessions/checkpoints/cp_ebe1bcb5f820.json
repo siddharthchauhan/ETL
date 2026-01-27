@@ -1,0 +1,12 @@
+{
+  "checkpoint_id": "cp_ebe1bcb5f820",
+  "parent_checkpoint_id": null,
+  "thread_id": "demo_reasoning_004026",
+  "timestamp": "2026-01-27T05:40:26.150753",
+  "state": {
+    "messages": []
+  },
+  "message_count": 0,
+  "description": "Session start",
+  "branch_name": "main"
+}

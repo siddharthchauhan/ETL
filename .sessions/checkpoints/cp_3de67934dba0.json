@@ -1,0 +1,12 @@
+{
+  "checkpoint_id": "cp_3de67934dba0",
+  "parent_checkpoint_id": null,
+  "thread_id": "test_integration_001",
+  "timestamp": "2026-01-27T05:38:48.266435",
+  "state": {
+    "messages": []
+  },
+  "message_count": 0,
+  "description": "Session start",
+  "branch_name": "main"
+}

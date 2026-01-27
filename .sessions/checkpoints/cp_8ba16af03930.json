@@ -1,0 +1,12 @@
+{
+  "checkpoint_id": "cp_8ba16af03930",
+  "parent_checkpoint_id": "cp_ebe1bcb5f820",
+  "thread_id": "demo_reasoning_004026",
+  "timestamp": "2026-01-27T05:40:26.283570",
+  "state": {
+    "messages": []
+  },
+  "message_count": 0,
+  "description": "Initial state - before any transformation",
+  "branch_name": "main"
+}

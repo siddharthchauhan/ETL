@@ -1,0 +1,21 @@
+{
+  "checkpoint_id": "cp_70a4dab12b28",
+  "parent_checkpoint_id": "cp_53f05dd40dbf",
+  "thread_id": "demo_reasoning_004026",
+  "timestamp": "2026-01-27T05:40:26.285021",
+  "state": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Convert DM domain"
+      },
+      {
+        "role": "assistant",
+        "content": "DM domain converted with 100 records"
+      }
+    ]
+  },
+  "message_count": 2,
+  "description": "Branch 'conservative-fix' from cp_53f05dd40dbf",
+  "branch_name": "conservative-fix"
+}
