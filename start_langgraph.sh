@@ -58,7 +58,21 @@ if ! command -v langgraph &> /dev/null; then
 fi
 echo "      langgraph CLI found"
 
-echo "[4/4] Starting langgraph dev..."
+echo "[4/5] Starting file server for generated documents..."
+# Start the file server in the background (serves PPTX, XLSX, DOCX, CSV downloads)
+python file_server.py &
+FILE_SERVER_PID=$!
+echo "      File server started (PID=$FILE_SERVER_PID, port=${FILE_SERVER_PORT:-8090})"
+
+# Cleanup file server on exit
+cleanup() {
+    echo ""
+    echo "[Cleanup] Stopping file server (PID=$FILE_SERVER_PID)..."
+    kill $FILE_SERVER_PID 2>/dev/null
+}
+trap cleanup EXIT
+
+echo "[5/5] Starting langgraph dev..."
 echo "================================================"
 echo ""
 

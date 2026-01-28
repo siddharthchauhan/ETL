@@ -17,6 +17,11 @@ import boto3
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
+# NOTE: Document generation tools (generate_presentation, generate_excel, etc.)
+# are imported at the bottom of this file to avoid a circular import:
+#   langgraph_chat.tools -> deepagents.document_tools -> deepagents.__init__
+#   -> deepagents.subagents -> langgraph_chat.tools (circular!)
+
 # Global storage for dataframes (tools can't return DataFrames directly)
 _source_data: Dict[str, pd.DataFrame] = {}
 _sdtm_data: Dict[str, pd.DataFrame] = {}
@@ -2562,3 +2567,27 @@ SDTM_TOOLS = [
     # Internet search (Tavily)
     search_internet,
 ]
+
+# ── Deferred import: Document generation tools ──────────────────────
+# Imported here (after all tool functions above are defined) to break
+# the circular dependency chain:
+#   langgraph_chat.tools -> deepagents.__init__ -> deepagents.subagents
+#   -> langgraph_chat.tools.convert_domain  (needs to exist already)
+from sdtm_pipeline.deepagents.document_tools import (
+    generate_presentation,
+    generate_excel,
+    generate_word_document,
+    generate_csv_file,
+    generate_pdf,
+    generate_markdown_file,
+    generate_text_file,
+)
+SDTM_TOOLS.extend([
+    generate_presentation,
+    generate_excel,
+    generate_word_document,
+    generate_csv_file,
+    generate_pdf,
+    generate_markdown_file,
+    generate_text_file,
+])
