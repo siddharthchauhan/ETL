@@ -6097,5 +6097,8 @@ CHAT_TOOLS = [
 # Document generation tools (PPTX, XLSX, DOCX, CSV)
 from .document_tools import DOCUMENT_TOOLS
 
+# Feedback and learning tools
+from .feedback_tools import FEEDBACK_TOOLS
+
 # Combined tools for unified agent
-SDTM_TOOLS = DEEPAGENT_TOOLS + CHAT_TOOLS + DOCUMENT_TOOLS
+SDTM_TOOLS = DEEPAGENT_TOOLS + CHAT_TOOLS + DOCUMENT_TOOLS + FEEDBACK_TOOLS

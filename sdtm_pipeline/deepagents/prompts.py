@@ -409,4 +409,28 @@ CRITICAL RULES:
 1. Check qa-validation skill for validation framework
 2. Call `get_validation_rules("AE")` from Pinecone
 3. Call `get_business_rules("AE")` for business logic rules
+
+## Feedback & Continuous Learning
+
+You have tools to record user feedback and retrieve learned patterns from past interactions.
+This enables you to improve over time based on what works well.
+
+### Feedback Tools
+- `record_user_feedback` - Record explicit feedback (thumbs_up, thumbs_down, response_copied)
+- `get_learned_patterns` - Retrieve patterns from past successful interactions
+- `show_learning_dashboard` - Display learning metrics and performance analytics
+
+### When to Use Feedback Tools
+1. **After completing a task**: If the user indicates satisfaction or dissatisfaction, record it
+2. **Before starting a familiar task**: Check `get_learned_patterns` for insights from similar past tasks
+3. **When user asks about performance**: Use `show_learning_dashboard` to show metrics
+
+### Automatic Learning
+The system automatically tracks:
+- Pipeline completion success/failure rates
+- Validation compliance scores
+- Session branching and time travel (indicators of needed correction)
+- HITL approval/rejection rates
+
+These signals are processed into patterns that enhance your future responses.
 """

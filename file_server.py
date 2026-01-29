@@ -59,7 +59,7 @@ except ImportError:
 def _cors_headers():
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
     }
 
@@ -131,6 +131,136 @@ async def handle_download(request: web.Request) -> web.Response:
     return web.FileResponse(filepath, headers=headers)
 
 
+# ---------- Feedback API Endpoints ----------
+
+
+async def handle_feedback_post(request: web.Request) -> web.Response:
+    """Record a user feedback event.
+
+    POST /feedback
+    Body: {
+        "signal": "thumbs_up" | "thumbs_down" | "response_copied" | "dwell_time" | ...,
+        "thread_id": "session_abc123",
+        "context": "optional description",
+        "domain": "DM",
+        "metadata": {"dwell_time_seconds": 15}
+    }
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response(
+            {"error": "Invalid JSON body"}, status=400, headers=_cors_headers()
+        )
+
+    signal_str = data.get("signal", "")
+    thread_id = data.get("thread_id", "unknown")
+    context = data.get("context", "")
+    domain = data.get("domain", "")
+    metadata = data.get("metadata", {})
+
+    try:
+        from sdtm_pipeline.deepagents.feedback import FeedbackSignal, get_feedback_collector
+
+        # Validate signal
+        try:
+            signal = FeedbackSignal(signal_str)
+        except ValueError:
+            valid = [s.value for s in FeedbackSignal]
+            return web.json_response(
+                {"error": f"Invalid signal: {signal_str}", "valid_signals": valid},
+                status=400,
+                headers=_cors_headers(),
+            )
+
+        collector = get_feedback_collector()
+        event = collector.record(
+            signal=signal,
+            thread_id=thread_id,
+            user_query=context,
+            domain=domain.upper() if domain else None,
+            metadata=metadata,
+        )
+
+        return web.json_response(
+            {
+                "success": True,
+                "event_id": event.event_id,
+                "signal": signal_str,
+                "sentiment": event.sentiment.value,
+            },
+            headers=_cors_headers(),
+        )
+    except ImportError:
+        return web.json_response(
+            {"error": "Feedback module not available"},
+            status=503,
+            headers=_cors_headers(),
+        )
+    except Exception as e:
+        return web.json_response(
+            {"error": str(e)}, status=500, headers=_cors_headers()
+        )
+
+
+async def handle_feedback_stats(request: web.Request) -> web.Response:
+    """Return aggregated feedback analytics.
+
+    GET /feedback/stats
+    """
+    try:
+        from sdtm_pipeline.deepagents.learning_store import get_learning_store
+
+        store = get_learning_store()
+        metrics = store.compute_metrics()
+
+        return web.json_response(metrics, headers=_cors_headers())
+    except ImportError:
+        return web.json_response(
+            {"error": "Learning store not available"},
+            status=503,
+            headers=_cors_headers(),
+        )
+    except Exception as e:
+        return web.json_response(
+            {"error": str(e)}, status=500, headers=_cors_headers()
+        )
+
+
+async def handle_feedback_events(request: web.Request) -> web.Response:
+    """Return recent feedback events for debugging.
+
+    GET /feedback/events?limit=50&thread_id=xxx
+    """
+    try:
+        from sdtm_pipeline.deepagents.learning_store import get_learning_store
+
+        store = get_learning_store()
+
+        limit = int(request.query.get("limit", "50"))
+        thread_id = request.query.get("thread_id")
+
+        events = store.read_events(limit=limit, thread_id=thread_id)
+
+        return web.json_response(
+            {
+                "events": [e.to_dict() for e in events],
+                "count": len(events),
+            },
+            headers=_cors_headers(),
+        )
+    except ImportError:
+        return web.json_response(
+            {"error": "Learning store not available"},
+            status=503,
+            headers=_cors_headers(),
+        )
+    except Exception as e:
+        return web.json_response(
+            {"error": str(e)}, status=500, headers=_cors_headers()
+        )
+
+
 def create_app() -> web.Application:
     """Create the aiohttp application."""
     app = web.Application()
@@ -138,10 +268,15 @@ def create_app() -> web.Application:
     # CORS preflight for all routes
     app.router.add_route("OPTIONS", "/{path:.*}", handle_options)
 
-    # Routes
+    # File serving routes
     app.router.add_get("/health", handle_health)
     app.router.add_get("/files", handle_list_files)
     app.router.add_get("/download/{filename}", handle_download)
+
+    # Feedback & learning API routes
+    app.router.add_post("/feedback", handle_feedback_post)
+    app.router.add_get("/feedback/stats", handle_feedback_stats)
+    app.router.add_get("/feedback/events", handle_feedback_events)
 
     return app
 

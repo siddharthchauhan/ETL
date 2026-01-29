@@ -406,6 +406,18 @@ def create_agent():
     # Bind tools to the LLM
     llm_with_tools = llm.bind_tools(SDTM_TOOLS)
 
+    # Initialize adaptive prompt builder for learning injection
+    try:
+        from sdtm_pipeline.deepagents.adaptive_prompt import get_adaptive_prompt_builder
+        from sdtm_pipeline.deepagents.feedback import get_feedback_collector
+        _adaptive_builder = get_adaptive_prompt_builder()
+        _feedback_collector = get_feedback_collector()
+        print("[SDTM Chat] Adaptive learning system initialized")
+    except Exception as _e:
+        _adaptive_builder = None
+        _feedback_collector = None
+        print(f"[SDTM Chat] Adaptive learning not available: {_e}")
+
     def chatbot(state: State):
         """Main chatbot node that processes messages."""
         messages = state["messages"]
@@ -414,8 +426,32 @@ def create_agent():
         # This prevents "multiple non-consecutive system messages" error from LangGraph Studio
         non_system_messages = [m for m in messages if not isinstance(m, SystemMessage)]
 
+        # Build adaptive learned context from past interactions
+        adaptive_context = ""
+        if _adaptive_builder:
+            try:
+                # Extract latest user message for context-aware pattern matching
+                latest_user_msg = ""
+                for m in reversed(non_system_messages):
+                    if isinstance(m, HumanMessage):
+                        latest_user_msg = m.content if isinstance(m.content, str) else str(m.content)
+                        break
+
+                if latest_user_msg:
+                    # Detect regeneration (same query repeated)
+                    if _feedback_collector:
+                        _feedback_collector.detect_regeneration("chat", latest_user_msg)
+
+                    adaptive_context = _adaptive_builder.build_learned_context(
+                        user_query=latest_user_msg,
+                    )
+            except Exception:
+                adaptive_context = ""
+
         # Always use our consolidated system prompt (includes all 16 skills)
-        messages = [SystemMessage(content=FULL_SYSTEM_PROMPT)] + non_system_messages
+        # Append learned context if available
+        system_content = FULL_SYSTEM_PROMPT + adaptive_context
+        messages = [SystemMessage(content=system_content)] + non_system_messages
 
         response = llm_with_tools.invoke(messages)
         return {"messages": [response]}

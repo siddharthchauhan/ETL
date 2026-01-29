@@ -134,6 +134,17 @@ def create_graph() -> CompiledStateGraph:
     # subagents, skills, and multiple tool calls often need more steps
     agent = agent.with_config(recursion_limit=RECURSION_LIMIT)
 
+    # Initialize adaptive learning system
+    try:
+        from .adaptive_prompt import get_adaptive_prompt_builder
+        from .feedback import get_feedback_collector
+        _builder = get_adaptive_prompt_builder()
+        _collector = get_feedback_collector()
+        print(f"[SDTM Graph] Adaptive learning system initialized "
+              f"(patterns cached: {len(_builder.store._patterns_cache)})")
+    except Exception as _init_err:
+        print(f"[SDTM Graph] Adaptive learning not available: {_init_err}")
+
     print(f"[SDTM Graph] Created agent with model={model}, recursion_limit={RECURSION_LIMIT}")
     return agent
 

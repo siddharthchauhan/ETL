@@ -730,6 +730,18 @@ class SessionManager:
 
         self._save_sessions()
 
+        # Record feedback signal: time travel indicates user dissatisfaction
+        try:
+            from .feedback import FeedbackSignal, get_feedback_collector
+            collector = get_feedback_collector()
+            collector.record(
+                signal=FeedbackSignal.TIME_TRAVELED,
+                thread_id=thread_id,
+                metadata={"checkpoint_id": checkpoint_id, "description": checkpoint.description},
+            )
+        except Exception:
+            pass  # Don't let feedback recording break core functionality
+
         return {
             "success": True,
             "checkpoint_id": checkpoint_id,
@@ -796,6 +808,18 @@ class SessionManager:
         session.updated_at = datetime.utcnow().isoformat()
 
         self._save_sessions()
+
+        # Record feedback signal: branching indicates user exploring alternatives
+        try:
+            from .feedback import FeedbackSignal, get_feedback_collector
+            collector = get_feedback_collector()
+            collector.record(
+                signal=FeedbackSignal.SESSION_BRANCHED,
+                thread_id=thread_id,
+                metadata={"branch_name": branch_name, "source_checkpoint": source_cp_id},
+            )
+        except Exception:
+            pass  # Don't let feedback recording break core functionality
 
         return {
             "success": True,
