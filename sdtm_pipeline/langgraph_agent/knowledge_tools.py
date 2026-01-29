@@ -758,6 +758,104 @@ class SDTMKnowledgeRetriever:
 
         return guidance
 
+    # ── DTA (Data Transfer Agreement) Methods ──────────────────────
+
+    def search_dta(
+        self,
+        query: str,
+        domain: Optional[str] = None,
+        top_k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search the DTA Pinecone index for relevant agreement clauses.
+
+        Args:
+            query: Free-text search query (e.g. "adverse event reporting requirements")
+            domain: Optional SDTM domain code to focus the search (e.g. "AE")
+            top_k: Number of results to return
+
+        Returns:
+            List of matching DTA clauses with metadata
+        """
+        search_query = f"Data Transfer Agreement {query}"
+        if domain:
+            search_query = f"Data Transfer Agreement {domain} domain {query}"
+
+        results = self.search_pinecone(
+            query=search_query,
+            index_name="dta",
+            top_k=top_k,
+        )
+
+        # Enrich results with metadata extraction
+        enriched = []
+        for r in results:
+            meta = r.get("metadata", {})
+            enriched.append({
+                "clause_id": meta.get("clause_id", r.get("id", "")),
+                "section_title": meta.get("section_title", ""),
+                "applicable_domains": meta.get("applicable_domains", "ALL"),
+                "requirement_type": meta.get("requirement_type", "general"),
+                "dta_id": meta.get("dta_id", ""),
+                "score": r.get("score", 0),
+                "content": meta.get("text", meta.get("content", "")),
+            })
+        return enriched
+
+    def get_dta_requirements_for_domain(
+        self,
+        domain: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve all DTA requirements applicable to a specific SDTM domain.
+
+        Args:
+            domain: SDTM domain code (e.g. "AE", "DM", "LB")
+
+        Returns:
+            List of DTA requirement dicts with clause_id, section_title,
+            requirement_type, and content.
+        """
+        # Two-pronged search: domain-specific + general requirements
+        domain_results = self.search_pinecone(
+            query=f"Data Transfer Agreement {domain} domain requirements specifications quality",
+            index_name="dta",
+            top_k=15,
+        )
+        general_results = self.search_pinecone(
+            query=f"Data Transfer Agreement general data quality completeness format requirements",
+            index_name="dta",
+            top_k=10,
+        )
+
+        # Merge and deduplicate by ID
+        seen_ids: set = set()
+        merged: List[Dict[str, Any]] = []
+        for r in domain_results + general_results:
+            rid = r.get("id", "")
+            if rid in seen_ids:
+                continue
+            seen_ids.add(rid)
+
+            meta = r.get("metadata", {})
+            applicable = meta.get("applicable_domains", "ALL")
+
+            # Keep if applicable to this domain or to ALL
+            if applicable == "ALL" or domain.upper() in applicable.upper():
+                merged.append({
+                    "clause_id": meta.get("clause_id", rid),
+                    "section_title": meta.get("section_title", ""),
+                    "applicable_domains": applicable,
+                    "requirement_type": meta.get("requirement_type", "general"),
+                    "dta_id": meta.get("dta_id", ""),
+                    "score": r.get("score", 0),
+                    "content": meta.get("text", meta.get("content", "")),
+                })
+
+        # Sort by relevance
+        merged.sort(key=lambda x: x["score"], reverse=True)
+        return merged
+
     def search_all_indexes(
         self,
         query: str,

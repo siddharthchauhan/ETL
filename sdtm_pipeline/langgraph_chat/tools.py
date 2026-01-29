@@ -2531,6 +2531,274 @@ def save_sdtm_locally(output_dir: str = "./sdtm_chat_output") -> str:
         return f"Error saving locally: {str(e)}\n\n{traceback.format_exc()}"
 
 
+# ── DTA (Data Transfer Agreement) Compliance Tools ──────────────────
+
+@tool
+def search_dta_document(query: str) -> str:
+    """
+    Search the Data Transfer Agreement (DTA) in Pinecone for relevant clauses and requirements.
+
+    Use this tool to look up DTA specifications, quality thresholds, data format
+    requirements, or any contractual data obligations before or during data
+    quality checks.
+
+    Args:
+        query: Free-text search query (e.g. "adverse event reporting requirements",
+               "data completeness thresholds", "AE domain format specifications")
+
+    Returns:
+        Matching DTA clauses with section titles, requirement types, and relevance scores.
+    """
+    try:
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+        if not retriever or not retriever.pinecone_client:
+            return ("DTA search requires Pinecone. Ensure PINECONE_API_KEY and "
+                    "OPENAI_API_KEY are configured and a DTA document has been indexed.")
+
+        results = retriever.search_dta(query, top_k=10)
+
+        if not results:
+            return (f"No DTA clauses found for: \"{query}\"\n\n"
+                    "The DTA index may be empty. Upload a DTA document first using "
+                    "`upload_dta_to_knowledge_base`.")
+
+        output = f"## DTA Search Results\n\n**Query:** {query}\n\n"
+        for r in results:
+            clause = r.get("clause_id", "—")
+            title = r.get("section_title", "—")
+            req_type = r.get("requirement_type", "general")
+            domains = r.get("applicable_domains", "ALL")
+            score = r.get("score", 0)
+            output += (f"### {title}\n"
+                       f"- **Clause:** {clause}\n"
+                       f"- **Type:** {req_type} | **Domains:** {domains} | "
+                       f"**Relevance:** {score:.2f}\n\n")
+
+        return output
+
+    except Exception as e:
+        return f"Error searching DTA: {str(e)}"
+
+
+@tool
+def validate_against_dta(domain: str) -> str:
+    """
+    Cross-reference a converted SDTM domain against Data Transfer Agreement (DTA)
+    requirements stored in Pinecone. Flags discrepancies between the actual data
+    and what the DTA specifies.
+
+    Call this AFTER converting a domain and BEFORE or AFTER validate_domain to
+    ensure DTA compliance alongside CDISC compliance.
+
+    Args:
+        domain: SDTM domain code to check (e.g. "AE", "DM", "LB")
+
+    Returns:
+        A DTA compliance report with PASS / FLAG / N/A for each requirement.
+    """
+    domain = domain.upper()
+
+    if domain not in _sdtm_data:
+        return f"Domain {domain} not converted yet. Please use convert_domain first."
+
+    try:
+        import pandas as pd
+        from sdtm_pipeline.langgraph_agent.knowledge_tools import get_knowledge_retriever
+
+        retriever = get_knowledge_retriever()
+        if not retriever or not retriever.pinecone_client:
+            return ("DTA validation requires Pinecone. Ensure PINECONE_API_KEY and "
+                    "OPENAI_API_KEY are configured and a DTA document has been indexed.")
+
+        df: pd.DataFrame = _sdtm_data[domain]
+        requirements = retriever.get_dta_requirements_for_domain(domain)
+
+        if not requirements:
+            return (f"No DTA requirements found for domain {domain}.\n\n"
+                    "The DTA index may be empty. Upload a DTA document first using "
+                    "`upload_dta_to_knowledge_base`.")
+
+        output = f"## DTA Compliance Report: {domain}\n\n"
+        output += f"**Records:** {len(df)} | **DTA requirements evaluated:** {len(requirements)}\n\n"
+
+        pass_count = 0
+        flag_count = 0
+        na_count = 0
+
+        output += "| Status | Clause | Requirement | Detail |\n"
+        output += "|--------|--------|-------------|--------|\n"
+
+        columns_upper = {c.upper(): c for c in df.columns}
+
+        for req in requirements:
+            clause = req.get("clause_id", "—")
+            title = req.get("section_title", "—")[:60]
+            req_type = req.get("requirement_type", "general")
+            content_lower = req.get("content", "").lower()
+
+            # Attempt automated checks based on requirement type
+            if req_type == "completeness":
+                # Check for mentions of specific variables
+                flagged = False
+                for var in columns_upper:
+                    if var.lower() in content_lower:
+                        col = columns_upper[var]
+                        null_pct = df[col].isna().mean() * 100
+                        if null_pct > 5:  # Flag if >5% missing
+                            output += f"| **FLAG** | {clause} | {title} | {var}: {null_pct:.1f}% missing |\n"
+                            flag_count += 1
+                            flagged = True
+                            break
+                if not flagged:
+                    # General completeness check
+                    overall_null = df.isna().mean().mean() * 100
+                    if overall_null > 10:
+                        output += f"| **FLAG** | {clause} | {title} | Overall {overall_null:.1f}% missing |\n"
+                        flag_count += 1
+                    else:
+                        output += f"| PASS | {clause} | {title} | Completeness OK |\n"
+                        pass_count += 1
+
+            elif req_type == "format":
+                # Check date format requirements
+                if "iso 8601" in content_lower or "date" in content_lower:
+                    import re
+                    date_cols = [c for c in df.columns if "DT" in c.upper() or "DATE" in c.upper()]
+                    bad_dates = False
+                    for col in date_cols[:3]:
+                        sample = df[col].dropna().head(20)
+                        iso_pattern = re.compile(r'^\d{4}(-\d{2})?(-\d{2})?(T.*)?$')
+                        non_iso = sum(1 for v in sample if not iso_pattern.match(str(v)))
+                        if non_iso > 0:
+                            output += f"| **FLAG** | {clause} | {title} | {col}: {non_iso} non-ISO values |\n"
+                            flag_count += 1
+                            bad_dates = True
+                            break
+                    if not bad_dates:
+                        output += f"| PASS | {clause} | {title} | Date formats OK |\n"
+                        pass_count += 1
+                else:
+                    output += f"| N/A | {clause} | {title} | Manual review needed |\n"
+                    na_count += 1
+
+            elif req_type == "terminology":
+                # Check if CT-related variables have values
+                ct_flagged = False
+                for var in columns_upper:
+                    if var.lower() in content_lower:
+                        col = columns_upper[var]
+                        unique_vals = df[col].dropna().nunique()
+                        if unique_vals == 0:
+                            output += f"| **FLAG** | {clause} | {title} | {var} has no values |\n"
+                            flag_count += 1
+                            ct_flagged = True
+                            break
+                if not ct_flagged:
+                    output += f"| PASS | {clause} | {title} | CT values present |\n"
+                    pass_count += 1
+
+            elif req_type == "range":
+                # Check for range requirements
+                output += f"| N/A | {clause} | {title} | Manual range review needed |\n"
+                na_count += 1
+
+            else:
+                # General requirements — check variable presence
+                mentioned_vars = [
+                    v for v in columns_upper
+                    if v.lower() in content_lower
+                ]
+                if mentioned_vars:
+                    output += f"| PASS | {clause} | {title} | Referenced vars present |\n"
+                    pass_count += 1
+                else:
+                    output += f"| N/A | {clause} | {title} | Manual review needed |\n"
+                    na_count += 1
+
+        total = pass_count + flag_count + na_count
+        output += f"\n**Summary:** {pass_count} PASS | {flag_count} FLAG | {na_count} N/A (of {total} requirements)\n"
+
+        if flag_count > 0:
+            output += f"\n⚠️ **{flag_count} DTA discrepancies found.** Review flagged items and resolve before submission.\n"
+        else:
+            output += f"\n✓ **No DTA discrepancies detected.** Data appears compliant with DTA requirements.\n"
+
+        return output
+
+    except Exception as e:
+        import traceback
+        return f"Error validating against DTA: {str(e)}\n\n{traceback.format_exc()}"
+
+
+@tool
+def upload_dta_to_knowledge_base(file_path: str) -> str:
+    """
+    Upload and index a Data Transfer Agreement (DTA) document into the Pinecone
+    knowledge base so it can be referenced during data quality checks.
+
+    The document is split by markdown/text headings into individual clauses,
+    each embedded and stored in the 'dta' Pinecone index. Once indexed, use
+    `search_dta_document` or `validate_against_dta` to query it.
+
+    Supported formats: .md, .txt (plain text or markdown).
+
+    Args:
+        file_path: Path to the DTA document file (relative to workspace or absolute).
+                   Example: "DTA_StudyXYZ.md" or "/path/to/dta.txt"
+
+    Returns:
+        Confirmation with number of clauses indexed.
+    """
+    import os
+
+    # Resolve path relative to workspace
+    workspace = os.getenv("SDTM_WORKSPACE", "./sdtm_workspace")
+    if not os.path.isabs(file_path):
+        resolved = os.path.join(workspace, file_path)
+        if not os.path.isfile(resolved):
+            # Also try current directory
+            if not os.path.isfile(file_path):
+                return (f"File not found: {file_path}\n"
+                        f"Looked in workspace ({workspace}) and current directory.")
+            resolved = file_path
+    else:
+        resolved = file_path
+
+    if not os.path.isfile(resolved):
+        return f"File not found: {resolved}"
+
+    try:
+        with open(resolved, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        if not content.strip():
+            return "Error: DTA document is empty."
+
+        # Derive a DTA ID from the filename
+        dta_id = os.path.splitext(os.path.basename(resolved))[0].upper().replace(" ", "-")
+
+        from sdtm_pipeline.knowledge_base.setup_pinecone import PineconeKnowledgeBase
+
+        kb = PineconeKnowledgeBase()
+        # Ensure the DTA index exists
+        kb.create_indexes()
+        count = kb.populate_dta_index(dta_text=content, dta_id=dta_id)
+
+        return (f"## DTA Document Indexed\n\n"
+                f"**File:** {os.path.basename(resolved)}\n"
+                f"**DTA ID:** {dta_id}\n"
+                f"**Clauses indexed:** {count}\n\n"
+                f"You can now use:\n"
+                f"- `search_dta_document(query)` to search DTA clauses\n"
+                f"- `validate_against_dta(domain)` to check domain compliance against DTA\n")
+
+    except Exception as e:
+        import traceback
+        return f"Error indexing DTA document: {str(e)}\n\n{traceback.format_exc()}"
+
+
 # Export all tools
 SDTM_TOOLS = [
     # Task Progress Tracking
@@ -2564,6 +2832,10 @@ SDTM_TOOLS = [
     fetch_sdtmig_specification,
     fetch_controlled_terminology,
     get_mapping_guidance_from_web,
+    # DTA (Data Transfer Agreement) Compliance
+    search_dta_document,
+    validate_against_dta,
+    upload_dta_to_knowledge_base,
     # Internet search (Tavily)
     search_internet,
 ]

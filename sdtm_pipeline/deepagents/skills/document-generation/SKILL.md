@@ -1,17 +1,6 @@
 ---
 name: document-generation
-description: |
-  Skill for generating downloadable documents from conversation context.
-  Supports PowerPoint, Excel, Word, CSV, PDF, Markdown, and plain text files.
-  Generated files are served via HTTP for frontend download.
-
-  Use this skill when:
-  - User asks to create a presentation, slide deck, or PowerPoint
-  - User asks to export data as Excel, spreadsheet, or CSV
-  - User asks to create a Word document, report, or summary document
-  - User asks for a PDF report or printable document
-  - User asks for a Markdown or text file export
-  - User wants downloadable artifacts from the conversation
+description: Enables generating professional downloadable documents directly from conversation context.
 ---
 
 # Document Generation Skill

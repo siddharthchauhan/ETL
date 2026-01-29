@@ -24,6 +24,7 @@ This skill provides expertise in validating SDTM datasets for CDISC conformance,
 | **Cross-Domain** | Phase 6 | Referential integrity between domains | Custom validation |
 | **Semantic** | Phase 6 | Business logic, clinical plausibility | Custom validation |
 | **Anomaly Detection** | Phase 2, 6 | Statistical outliers, data quality | Isolation Forest |
+| **DTA Compliance** | Phase 2, 6 | Data Transfer Agreement requirements | `validate_against_dta` |
 | **Protocol Compliance** | Phase 6 | Study-specific requirements | Custom validation |
 
 #### Validation Rule Categories
@@ -51,6 +52,12 @@ VALIDATION_RULES = {
         "SM0001": "End date before start date",
         "SM0002": "Age outside plausible range",
         "SM0003": "Deceased subject with ongoing events",
+    },
+    "dta_compliance": {
+        "DTA0001": "Variable required by DTA not present in dataset",
+        "DTA0002": "Data completeness below DTA threshold",
+        "DTA0003": "Value format does not match DTA specification",
+        "DTA0004": "Domain not included per DTA scope",
     }
 }
 ```
@@ -99,18 +106,20 @@ def calculate_conformance_score(validation_results: dict) -> float:
     Calculate weighted conformance score.
 
     Weights:
-    - Structural: 25%
-    - CDISC: 30%
-    - Cross-Domain: 20%
+    - Structural: 20%
+    - CDISC: 25%
+    - Cross-Domain: 15%
     - Semantic: 15%
     - Anomaly: 10%
+    - DTA Compliance: 15%
     """
     weights = {
-        "structural": 0.25,
-        "cdisc": 0.30,
-        "cross_domain": 0.20,
+        "structural": 0.20,
+        "cdisc": 0.25,
+        "cross_domain": 0.15,
         "semantic": 0.15,
-        "anomaly": 0.10
+        "anomaly": 0.10,
+        "dta_compliance": 0.15,
     }
 
     layer_scores = {}
@@ -216,6 +225,14 @@ def calculate_conformance_score(validation_results: dict) -> float:
 - [ ] Date conversion validation
 - [ ] USUBJID uniqueness verification
 - [ ] Cross-domain referential integrity
+
+**DTA Cross-Reference QC (Phase 2 and 6)**
+- [ ] DTA document uploaded to knowledge base (`upload_dta_to_knowledge_base`)
+- [ ] DTA-required variables present in each domain (`validate_against_dta`)
+- [ ] Data completeness meets DTA thresholds
+- [ ] Value formats match DTA specifications (ISO 8601, character lengths)
+- [ ] All DTA-scoped domains included in submission
+- [ ] DTA discrepancies flagged and documented for review
 
 #### QC Report Template
 

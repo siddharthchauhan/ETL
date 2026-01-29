@@ -1,19 +1,10 @@
 ---
 name: lb-domain-transformation
-description: |
-  Comprehensive skill for transforming Laboratory (LB) domain data from EDC horizontal format to SDTM vertical format.
-  This skill handles:
-  - Detection of horizontal vs vertical source data format
-  - MELT/UNPIVOT transformation for Findings domains
-  - Lab test code mapping (LBTESTCD, LBTEST) from common EDC column names
-  - Unit standardization and reference range handling
-  - Specimen type inference
-  - Category assignment (CHEMISTRY, HEMATOLOGY, URINALYSIS)
+description: Automatically detect and transform lab data from horizontal (wide) format to SDTM LB vertical (long) format using a MELT operation.
+Core Problem Solved:
 
-  Use this skill when:
-  - Transforming lab data that has empty LBTESTCD, LBTEST, LBORRES fields
-  - Source data has columns named after tests (HGB, WBC, ALT, etc.)
-  - Source data appears to have one row per subject/visit with multiple test columns
+EDC systems often export lab data with each test as a separate column (e.g., HGB, WBC, GLUCOSE)
+SDTM requires vertical format where each row = one test result with LBTESTCD, LBTEST, LBORRES
 ---
 
 # LB Domain Transformation Skill

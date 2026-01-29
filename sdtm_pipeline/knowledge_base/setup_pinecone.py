@@ -102,6 +102,11 @@ class PineconeKnowledgeBase:
             "description": "Variable derivation rules with cross-domain dependencies and source patterns",
             "dimension": 3072,
             "metric": "cosine"
+        },
+        "dta": {
+            "description": "Data Transfer Agreement specifications, clauses, and quality requirements",
+            "dimension": 3072,
+            "metric": "cosine"
         }
     }
 
@@ -1112,6 +1117,82 @@ all map to the same SDTM target variable(s).
 
         logger.info(f"Prepared {len(documents)} derivation rule documents")
         return self.upsert_documents("derivationrules", documents)
+
+    def populate_dta_index(self, dta_text: str, dta_id: str = "DTA-001") -> int:
+        """Populate the DTA index from a Data Transfer Agreement document.
+
+        The text is split on markdown headings (## or ###) to produce one
+        Pinecone record per section.  If no headings are found the whole
+        document is indexed as a single chunk.
+
+        Args:
+            dta_text: Full text of the DTA document (plain text or markdown).
+            dta_id:   Identifier for this agreement (used as a record-ID prefix).
+
+        Returns:
+            Number of documents indexed.
+        """
+        import re
+
+        # Split on markdown headings while keeping the heading text
+        sections: list[tuple[str, str]] = []
+        pattern = re.compile(r'^(#{2,4})\s+(.+)', re.MULTILINE)
+        matches = list(pattern.finditer(dta_text))
+
+        if matches:
+            for i, m in enumerate(matches):
+                title = m.group(2).strip()
+                start = m.start()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(dta_text)
+                body = dta_text[start:end].strip()
+                sections.append((title, body))
+        else:
+            # No headings — index as a single chunk
+            sections.append(("Full Document", dta_text.strip()))
+
+        # Detect which SDTM domains a section might reference
+        KNOWN_DOMAINS = {
+            "DM", "AE", "CM", "MH", "VS", "LB", "EX", "DS", "SV", "SE",
+            "TA", "TE", "TI", "TV", "TS", "CO", "SU", "PR", "DV", "HO",
+            "CE", "FA", "QS", "SC", "EC", "AG", "ML", "EG", "IE", "PE",
+            "PP", "PC", "IS", "MB", "MS", "MI",
+        }
+
+        documents: list[KnowledgeDocument] = []
+        for idx, (title, body) in enumerate(sections):
+            clause_id = f"{dta_id}-S{idx + 1:03d}"
+            # Find referenced domains
+            found_domains = sorted(
+                d for d in KNOWN_DOMAINS
+                if re.search(rf'\b{d}\b', body)
+            )
+            # Determine requirement type from keywords
+            req_type = "general"
+            lower_body = body.lower()
+            if any(kw in lower_body for kw in ("completeness", "missing", "null", "population rate")):
+                req_type = "completeness"
+            elif any(kw in lower_body for kw in ("format", "iso 8601", "date format", "character length")):
+                req_type = "format"
+            elif any(kw in lower_body for kw in ("range", "min", "max", "threshold", "limit")):
+                req_type = "range"
+            elif any(kw in lower_body for kw in ("terminology", "codelist", "controlled", "ct value")):
+                req_type = "terminology"
+
+            documents.append(KnowledgeDocument(
+                id=clause_id,
+                text=body,
+                metadata={
+                    "dta_id": dta_id,
+                    "clause_id": clause_id,
+                    "section_title": title[:200],
+                    "applicable_domains": ", ".join(found_domains) if found_domains else "ALL",
+                    "requirement_type": req_type,
+                    "type": "dta_clause",
+                }
+            ))
+
+        logger.info(f"Prepared {len(documents)} DTA clause documents")
+        return self.upsert_documents("dta", documents)
 
     def populate_all_indexes(self) -> Dict[str, int]:
         """Populate all knowledge base indexes."""

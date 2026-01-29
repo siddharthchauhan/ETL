@@ -19,7 +19,7 @@ import threading
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import unquote
+from urllib.parse import unquote, parse_qs, urlparse, urlencode
 
 from langchain_core.tools import tool
 
@@ -35,6 +35,11 @@ GENERATED_DOCS_DIR = os.getenv(
 
 # File server port (must match frontend expectations)
 FILE_SERVER_PORT = int(os.getenv("FILE_SERVER_PORT", "8090"))
+
+# Skills directory — each sub-folder contains a SKILL.md with YAML frontmatter
+SKILLS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "skills"
+)
 
 # Ensure proper MIME types for Office docs
 mimetypes.add_type(
@@ -63,7 +68,7 @@ class _FileRequestHandler(BaseHTTPRequestHandler):
 
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
     def do_OPTIONS(self):  # noqa: N802
@@ -92,6 +97,27 @@ class _FileRequestHandler(BaseHTTPRequestHandler):
         if path.startswith("/download/"):
             filename = path[len("/download/"):]
             self._handle_download(filename)
+            return
+
+        # Feedback stats
+        if path == "/feedback/stats":
+            self._handle_feedback_stats()
+            return
+
+        # Feedback events
+        if path.startswith("/feedback/events"):
+            self._handle_feedback_events()
+            return
+
+        # Skills list
+        if path == "/skills":
+            self._handle_list_skills()
+            return
+
+        # Single skill detail
+        if path.startswith("/skills/") and path.count("/") == 2:
+            dir_name = path[len("/skills/"):]
+            self._handle_get_skill(dir_name)
             return
 
         self.send_response(404)
@@ -162,6 +188,598 @@ class _FileRequestHandler(BaseHTTPRequestHandler):
         self._send_cors_headers()
         self.end_headers()
         self.wfile.write(data)
+
+    # ----- POST handler -----
+
+    def do_POST(self):  # noqa: N802
+        path = unquote(self.path)
+
+        if path == "/feedback":
+            self._handle_feedback_post()
+            return
+
+        if path == "/notify/email":
+            self._handle_notify_email()
+            return
+
+        if path == "/notify/test-email":
+            self._handle_notify_test_email()
+            return
+
+        # Create a new skill
+        if path == "/skills":
+            self._handle_create_skill()
+            return
+
+        # Upload a skill .md file
+        if path == "/skills/upload":
+            self._handle_upload_skill()
+            return
+
+        # Reload skills into the running agent
+        if path == "/skills/reload":
+            self._handle_reload_skills()
+            return
+
+        # CORS preflight is handled by do_OPTIONS; any other POST is 404
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(b'{"error":"Not found"}')
+
+    # ----- PUT handler -----
+
+    def do_PUT(self):  # noqa: N802
+        path = unquote(self.path)
+
+        # Update an existing skill
+        if path.startswith("/skills/") and path.count("/") == 2:
+            dir_name = path[len("/skills/"):]
+            self._handle_update_skill(dir_name)
+            return
+
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(b'{"error":"Not found"}')
+
+    # ----- DELETE handler -----
+
+    def do_DELETE(self):  # noqa: N802
+        path = unquote(self.path)
+
+        # Delete a skill
+        if path.startswith("/skills/") and path.count("/") == 2:
+            dir_name = path[len("/skills/"):]
+            self._handle_delete_skill(dir_name)
+            return
+
+        self.send_response(404)
+        self.send_header("Content-Type", "application/json")
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(b'{"error":"Not found"}')
+
+    # ----- Feedback handlers -----
+
+    def _handle_feedback_post(self):
+        """Record a user feedback event (POST /feedback)."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            data = json.loads(body)
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON body"})
+            return
+
+        signal_str = data.get("signal", "")
+        thread_id = data.get("thread_id", "unknown")
+        context = data.get("context", "")
+        domain = data.get("domain", "")
+        metadata = data.get("metadata", {})
+
+        try:
+            from sdtm_pipeline.deepagents.feedback import FeedbackSignal, get_feedback_collector
+
+            try:
+                signal = FeedbackSignal(signal_str)
+            except ValueError:
+                valid = [s.value for s in FeedbackSignal]
+                self._send_json(400, {"error": f"Invalid signal: {signal_str}", "valid_signals": valid})
+                return
+
+            collector = get_feedback_collector()
+            event = collector.record(
+                signal=signal,
+                thread_id=thread_id,
+                user_query=context,
+                domain=domain.upper() if domain else None,
+                metadata=metadata,
+            )
+
+            self._send_json(200, {
+                "success": True,
+                "event_id": event.event_id,
+                "signal": signal_str,
+                "sentiment": event.sentiment.value,
+            })
+        except ImportError:
+            self._send_json(503, {"error": "Feedback module not available"})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_feedback_stats(self):
+        """Return aggregated feedback analytics (GET /feedback/stats)."""
+        try:
+            from sdtm_pipeline.deepagents.learning_store import get_learning_store
+
+            store = get_learning_store()
+            metrics = store.compute_metrics()
+            self._send_json(200, metrics)
+        except ImportError:
+            self._send_json(503, {"error": "Learning store not available"})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_feedback_events(self):
+        """Return recent feedback events (GET /feedback/events?limit=50&thread_id=xxx)."""
+        try:
+            from sdtm_pipeline.deepagents.learning_store import get_learning_store
+
+            store = get_learning_store()
+
+            # Parse query parameters
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            limit = int(params.get("limit", ["50"])[0])
+            thread_id = params.get("thread_id", [None])[0]
+
+            events = store.read_events(limit=limit, thread_id=thread_id)
+            self._send_json(200, {
+                "events": [e.to_dict() for e in events],
+                "count": len(events),
+            })
+        except ImportError:
+            self._send_json(503, {"error": "Learning store not available"})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    # ----- Skills CRUD handlers -----
+
+    def _parse_skill_frontmatter(self, content: str):
+        """Parse YAML frontmatter from a SKILL.md file. Returns (name, description, body)."""
+        name, description, body = "", "", content
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                frontmatter = parts[1].strip()
+                body = parts[2].strip()
+                for line in frontmatter.splitlines():
+                    if line.startswith("name:"):
+                        name = line[len("name:"):].strip()
+                    elif line.startswith("description:"):
+                        description = line[len("description:"):].strip()
+        return name, description, body
+
+    def _build_skill_md(self, name: str, description: str, body: str) -> str:
+        """Build a SKILL.md file with YAML frontmatter."""
+        return f"---\nname: {name}\ndescription: {description}\n---\n\n{body}\n"
+
+    def _slugify(self, text: str) -> str:
+        """Convert text to a directory-safe slug."""
+        import re
+        slug = text.lower().strip()
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+        slug = re.sub(r'[\s_]+', '-', slug)
+        slug = re.sub(r'-+', '-', slug)
+        return slug.strip('-')
+
+    def _reload_agent_skills(self):
+        """Reload skills into the running LangGraph agent."""
+        try:
+            from sdtm_pipeline.langgraph_chat.graph import reload_skills
+            reload_skills()
+        except Exception as e:
+            print(f"[Skills] Warning: Could not reload skills: {e}")
+
+    def _handle_list_skills(self):
+        """List all skills (GET /skills)."""
+        try:
+            skills = []
+            if os.path.isdir(SKILLS_DIR):
+                for dir_name in sorted(os.listdir(SKILLS_DIR)):
+                    skill_dir = os.path.join(SKILLS_DIR, dir_name)
+                    skill_file = os.path.join(skill_dir, "SKILL.md")
+                    if os.path.isdir(skill_dir) and os.path.isfile(skill_file):
+                        with open(skill_file, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        name, description, _ = self._parse_skill_frontmatter(content)
+                        skills.append({
+                            "name": name or dir_name,
+                            "description": description,
+                            "dirName": dir_name,
+                        })
+            self._send_json(200, {"skills": skills, "count": len(skills)})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_get_skill(self, dir_name: str):
+        """Get full skill detail (GET /skills/<dir_name>)."""
+        skill_file = os.path.join(SKILLS_DIR, dir_name, "SKILL.md")
+        if not os.path.isfile(skill_file):
+            self._send_json(404, {"error": f"Skill '{dir_name}' not found"})
+            return
+        try:
+            with open(skill_file, "r", encoding="utf-8") as f:
+                raw = f.read()
+            name, description, body = self._parse_skill_frontmatter(raw)
+            self._send_json(200, {
+                "name": name or dir_name,
+                "description": description,
+                "dirName": dir_name,
+                "content": body,
+            })
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_create_skill(self):
+        """Create a new skill (POST /skills)."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            data = json.loads(body)
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON body"})
+            return
+
+        name = data.get("name", "").strip()
+        description = data.get("description", "").strip()
+        content = data.get("content", "").strip()
+
+        if not name:
+            self._send_json(400, {"error": "Missing 'name'"})
+            return
+
+        dir_name = self._slugify(name)
+        if not dir_name:
+            self._send_json(400, {"error": "Invalid skill name"})
+            return
+
+        skill_dir = os.path.join(SKILLS_DIR, dir_name)
+        if os.path.exists(skill_dir):
+            self._send_json(409, {"error": f"Skill '{dir_name}' already exists"})
+            return
+
+        try:
+            os.makedirs(skill_dir, exist_ok=True)
+            skill_file = os.path.join(skill_dir, "SKILL.md")
+            with open(skill_file, "w", encoding="utf-8") as f:
+                f.write(self._build_skill_md(name, description, content))
+            self._reload_agent_skills()
+            self._send_json(201, {"success": True, "dirName": dir_name})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_upload_skill(self):
+        """Upload a .md file as a new skill (POST /skills/upload)."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+        except Exception:
+            self._send_json(400, {"error": "Could not read request body"})
+            return
+
+        content_type = self.headers.get("Content-Type", "")
+
+        # Handle JSON upload (base64 or raw text)
+        if "application/json" in content_type:
+            try:
+                data = json.loads(raw_body)
+                file_content = data.get("content", "")
+                file_name = data.get("fileName", "uploaded-skill")
+            except Exception:
+                self._send_json(400, {"error": "Invalid JSON body"})
+                return
+        else:
+            # Treat as raw text/markdown
+            file_content = raw_body.decode("utf-8", errors="replace")
+            file_name = "uploaded-skill"
+
+        if not file_content.strip():
+            self._send_json(400, {"error": "Empty file content"})
+            return
+
+        # Parse frontmatter if present
+        name, description, body = self._parse_skill_frontmatter(file_content)
+        if not name:
+            # Use filename (minus extension) as name
+            name = os.path.splitext(file_name)[0]
+        if not body:
+            body = file_content
+
+        dir_name = self._slugify(name)
+        if not dir_name:
+            dir_name = "uploaded-skill"
+
+        # Handle conflicts by appending a suffix
+        base_dir_name = dir_name
+        counter = 1
+        while os.path.exists(os.path.join(SKILLS_DIR, dir_name)):
+            dir_name = f"{base_dir_name}-{counter}"
+            counter += 1
+
+        try:
+            skill_dir = os.path.join(SKILLS_DIR, dir_name)
+            os.makedirs(skill_dir, exist_ok=True)
+            skill_file = os.path.join(skill_dir, "SKILL.md")
+            with open(skill_file, "w", encoding="utf-8") as f:
+                f.write(self._build_skill_md(name, description, body))
+            self._reload_agent_skills()
+            self._send_json(201, {"success": True, "dirName": dir_name, "name": name})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_reload_skills(self):
+        """Manually trigger a skills reload (POST /skills/reload)."""
+        try:
+            self._reload_agent_skills()
+            self._send_json(200, {"success": True})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_update_skill(self, dir_name: str):
+        """Update an existing skill (PUT /skills/<dir_name>)."""
+        skill_dir = os.path.join(SKILLS_DIR, dir_name)
+        skill_file = os.path.join(skill_dir, "SKILL.md")
+        if not os.path.isfile(skill_file):
+            self._send_json(404, {"error": f"Skill '{dir_name}' not found"})
+            return
+
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            data = json.loads(body)
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON body"})
+            return
+
+        name = data.get("name", "").strip()
+        description = data.get("description", "").strip()
+        content = data.get("content", "").strip()
+
+        if not name:
+            self._send_json(400, {"error": "Missing 'name'"})
+            return
+
+        try:
+            with open(skill_file, "w", encoding="utf-8") as f:
+                f.write(self._build_skill_md(name, description, content))
+            self._reload_agent_skills()
+            self._send_json(200, {"success": True, "dirName": dir_name})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_delete_skill(self, dir_name: str):
+        """Delete a skill directory (DELETE /skills/<dir_name>)."""
+        import shutil
+
+        skill_dir = os.path.join(SKILLS_DIR, dir_name)
+        if not os.path.isdir(skill_dir):
+            self._send_json(404, {"error": f"Skill '{dir_name}' not found"})
+            return
+
+        try:
+            shutil.rmtree(skill_dir)
+            self._reload_agent_skills()
+            self._send_json(200, {"success": True})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    # ----- Email notification handlers -----
+
+    def _get_gmail_oauth_config(self):
+        """Read Gmail OAuth2 settings from environment variables."""
+        client_id = os.getenv("GMAIL_CLIENT_ID")
+        client_secret = os.getenv("GMAIL_CLIENT_SECRET")
+        refresh_token = os.getenv("GMAIL_REFRESH_TOKEN")
+        from_addr = os.getenv("SMTP_FROM", "")
+        if not all([client_id, client_secret, refresh_token, from_addr]):
+            return None
+        return {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "from": from_addr,
+        }
+
+    def _get_smtp_config(self):
+        """Read basic SMTP settings from environment variables (fallback)."""
+        host = os.getenv("SMTP_HOST")
+        port = int(os.getenv("SMTP_PORT", "587"))
+        user = os.getenv("SMTP_USER")
+        password = os.getenv("SMTP_PASSWORD")
+        from_addr = os.getenv("SMTP_FROM", user or "")
+        if not host or not user or not password:
+            return None
+        return {"host": host, "port": port, "user": user, "password": password, "from": from_addr}
+
+    def _refresh_oauth2_access_token(self, client_id: str, client_secret: str, refresh_token: str) -> str:
+        """Exchange a Gmail OAuth2 refresh token for a fresh access token."""
+        import urllib.request as _req
+
+        data = urlencode({
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        }).encode()
+
+        req = _req.Request(
+            "https://oauth2.googleapis.com/token",
+            data=data,
+            method="POST",
+        )
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+        with _req.urlopen(req, timeout=15) as resp:
+            body = json.loads(resp.read().decode())
+
+        access_token = body.get("access_token")
+        if not access_token:
+            raise RuntimeError(f"OAuth2 token refresh failed: {body}")
+        return access_token
+
+    def _send_email(self, to: str, subject: str, html_body: str):
+        """Send an email. Tries Gmail OAuth2 first, falls back to basic SMTP."""
+        import smtplib
+        import base64
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        # --- Try Gmail OAuth2 (XOAUTH2) ---
+        oauth_cfg = self._get_gmail_oauth_config()
+        if oauth_cfg:
+            access_token = self._refresh_oauth2_access_token(
+                oauth_cfg["client_id"],
+                oauth_cfg["client_secret"],
+                oauth_cfg["refresh_token"],
+            )
+
+            msg = MIMEMultipart("alternative")
+            msg["From"] = oauth_cfg["from"]
+            msg["To"] = to
+            msg["Subject"] = subject
+            msg.attach(MIMEText(html_body, "html"))
+
+            # Build XOAUTH2 string: "user=<email>\x01auth=Bearer <token>\x01\x01"
+            auth_string = f"user={oauth_cfg['from']}\x01auth=Bearer {access_token}\x01\x01"
+            auth_b64 = base64.b64encode(auth_string.encode()).decode()
+
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                code, resp_msg = server.docmd("AUTH", f"XOAUTH2 {auth_b64}")
+                if code not in (235, 250):
+                    raise RuntimeError(
+                        f"XOAUTH2 authentication failed ({code}): {resp_msg.decode()}"
+                    )
+                server.sendmail(oauth_cfg["from"], [to], msg.as_string())
+            return
+
+        # --- Fallback: basic SMTP with password ---
+        smtp_cfg = self._get_smtp_config()
+        if smtp_cfg:
+            msg = MIMEMultipart("alternative")
+            msg["From"] = smtp_cfg["from"]
+            msg["To"] = to
+            msg["Subject"] = subject
+            msg.attach(MIMEText(html_body, "html"))
+
+            with smtplib.SMTP(smtp_cfg["host"], smtp_cfg["port"], timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_cfg["user"], smtp_cfg["password"])
+                server.sendmail(smtp_cfg["from"], [to], msg.as_string())
+            return
+
+        raise EnvironmentError(
+            "Email not configured. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, "
+            "GMAIL_REFRESH_TOKEN, and SMTP_FROM environment variables. "
+            "Run `python setup_gmail_oauth.py` to obtain a refresh token."
+        )
+
+    def _handle_notify_email(self):
+        """Send a task-completion notification email (POST /notify/email)."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            data = json.loads(body)
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON body"})
+            return
+
+        to = data.get("to", "")
+        task_name = data.get("task_name", "Unknown Task")
+        output = data.get("output", "")
+
+        if not to:
+            self._send_json(400, {"error": "Missing 'to' email address"})
+            return
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        subject = f"Task Completed: {task_name}"
+        html = (
+            f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
+            f"<h2 style='color:#1a1a1a;'>Scheduled Task Completed</h2>"
+            f"<p><strong>Task:</strong> {task_name}</p>"
+            f"<p><strong>Completed at:</strong> {now}</p>"
+            f"<hr style='border:none;border-top:1px solid #e5e5e5;margin:16px 0;'/>"
+            f"<h3 style='color:#333;'>Output Summary</h3>"
+            f"<div style='background:#f9f9f9;padding:12px 16px;border-radius:8px;"
+            f"border:1px solid #e5e5e5;white-space:pre-wrap;font-size:14px;'>"
+            f"{output[:2000]}"
+            f"</div>"
+            f"<p style='color:#888;font-size:12px;margin-top:24px;'>"
+            f"Sent by SDTM Agent &middot; Automated notification</p>"
+            f"</div>"
+        )
+
+        try:
+            self._send_email(to, subject, html)
+            self._send_json(200, {"success": True})
+        except EnvironmentError as e:
+            self._send_json(503, {"success": False, "error": str(e)})
+        except Exception as e:
+            self._send_json(500, {"success": False, "error": str(e)})
+
+    def _handle_notify_test_email(self):
+        """Send a test notification email (POST /notify/test-email)."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            data = json.loads(body)
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON body"})
+            return
+
+        to = data.get("to", "")
+        if not to:
+            self._send_json(400, {"error": "Missing 'to' email address"})
+            return
+
+        subject = "Test Notification from SDTM Agent"
+        html = (
+            "<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
+            "<h2 style='color:#1a1a1a;'>Test Notification</h2>"
+            "<p>This is a test email from your SDTM Agent. "
+            "If you received this, email notifications are working correctly.</p>"
+            "<p style='color:#888;font-size:12px;margin-top:24px;'>"
+            "Sent by SDTM Agent &middot; Test notification</p>"
+            "</div>"
+        )
+
+        try:
+            self._send_email(to, subject, html)
+            self._send_json(200, {"success": True})
+        except EnvironmentError as e:
+            self._send_json(503, {"success": False, "error": str(e)})
+        except Exception as e:
+            self._send_json(500, {"success": False, "error": str(e)})
+
+    # ----- Utility -----
+
+    def _send_json(self, status_code: int, data: dict):
+        """Send a JSON response with CORS headers."""
+        body = json.dumps(data).encode()
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, format, *args):
         """Suppress default request logging to keep LangGraph output clean."""

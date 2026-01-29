@@ -176,6 +176,20 @@ if LOADED_SKILLS:
     skill_names = [s['name'] for s in LOADED_SKILLS]
     print(f"[SDTM Chat] Loaded {len(LOADED_SKILLS)} skills: {', '.join(skill_names)}")
 
+
+def reload_skills():
+    """Re-read skills from disk and update the module globals.
+
+    Called by the embedded file server after a skill is created, updated,
+    or deleted so the agent picks up the change immediately.
+    """
+    global LOADED_SKILLS, SKILLS_PROMPT, FULL_SYSTEM_PROMPT
+    LOADED_SKILLS = load_all_skills()
+    SKILLS_PROMPT = build_skills_prompt(LOADED_SKILLS)
+    FULL_SYSTEM_PROMPT = SYSTEM_PROMPT + SKILLS_PROMPT
+    names = [s['name'] for s in LOADED_SKILLS]
+    print(f"[SDTM Chat] Reloaded {len(LOADED_SKILLS)} skills: {', '.join(names)}")
+
 try:
     from .tools import SDTM_TOOLS
 except ImportError:
@@ -293,17 +307,22 @@ Use this when user asks to "generate mapping specification" or wants to review m
 18. **Get Business Rules**: Retrieve business rules (`get_business_rules`)
 19. **Search Guidelines**: Search SDTM/CDISC documentation (`search_sdtm_guidelines`)
 
+### DTA (Data Transfer Agreement) Compliance
+20. **Search DTA Document**: Search DTA clauses and requirements in Pinecone (`search_dta_document`)
+21. **Validate Against DTA**: Cross-reference converted data against DTA specifications, flag discrepancies (`validate_against_dta`)
+22. **Upload DTA Document**: Index a DTA document into Pinecone for future reference (`upload_dta_to_knowledge_base`)
+
 ### Internet Search (Tavily AI Search)
-20. **Search Internet**: Search the web for any information (`search_internet`)
+23. **Search Internet**: Search the web for any information (`search_internet`)
 
 ### Document Generation (Downloadable Files)
-21. **Generate Presentation**: Create PowerPoint (.pptx) slide decks (`generate_presentation`)
-22. **Generate Excel**: Create Excel (.xlsx) workbooks with styled sheets (`generate_excel`)
-23. **Generate Word Document**: Create Word (.docx) documents with sections (`generate_word_document`)
-24. **Generate CSV**: Create CSV files from tabular data (`generate_csv_file`)
-25. **Generate PDF**: Create PDF documents with sections (`generate_pdf`)
-26. **Generate Markdown File**: Create Markdown (.md) files (`generate_markdown_file`)
-27. **Generate Text File**: Create plain text (.txt) files (`generate_text_file`)
+24. **Generate Presentation**: Create PowerPoint (.pptx) slide decks (`generate_presentation`)
+25. **Generate Excel**: Create Excel (.xlsx) workbooks with styled sheets (`generate_excel`)
+26. **Generate Word Document**: Create Word (.docx) documents with sections (`generate_word_document`)
+27. **Generate CSV**: Create CSV files from tabular data (`generate_csv_file`)
+28. **Generate PDF**: Create PDF documents with sections (`generate_pdf`)
+29. **Generate Markdown File**: Create Markdown (.md) files (`generate_markdown_file`)
+30. **Generate Text File**: Create plain text (.txt) files (`generate_text_file`)
 
 **CRITICAL: After generating any document, include the result as a ```generated-file``` code block:**
 ```generated-file
@@ -323,6 +342,8 @@ Use this when user asks to "generate mapping specification" or wants to review m
 | "How do I map AEVERB?" | `get_mapping_guidance_from_web("AEVERB", "AE")` |
 | "What's valid for AEREL?" | `fetch_controlled_terminology("REL")` |
 | "Validate my data" | `get_validation_rules(domain)` → `validate_domain` |
+| "Check DTA compliance" | `search_dta_document(query)` → `validate_against_dta(domain)` |
+| "Upload DTA" | `upload_dta_to_knowledge_base(file_path)` |
 | "FDA rules for LB" | `get_business_rules("LB")` |
 | Mapping unknown column | `get_mapping_guidance_from_web(column, domain)` |
 
@@ -346,8 +367,9 @@ A typical conversion workflow is:
 5. Convert domains (uses intelligent mapping internally)
 6. **CALL `get_validation_rules(domain)` for compliance requirements**
 7. Validate the converted domains
-8. Review the validation report
-9. Upload to S3 / Load to Neo4j / Save locally
+8. **CALL `validate_against_dta(domain)` to cross-reference DTA requirements and flag discrepancies**
+9. Review the validation report (CDISC + DTA compliance)
+10. Upload to S3 / Load to Neo4j / Save locally
 
 ## IMPORTANT: After Conversion
 

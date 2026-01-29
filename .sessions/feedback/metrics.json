@@ -1,10 +1,10 @@
 {
-  "total_interactions": 2,
-  "total_feedback_events": 2,
-  "positive_rate": 1.0,
-  "negative_rate": 0.0,
+  "total_interactions": 4,
+  "total_feedback_events": 6,
+  "positive_rate": 0.3333333333333333,
+  "negative_rate": 0.3333333333333333,
   "copy_rate": 0.0,
-  "regeneration_rate": 0.0,
+  "regeneration_rate": 0.5,
   "pipeline_success_rate": 0.0,
   "avg_validation_score": 0.0,
   "hitl_approval_rate": 0.0,
@@ -12,7 +12,9 @@
   "tool_success_rates": {},
   "patterns_extracted": 0,
   "signal_counts": {
-    "thumbs_up": 2
+    "thumbs_up": 2,
+    "response_regenerated": 2,
+    "dwell_time": 2
   },
-  "computed_at": "2026-01-29T05:48:14.836835Z"
+  "computed_at": "2026-01-29T22:14:41.182641Z"
 }
