@@ -1,5 +1,6 @@
 # LangGraph checkpoint files
 .langgraph_api/*.pckl
+.langgraph_api/.langgraph_*
 
 # Python
 __pycache__/

@@ -1,0 +1,823 @@
+{
+  "specification_metadata": {
+    "study_id": "MAXIS-08",
+    "study_name": "MAXIS-08 Clinical Trial",
+    "specification_version": "1.0",
+    "specification_date": "2024-01-15",
+    "sdtm_version": "3.4",
+    "created_by": "SDTM Mapping Specification Expert",
+    "domain": "DM",
+    "domain_name": "Demographics",
+    "domain_class": "Special Purpose",
+    "description": "Demographics domain - one record per subject containing demographic characteristics and study participation summary"
+  },
+  
+  "source_metadata": {
+    "source_file": "DEMO.csv",
+    "source_system": "EDC",
+    "source_columns": [
+      "STUDY",
+      "DCMNAME",
+      "CPEVENT",
+      "PT",
+      "VISIT",
+      "RCE",
+      "DOB",
+      "GENDRL",
+      "GENDER",
+      "SUBEVE",
+      "REPEATSN",
+      "INVSITE"
+    ],
+    "record_structure": "One record per subject",
+    "sample_data_notes": "PT format: Site-Subject (e.g., 01-01), DOB format: YYYYMMDD (e.g., 19740918), GENDER: M/F, RCE: BLACK/ASIAN/HISPANIC/WHITE, INVSITE: C008_408"
+  },
+  
+  "data_quality_notes": [
+    "✅ 100% completeness on all source columns",
+    "⚠️ HISPANIC in RCE field needs clinical review - may represent ethnicity rather than race",
+    "⚠️ Use GENDER field (M/F) for SEX variable mapping",
+    "⚠️ RFSTDTC and RFENDTC not available in DEMO.csv - may need visit/exposure data",
+    "⚠️ ARM/ARMCD not available in DEMO.csv - may need randomization data",
+    "✅ All subjects from single site: C008_408"
+  ],
+  
+  "cdisc_ct_mappings": {
+    "SEX": {
+      "M": "M",
+      "F": "F"
+    },
+    "RACE": {
+      "BLACK": "BLACK OR AFRICAN AMERICAN",
+      "WHITE": "WHITE",
+      "ASIAN": "ASIAN",
+      "HISPANIC": "MANUAL_REVIEW_REQUIRED"
+    },
+    "RACE_NOTES": "HISPANIC value flagged for manual review - typically represents ethnicity (ETHNIC variable) not race. Clinical review required to determine proper RACE and ETHNIC values.",
+    "AGEU": "YEARS"
+  },
+  
+  "target_domain": "DM",
+  
+  "mappings": [
+    {
+      "variable_order": 1,
+      "target_variable": "STUDYID",
+      "label": "Study Identifier",
+      "type": "Char",
+      "length": 20,
+      "core": "Req",
+      "role": "Identifier",
+      "cdisc_notes": "Unique identifier for a study",
+      "source_column": "STUDY",
+      "transformation_type": "ASSIGN",
+      "transformation_rule": "ASSIGN(\"MAXIS-08\")",
+      "algorithm_description": "Constant value assignment. Use the study identifier from source or hardcode study protocol number.",
+      "controlled_terminology": null,
+      "notes": "Source column STUDY contains 'MAXIS-08'. Can use direct mapping or constant assignment.",
+      "validation_rules": [
+        "Must not be null",
+        "Should match protocol identifier"
+      ]
+    },
+    {
+      "variable_order": 2,
+      "target_variable": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "type": "Char",
+      "length": 2,
+      "core": "Req",
+      "role": "Identifier",
+      "cdisc_notes": "Two-character abbreviation for the domain",
+      "source_column": null,
+      "transformation_type": "ASSIGN",
+      "transformation_rule": "ASSIGN(\"DM\")",
+      "algorithm_description": "Constant value 'DM' for Demographics domain",
+      "controlled_terminology": "Domain abbreviation (DM)",
+      "notes": "Hardcoded value for Demographics domain",
+      "validation_rules": [
+        "Must equal 'DM'"
+      ]
+    },
+    {
+      "variable_order": 3,
+      "target_variable": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "type": "Char",
+      "length": 40,
+      "core": "Req",
+      "role": "Identifier",
+      "cdisc_notes": "Identifier used to uniquely identify a subject across all studies",
+      "source_column": "STUDY, INVSITE, PT",
+      "transformation_type": "CONCAT",
+      "transformation_rule": "CONCAT(STUDY, \"-\", SUBSTR(INVSITE, 6, 3), \"-\", PT)",
+      "algorithm_description": "Concatenate STUDYID + '-' + SITEID + '-' + SUBJID. Extract site from INVSITE (e.g., 'C008_408' -> '408'), then combine with PT (subject ID)",
+      "controlled_terminology": null,
+      "notes": "INVSITE format is 'C008_XXX' where XXX is the site ID. PT contains Site-Subject format (e.g., '01-01'). Final format: MAXIS-08-408-01-01",
+      "validation_rules": [
+        "Must be unique across all subjects",
+        "Must not be null",
+        "Format: STUDYID-SITEID-SUBJID"
+      ]
+    },
+    {
+      "variable_order": 4,
+      "target_variable": "SUBJID",
+      "label": "Subject Identifier for the Study",
+      "type": "Char",
+      "length": 20,
+      "core": "Req",
+      "role": "Topic",
+      "cdisc_notes": "Subject identifier within the study",
+      "source_column": "PT",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "PT",
+      "algorithm_description": "Direct mapping from PT field which contains subject identifier in Site-Subject format (e.g., '01-01', '01-02')",
+      "controlled_terminology": null,
+      "notes": "PT field contains subject ID in format XX-YY where XX is site and YY is subject number",
+      "validation_rules": [
+        "Must not be null",
+        "Must be unique within study"
+      ]
+    },
+    {
+      "variable_order": 5,
+      "target_variable": "RFSTDTC",
+      "label": "Subject Reference Start Date/Time",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Reference start date for subject, typically first exposure or randomization date",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_VISITS_OR_EXPOSURE",
+      "algorithm_description": "RFSTDTC typically derived from first visit date, first exposure date, or randomization date. Not available in DEMO.csv - requires visit (SV) or exposure (EX) data",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Need to derive from: 1) First study drug administration date (EX domain), 2) First visit date (SV domain), or 3) Randomization date. This should be populated during multi-domain integration phase.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD)",
+        "Should be <= all other subject dates"
+      ]
+    },
+    {
+      "variable_order": 6,
+      "target_variable": "RFENDTC",
+      "label": "Subject Reference End Date/Time",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Reference end date for subject, typically last exposure or completion date",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_VISITS_OR_EXPOSURE",
+      "algorithm_description": "RFENDTC typically derived from last visit date, last exposure date, or study completion date. Not available in DEMO.csv - requires visit (SV) or exposure (EX) data",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Need to derive from: 1) Last study drug administration date (EX domain), 2) Last visit date (SV domain), or 3) Study completion/discontinuation date (DS domain). This should be populated during multi-domain integration phase.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD)",
+        "Should be >= RFSTDTC",
+        "Should be >= all other subject dates"
+      ]
+    },
+    {
+      "variable_order": 7,
+      "target_variable": "RFXSTDTC",
+      "label": "Date/Time of First Study Treatment",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "First date/time of study treatment for subject",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_EXPOSURE",
+      "algorithm_description": "Minimum EXSTDTC from EX (Exposure) domain for each subject",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from EX domain: SELECT MIN(EXSTDTC) GROUP BY USUBJID. Populate during multi-domain integration.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+        "Should be >= RFSTDTC"
+      ]
+    },
+    {
+      "variable_order": 8,
+      "target_variable": "RFXENDTC",
+      "label": "Date/Time of Last Study Treatment",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Last date/time of study treatment for subject",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_EXPOSURE",
+      "algorithm_description": "Maximum EXENDTC (or EXSTDTC if EXENDTC is null) from EX domain for each subject",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from EX domain: SELECT MAX(COALESCE(EXENDTC, EXSTDTC)) GROUP BY USUBJID. Populate during multi-domain integration.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+        "Should be >= RFXSTDTC",
+        "Should be <= RFENDTC"
+      ]
+    },
+    {
+      "variable_order": 9,
+      "target_variable": "RFICDTC",
+      "label": "Date/Time of Informed Consent",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Date/time subject provided informed consent",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_CONSENT_FORM",
+      "algorithm_description": "Informed consent date typically captured in a separate consent form or disposition dataset",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Should be derived from consent form data or DS (Disposition) domain where DSDECOD='INFORMED CONSENT OBTAINED'. This is the earliest date in subject's trial participation.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+        "Should be <= all other subject dates"
+      ]
+    },
+    {
+      "variable_order": 10,
+      "target_variable": "RFPENDTC",
+      "label": "Date/Time of End of Participation",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Date/time subject ended participation (last contact)",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_DISPOSITION",
+      "algorithm_description": "Latest contact date - typically from DS (Disposition) domain study completion or early termination record",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from DS domain where DSDECOD in ('COMPLETED', 'DISCONTINUED', 'SCREEN FAILURE'). Use DSSTDTC of the final disposition event.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD)",
+        "Should be >= all other subject dates"
+      ]
+    },
+    {
+      "variable_order": 11,
+      "target_variable": "DTHDTC",
+      "label": "Date/Time of Death",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Date/time of death if subject died during study",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_DISPOSITION_OR_AE",
+      "algorithm_description": "Death date from DS domain (DSDECOD='DEATH') or AE domain (AEOUT='FATAL')",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Only populate if subject died. Derive from DS or AE domain. Leave blank if subject did not die.",
+      "validation_rules": [
+        "Must be in ISO 8601 format if present",
+        "Only populated if DTHFL='Y'",
+        "Should be <= RFPENDTC"
+      ]
+    },
+    {
+      "variable_order": 12,
+      "target_variable": "DTHFL",
+      "label": "Subject Death Flag",
+      "type": "Char",
+      "length": 1,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Indicates if subject died",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "IF(DTHDTC != null, \"Y\", null)",
+      "algorithm_description": "Set to 'Y' if DTHDTC is populated (subject died), otherwise leave blank/null",
+      "controlled_terminology": "Y or null",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive based on presence of death record in DS or AE domain. Only set to 'Y' if confirmed death, otherwise leave null (not 'N').",
+      "validation_rules": [
+        "Must be 'Y' or null (not 'N')",
+        "If 'Y', then DTHDTC must be populated"
+      ]
+    },
+    {
+      "variable_order": 13,
+      "target_variable": "SITEID",
+      "label": "Study Site Identifier",
+      "type": "Char",
+      "length": 10,
+      "core": "Req",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Unique identifier for study site",
+      "source_column": "INVSITE",
+      "transformation_type": "DERIVE",
+      "transformation_rule": "SUBSTR(INVSITE, 6, 3)",
+      "algorithm_description": "Extract site ID from INVSITE field. INVSITE format is 'C008_XXX' where XXX is the site identifier. Use SUBSTR to extract characters starting at position 6 for 3 characters.",
+      "controlled_terminology": null,
+      "notes": "INVSITE contains 'C008_408', extract '408' as SITEID. All subjects appear to be from single site 408.",
+      "validation_rules": [
+        "Must not be null",
+        "Should be consistent within INVSITE field"
+      ]
+    },
+    {
+      "variable_order": 14,
+      "target_variable": "INVID",
+      "label": "Investigator Identifier",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Identifier for principal investigator at site",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_SITE_METADATA",
+      "algorithm_description": "Investigator ID typically from site metadata or investigator roster",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from site metadata file or investigator roster that maps SITEID to INVID.",
+      "validation_rules": [
+        "Should be populated for all subjects at sites with single PI"
+      ]
+    },
+    {
+      "variable_order": 15,
+      "target_variable": "INVNAM",
+      "label": "Investigator Name",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Name of principal investigator",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_SITE_METADATA",
+      "algorithm_description": "Investigator name from site metadata or investigator roster",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from site metadata file or investigator roster that maps SITEID to INVNAM.",
+      "validation_rules": [
+        "Should follow format: LastName, FirstName"
+      ]
+    },
+    {
+      "variable_order": 16,
+      "target_variable": "BRTHDTC",
+      "label": "Date/Time of Birth",
+      "type": "Char",
+      "length": 20,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Subject's date of birth in ISO 8601 format",
+      "source_column": "DOB",
+      "transformation_type": "DATE_FORMAT",
+      "transformation_rule": "ISO8601DATEFORMAT(DOB, \"YYYYMMDD\")",
+      "algorithm_description": "Convert DOB from YYYYMMDD format (e.g., 19740918) to ISO 8601 format (YYYY-MM-DD). Insert hyphens: YYYY-MM-DD.",
+      "controlled_terminology": "ISO 8601",
+      "notes": "DOB source format: 19740918 (8-digit YYYYMMDD). Convert to 1974-09-18. All DOB values should be < RFSTDTC.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD)",
+        "Should be reasonable birth date (not future, not >120 years ago)",
+        "Should be < RFSTDTC"
+      ],
+      "example": {
+        "source_value": "19740918",
+        "target_value": "1974-09-18"
+      }
+    },
+    {
+      "variable_order": 17,
+      "target_variable": "AGE",
+      "label": "Age",
+      "type": "Num",
+      "length": 8,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Age of subject (numeric)",
+      "source_column": "DOB",
+      "transformation_type": "CALCULATE",
+      "transformation_rule": "FLOOR((RFSTDTC - BRTHDTC) / 365.25)",
+      "algorithm_description": "Calculate age in years at reference date (RFSTDTC). Formula: (RFSTDTC - BRTHDTC) / 365.25, rounded down. If RFSTDTC not available, can use informed consent date or first visit date as reference.",
+      "controlled_terminology": null,
+      "notes": "Age calculated at reference start date (RFSTDTC). Since RFSTDTC not in DEMO.csv, may need to calculate at a proxy date (e.g., current date or earliest visit date) and update later. Age should be in whole years (integer).",
+      "validation_rules": [
+        "Must be numeric integer",
+        "Should be >= 18 (typical for clinical trials)",
+        "Should be <= 120",
+        "Should match AGEU='YEARS'"
+      ]
+    },
+    {
+      "variable_order": 18,
+      "target_variable": "AGEU",
+      "label": "Age Units",
+      "type": "Char",
+      "length": 10,
+      "core": "Exp",
+      "role": "Variable Qualifier",
+      "cdisc_notes": "Units for age (typically YEARS)",
+      "source_column": null,
+      "transformation_type": "ASSIGN",
+      "transformation_rule": "ASSIGN(\"YEARS\")",
+      "algorithm_description": "Constant value 'YEARS' for adult studies. Pediatric studies may use MONTHS, WEEKS, or DAYS.",
+      "controlled_terminology": "AGEU (YEARS, MONTHS, WEEKS, DAYS, HOURS)",
+      "notes": "Standard value 'YEARS' for adult clinical trials. Must match units used in AGE calculation.",
+      "validation_rules": [
+        "Must be from controlled terminology",
+        "Must be 'YEARS' if AGE >= 2"
+      ]
+    },
+    {
+      "variable_order": 19,
+      "target_variable": "AGEGR1",
+      "label": "Age Group 1",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Age group classification (protocol-defined)",
+      "source_column": "DOB",
+      "transformation_type": "DERIVE",
+      "transformation_rule": "IF(AGE < 65, \"<65\", \">=65\")",
+      "algorithm_description": "Protocol-defined age grouping. Common groups: <65 and >=65. Can also use: 18-44, 45-64, 65-74, >=75. Check protocol for specific grouping requirements.",
+      "controlled_terminology": null,
+      "notes": "Age groupings should be defined per protocol. Common FDA grouping: <65 vs >=65 for safety analysis. This is a derived variable for analysis purposes.",
+      "validation_rules": [
+        "Should be consistent with protocol-defined groups",
+        "Should be based on AGE variable"
+      ]
+    },
+    {
+      "variable_order": 20,
+      "target_variable": "SEX",
+      "label": "Sex",
+      "type": "Char",
+      "length": 1,
+      "core": "Req",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Sex of subject",
+      "source_column": "GENDER",
+      "transformation_type": "MAP",
+      "transformation_rule": "IF(GENDER == \"M\", \"M\", IF(GENDER == \"F\", \"F\", \"U\"))",
+      "algorithm_description": "Map GENDER field to CDISC CT SEX values. Source contains M/F. Direct mapping: M->M, F->F. If unknown, use 'U'.",
+      "controlled_terminology": "SEX (M=Male, F=Female, U=Unknown, UNDIFFERENTIATED)",
+      "notes": "✅ Use GENDER field (not GENDRL). Source values are already CDISC-compliant: M, F. Note: GENDRL appears to be gender label/description field, GENDER contains the coded values.",
+      "validation_rules": [
+        "Must be M, F, U, or UNDIFFERENTIATED",
+        "Must not be null",
+        "Must match controlled terminology"
+      ],
+      "example": {
+        "M": "M",
+        "F": "F"
+      }
+    },
+    {
+      "variable_order": 21,
+      "target_variable": "RACE",
+      "label": "Race",
+      "type": "Char",
+      "length": 100,
+      "core": "Perm",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Race of subject",
+      "source_column": "RCE",
+      "transformation_type": "MAP",
+      "transformation_rule": "MAP(RCE, RACE_CODELIST)",
+      "algorithm_description": "Map source RCE values to CDISC CT RACE values. Mappings: BLACK->BLACK OR AFRICAN AMERICAN, WHITE->WHITE, ASIAN->ASIAN. HISPANIC requires manual review (typically ethnicity, not race).",
+      "controlled_terminology": "RACE (AMERICAN INDIAN OR ALASKA NATIVE, ASIAN, BLACK OR AFRICAN AMERICAN, NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER, WHITE, MULTIPLE, NOT REPORTED, UNKNOWN)",
+      "notes": "⚠️ CRITICAL: HISPANIC in source RCE field is problematic. HISPANIC is an ETHNICITY in CDISC, not a RACE. Options: 1) Flag for manual review to determine actual race, 2) Set RACE='NOT REPORTED' and ETHNIC='HISPANIC OR LATINO', 3) Request source data correction. Current mappings: BLACK->BLACK OR AFRICAN AMERICAN, WHITE->WHITE, ASIAN->ASIAN.",
+      "validation_rules": [
+        "Must be from controlled terminology",
+        "HISPANIC values must be reviewed and remapped"
+      ],
+      "mapping_table": {
+        "BLACK": "BLACK OR AFRICAN AMERICAN",
+        "WHITE": "WHITE",
+        "ASIAN": "ASIAN",
+        "HISPANIC": "**MANUAL_REVIEW_REQUIRED**"
+      },
+      "data_quality_flag": "HISPANIC values require clinical review and correction"
+    },
+    {
+      "variable_order": 22,
+      "target_variable": "ETHNIC",
+      "label": "Ethnicity",
+      "type": "Char",
+      "length": 100,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Ethnicity of subject",
+      "source_column": "RCE",
+      "transformation_type": "MAP",
+      "transformation_rule": "IF(RCE == \"HISPANIC\", \"HISPANIC OR LATINO\", \"NOT REPORTED\")",
+      "algorithm_description": "Map ethnicity values. If RCE='HISPANIC', set ETHNIC='HISPANIC OR LATINO' and flag RACE for review. For all other RCE values, set to 'NOT REPORTED' unless separate ethnicity data is available.",
+      "controlled_terminology": "ETHNIC (HISPANIC OR LATINO, NOT HISPANIC OR LATINO, NOT REPORTED, UNKNOWN)",
+      "notes": "⚠️ Ethnicity typically collected separately from race. Current logic: if source RCE='HISPANIC', map to 'HISPANIC OR LATINO'; otherwise default to 'NOT REPORTED'. BEST PRACTICE: Collect Hispanic ethnicity separately in source system.",
+      "validation_rules": [
+        "Must be from controlled terminology",
+        "Should be populated for all subjects"
+      ],
+      "mapping_table": {
+        "HISPANIC": "HISPANIC OR LATINO",
+        "OTHER": "NOT REPORTED"
+      }
+    },
+    {
+      "variable_order": 23,
+      "target_variable": "ARMCD",
+      "label": "Planned Arm Code",
+      "type": "Char",
+      "length": 20,
+      "core": "Req",
+      "role": "Synonym Qualifier",
+      "cdisc_notes": "Planned arm code (short code for treatment arm)",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_RANDOMIZATION",
+      "algorithm_description": "Planned treatment arm code from randomization dataset or TA (Trial Arms) domain. Common values: PLACEBO, ARM_A, ARM_B, SCREENFAIL, NOTASSGN",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Must derive from randomization data or trial design (TA domain). For screen failures, use 'SCRNFAIL'. For subjects not yet randomized, use 'NOTASSGN'. This is a REQUIRED field in DM.",
+      "validation_rules": [
+        "Must not be null",
+        "Should match TA.ARMCD values",
+        "Should be short code (e.g., TRT, PBO)"
+      ]
+    },
+    {
+      "variable_order": 24,
+      "target_variable": "ARM",
+      "label": "Description of Planned Arm",
+      "type": "Char",
+      "length": 200,
+      "core": "Req",
+      "role": "Synonym Qualifier",
+      "cdisc_notes": "Description of planned treatment arm",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_RANDOMIZATION",
+      "algorithm_description": "Planned treatment arm description from randomization dataset or TA domain. Full text description matching ARMCD. Examples: 'Placebo', 'Active Treatment 100mg', 'Screen Failure', 'Not Assigned'",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Must derive from randomization data or trial design (TA domain). Should be descriptive text matching ARMCD. For screen failures, use 'Screen Failure'. For subjects not yet randomized, use 'Not Assigned'. This is a REQUIRED field in DM.",
+      "validation_rules": [
+        "Must not be null",
+        "Should match TA.ARM values",
+        "Should be descriptive text"
+      ]
+    },
+    {
+      "variable_order": 25,
+      "target_variable": "ACTARMCD",
+      "label": "Actual Arm Code",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "role": "Synonym Qualifier",
+      "cdisc_notes": "Actual treatment arm code (what subject received)",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_EXPOSURE",
+      "algorithm_description": "Actual treatment received. May differ from ARMCD if subject switched treatments or received wrong treatment. Derive from EX domain.",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from actual exposure data (EX domain). Usually same as ARMCD, but can differ in crossover studies or if subject received wrong treatment. Leave blank if no treatment given (e.g., screen failures).",
+      "validation_rules": [
+        "Should match ARMCD in most cases",
+        "Only differs if treatment deviation occurred"
+      ]
+    },
+    {
+      "variable_order": 26,
+      "target_variable": "ACTARM",
+      "label": "Description of Actual Arm",
+      "type": "Char",
+      "length": 200,
+      "core": "Perm",
+      "role": "Synonym Qualifier",
+      "cdisc_notes": "Description of actual treatment arm received",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_EXPOSURE",
+      "algorithm_description": "Description of actual treatment received. Corresponds to ACTARMCD. Derive from EX domain.",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from actual exposure data (EX domain). Should be descriptive text matching ACTARMCD. Usually same as ARM.",
+      "validation_rules": [
+        "Should match ARM in most cases",
+        "Should be descriptive text matching ACTARMCD"
+      ]
+    },
+    {
+      "variable_order": 27,
+      "target_variable": "COUNTRY",
+      "label": "Country",
+      "type": "Char",
+      "length": 3,
+      "core": "Exp",
+      "role": "Record Qualifier",
+      "cdisc_notes": "Country where subject participated",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_SITE_METADATA",
+      "algorithm_description": "Three-character ISO 3166-1 alpha-3 country code. Typically derived from site metadata that maps SITEID to COUNTRY.",
+      "controlled_terminology": "ISO 3166-1 alpha-3 (USA, GBR, CAN, DEU, etc.)",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Derive from site metadata/investigator roster that maps SITEID to country code. Use ISO 3166-1 alpha-3 codes (e.g., USA, CAN, GBR, FRA, DEU). For single-country studies, can hardcode value.",
+      "validation_rules": [
+        "Must be ISO 3166-1 alpha-3 code",
+        "Must be 3 characters",
+        "Should be uppercase"
+      ],
+      "example": {
+        "United States": "USA",
+        "Canada": "CAN",
+        "United Kingdom": "GBR"
+      }
+    },
+    {
+      "variable_order": 28,
+      "target_variable": "DMDTC",
+      "label": "Date/Time of Collection",
+      "type": "Char",
+      "length": 20,
+      "core": "Perm",
+      "role": "Timing",
+      "cdisc_notes": "Date/time demographics data was collected",
+      "source_column": null,
+      "transformation_type": "DERIVE",
+      "transformation_rule": "DERIVE_FROM_VISIT_DATE",
+      "algorithm_description": "Date demographics form was completed. Typically from screening or baseline visit date.",
+      "controlled_terminology": "ISO 8601",
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Typically same as screening visit date or baseline visit date. Can derive from SV domain where VISIT='SCREENING' or 'BASELINE'.",
+      "validation_rules": [
+        "Must be in ISO 8601 format (YYYY-MM-DD)",
+        "Should be near RFSTDTC"
+      ]
+    },
+    {
+      "variable_order": 29,
+      "target_variable": "DMDY",
+      "label": "Study Day of Collection",
+      "type": "Num",
+      "length": 8,
+      "core": "Perm",
+      "role": "Timing",
+      "cdisc_notes": "Study day of demographics collection",
+      "source_column": null,
+      "transformation_type": "CALCULATE",
+      "transformation_rule": "CALCULATE_STUDY_DAY(DMDTC, RFSTDTC)",
+      "algorithm_description": "Study day relative to RFSTDTC. If DMDTC >= RFSTDTC: (DMDTC - RFSTDTC) + 1. If DMDTC < RFSTDTC: (DMDTC - RFSTDTC). No day 0.",
+      "controlled_terminology": null,
+      "notes": "⚠️ NOT AVAILABLE in DEMO.csv. Calculate only after DMDTC and RFSTDTC are populated. Study day calculation follows CDISC convention: no day 0, day before reference date is -1, day of reference date is 1.",
+      "validation_rules": [
+        "Must be integer",
+        "Cannot be 0",
+        "Typically negative (demographics collected before treatment)"
+      ]
+    }
+  ],
+  
+  "transformation_dependencies": {
+    "immediate_mappings": [
+      "STUDYID",
+      "DOMAIN",
+      "SUBJID",
+      "SITEID",
+      "BRTHDTC",
+      "SEX"
+    ],
+    "requires_usubjid": [
+      "USUBJID (requires STUDYID, SITEID, SUBJID)"
+    ],
+    "requires_other_domains": [
+      "RFSTDTC (requires SV or EX domain)",
+      "RFENDTC (requires SV or EX domain)",
+      "RFXSTDTC (requires EX domain)",
+      "RFXENDTC (requires EX domain)",
+      "RFICDTC (requires consent data or DS domain)",
+      "RFPENDTC (requires DS domain)",
+      "DTHDTC (requires DS or AE domain)",
+      "DTHFL (requires DS or AE domain)",
+      "ARMCD (requires randomization data or TA domain)",
+      "ARM (requires randomization data or TA domain)",
+      "ACTARMCD (requires EX domain)",
+      "ACTARM (requires EX domain)",
+      "DMDTC (requires SV domain)",
+      "DMDY (requires DMDTC and RFSTDTC)"
+    ],
+    "requires_external_metadata": [
+      "INVID (requires site metadata)",
+      "INVNAM (requires site metadata)",
+      "COUNTRY (requires site metadata)"
+    ],
+    "calculated_variables": [
+      "AGE (calculated from BRTHDTC and RFSTDTC)",
+      "AGEGR1 (calculated from AGE)",
+      "DMDY (calculated from DMDTC and RFSTDTC)"
+    ]
+  },
+  
+  "implementation_notes": {
+    "phase_1_demo_only": {
+      "description": "Variables that can be populated from DEMO.csv only",
+      "variables": [
+        "STUDYID",
+        "DOMAIN",
+        "SUBJID",
+        "SITEID",
+        "BRTHDTC",
+        "SEX"
+      ],
+      "notes": "USUBJID can be constructed but may need refinement once SITEID extraction logic is validated"
+    },
+    "phase_2_integration": {
+      "description": "Variables requiring integration with other domains",
+      "required_domains": {
+        "SV": ["RFSTDTC", "RFENDTC", "DMDTC"],
+        "EX": ["RFXSTDTC", "RFXENDTC", "ACTARMCD", "ACTARM"],
+        "DS": ["RFICDTC", "RFPENDTC", "DTHDTC", "DTHFL"],
+        "TA": ["ARMCD", "ARM"],
+        "SITE_METADATA": ["INVID", "INVNAM", "COUNTRY"]
+      }
+    },
+    "race_ethnicity_handling": {
+      "issue": "HISPANIC value in RCE field represents ethnicity, not race",
+      "recommended_approach": "1) Generate DQ report flagging all HISPANIC records, 2) Request clinical review to determine actual RACE value, 3) Set ETHNIC='HISPANIC OR LATINO' for these subjects, 4) Set RACE based on clinical input or use 'NOT REPORTED' as interim value",
+      "alternative_approach": "If site confirms HISPANIC subjects have no other race information, use RACE='NOT REPORTED' and ETHNIC='HISPANIC OR LATINO'"
+    },
+    "age_calculation": {
+      "challenge": "RFSTDTC not available in DEMO.csv",
+      "interim_solution": "Calculate age at a proxy date (e.g., data extraction date or system date) and document that AGE needs recalculation once RFSTDTC is available",
+      "final_solution": "Recalculate AGE once RFSTDTC is populated from visit or exposure data"
+    }
+  },
+  
+  "validation_checklist": [
+    {
+      "check": "All REQUIRED variables populated",
+      "variables": ["STUDYID", "DOMAIN", "USUBJID", "SUBJID", "SITEID", "SEX", "ARMCD", "ARM"],
+      "status": "⚠️ ARMCD and ARM require external data"
+    },
+    {
+      "check": "All EXPECTED variables populated where data available",
+      "variables": ["RFSTDTC", "RFENDTC", "BRTHDTC", "AGE", "AGEU", "ETHNIC", "COUNTRY"],
+      "status": "⚠️ Multiple variables require external data"
+    },
+    {
+      "check": "All dates in ISO 8601 format",
+      "variables": ["BRTHDTC", "RFSTDTC", "RFENDTC", "RFXSTDTC", "RFXENDTC", "RFICDTC", "RFPENDTC", "DTHDTC", "DMDTC"],
+      "status": "✅ Transformation rule includes ISO8601DATEFORMAT"
+    },
+    {
+      "check": "Controlled Terminology compliance",
+      "variables": ["SEX", "RACE", "ETHNIC", "AGEU"],
+      "status": "⚠️ RACE mapping requires manual review for HISPANIC values"
+    },
+    {
+      "check": "USUBJID uniqueness",
+      "rule": "USUBJID must be unique across all subjects",
+      "status": "✅ Construction logic ensures uniqueness"
+    },
+    {
+      "check": "One record per subject",
+      "rule": "DM domain must have exactly one record per USUBJID",
+      "status": "✅ Source data structure supports this"
+    },
+    {
+      "check": "Date logic consistency",
+      "rules": [
+        "RFICDTC <= RFSTDTC <= RFXSTDTC",
+        "RFXENDTC <= RFENDTC <= RFPENDTC",
+        "BRTHDTC < RFSTDTC",
+        "DTHDTC <= RFPENDTC (if populated)"
+      ],
+      "status": "⚠️ Validate after all dates populated"
+    }
+  ],
+  
+  "output_specifications": {
+    "file_name": "dm.xpt",
+    "file_format": "SAS V5 XPORT",
+    "alternative_formats": ["dm.csv", "dm.sas7bdat"],
+    "record_structure": "One record per subject",
+    "sort_order": ["STUDYID", "USUBJID"],
+    "variable_order": "As specified in variable_order field",
+    "character_encoding": "UTF-8",
+    "missing_values": "Null/empty for character, . for numeric"
+  },
+  
+  "regulatory_notes": {
+    "fda_requirements": [
+      "DM is a required domain for all submissions",
+      "RFSTDTC and RFENDTC are critical for defining subject participation period",
+      "ARM/ARMCD must reflect planned treatment, not actual",
+      "COUNTRY required for multi-national trials",
+      "All dates must be ISO 8601 compliant"
+    ],
+    "common_deficiencies": [
+      "Missing RFSTDTC/RFENDTC for some subjects",
+      "Inconsistent USUBJID format across domains",
+      "Race/ethnicity not properly distinguished",
+      "AGE calculation errors or missing AGEU",
+      "ARM/ARMCD inconsistent with trial design domains"
+    ]
+  }
+}

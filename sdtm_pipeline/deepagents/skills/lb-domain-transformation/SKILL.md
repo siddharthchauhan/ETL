@@ -1,10 +1,10 @@
 ---
 name: lb-domain-transformation
-description: Automatically detect and transform lab data from horizontal (wide) format to SDTM LB vertical (long) format using a MELT operation.
-Core Problem Solved:
-
-EDC systems often export lab data with each test as a separate column (e.g., HGB, WBC, GLUCOSE)
-SDTM requires vertical format where each row = one test result with LBTESTCD, LBTEST, LBORRES
+description: >
+  Automatically detect and transform lab data from horizontal (wide) format to SDTM LB vertical
+  (long) format using a MELT operation. EDC systems often export lab data with each test as a
+  separate column (e.g., HGB, WBC, GLUCOSE). SDTM requires vertical format where each row is one
+  test result with LBTESTCD, LBTEST, LBORRES.
 ---
 
 # LB Domain Transformation Skill

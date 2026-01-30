@@ -1,0 +1,39 @@
+Issue_ID,Severity,Category,Description,Records_Affected,Owner,Phase,Estimated_Hours,Status,Due_Date,Completion_Date,Script_Available,Validation_Required,Notes
+C-001,CRITICAL,Business Rule,Duplicate AESEQ within subjects,~100,Programming Lead,Phase 1,0.5,NOT_STARTED,Day 1,,"Yes - Python script provided",Yes,Re-sequence AESEQ to be unique per USUBJID
+C-002,CRITICAL,Cross-Field,Fatal/Life-Threatening not marked serious,2,Clinical Data Manager,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - SQL update provided",Yes,Update AESER='Y' for FATAL and LIFE THREATENING
+M-001,MAJOR,Controlled Terminology,AEREL: UNLIKELY RELATED → UNLIKELY,18,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - SQL update provided",Yes,Fix controlled terminology violation
+M-002,MAJOR,Controlled Terminology,AEREL: PROBABLY RELATED → PROBABLE,18,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - SQL update provided",Yes,Fix controlled terminology violation
+M-003,MAJOR,Controlled Terminology,AEOUT: RESOLVED → RECOVERED/RESOLVED,12,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - SQL update provided",Yes,Fix controlled terminology violation
+M-004,MAJOR,Controlled Terminology,AEOUT: CONTINUING → RECOVERING/RESOLVING,12,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - SQL update provided",Yes,Fix controlled terminology violation - check if ongoing
+M-005,MAJOR,Date Format,AESTDTC: Fix ISO 8601 format (200901 → 2009-01),4,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - Python script provided",Yes,Add hyphen separator to partial dates
+M-006,MAJOR,Date Format,AEENDTC: Fix ISO 8601 format (200901 → 2009-01),4,Programming Lead,Phase 1,0.25,NOT_STARTED,Day 1,,"Yes - Python script provided",Yes,Add hyphen separator to partial dates
+M-007,MAJOR,Date Format,AEENDTC: Remove decimal (200809.0 → 2008-09),1,Programming Lead,Phase 1,0.1,NOT_STARTED,Day 1,,"Yes - Python script provided",Yes,Remove decimal point from dates
+M-013,MAJOR,Completeness,AESDTH flag for fatal SAE (DISEASE PROGRESSION),1,Safety Team,Phase 2,0.25,NOT_STARTED,Day 2,,No - Manual review of SAE form,Yes,Set AESDTH='Y' for fatal outcome
+M-014,MAJOR,Completeness,AESLIFE flag for life-threatening SAE,1,Safety Team,Phase 2,0.25,NOT_STARTED,Day 2,,No - Manual review of SAE form,Yes,Set AESLIFE='Y' for life-threatening severity
+M-015,MAJOR,Completeness,All SAE criterion flags missing,7,Clinical Data Manager,Phase 2,2.0,NOT_STARTED,Day 2,,No - Source CRF review required,Yes,Populate AESDTH AESLIFE AESHOSP AESDISAB AESCONG AESMIE
+M-009,MAJOR,Business Rule,Missing AEENDTC for SAE: ABDOMINAL PAIN,1,Clinical Data Manager,Phase 2,0.25,NOT_STARTED,Day 2,,No - Clinical review,Yes,Document as ongoing or populate end date
+M-010,MAJOR,Business Rule,Missing AEENDTC for SAE: LETHARGY,1,Clinical Data Manager,Phase 2,0.25,NOT_STARTED,Day 2,,No - Clinical review,Yes,Document as ongoing or populate end date
+M-011,MAJOR,Business Rule,Missing AEENDTC for SAE: HYPERBILIRUBINEMIA,1,Clinical Data Manager,Phase 2,0.25,NOT_STARTED,Day 2,,No - Clinical review,Yes,Document as ongoing or populate end date
+M-012,MAJOR,Business Rule,Missing AEENDTC for SAE: WEAKNESS,1,Clinical Data Manager,Phase 2,0.25,NOT_STARTED,Day 2,,No - Clinical review,Yes,Document as ongoing or populate end date
+N-001,MINOR,Cross-Field,13 SEVERE AEs not marked serious,13,Clinical Data Manager,Phase 3,1.0,NOT_STARTED,Day 3,,No - Clinical review,Optional,Review and document justification or update AESER
+N-002,MINOR,Completeness,Missing AEOUT for 8 records,8,Clinical Data Manager,Phase 3,0.5,NOT_STARTED,Day 3,,No - Source review,Optional,Populate outcome or set to UNKNOWN
+N-003,MINOR,Business Rule,Severe/SAE with no drug modification,5,Clinical Data Manager,Phase 3,0.5,NOT_STARTED,Day 3,,No - Clinical review,Optional,Verify AEACN is clinically appropriate
+W-001,WARNING,Business Rule,Cannot determine SAE criteria,7,Safety Team,Phase 2,0,DEPENDENCY_ON_M-015,Day 2,,No - Covered by M-015,No,Resolved by populating criterion flags (M-015)
+W-002,WARNING,Referential Integrity,USUBJID not validated against DM,276,Programming Lead,Phase 3,0.5,NOT_STARTED,Day 3,,"Yes - SQL query provided",Yes,Cross-check all subjects exist in Demographics
+W-003,WARNING,Referential Integrity,VISITNUM not validated against TV/SV,TBD,Programming Lead,Phase 3,0.5,NOT_STARTED,Day 3,,"Yes - SQL query provided",Optional,Validate visit numbers if TV/SV domains exist
+W-004,WARNING,Completeness,AEENDTC missing for 120 records,120,Clinical Data Manager,Phase 3,0,ACCEPTED_AS_IS,N/A,,No,No,Acceptable - likely ongoing events
+W-005,WARNING,Cross-Field,Action taken may not align with severity,Various,Clinical Data Manager,Phase 3,0,ACCEPTED_AS_IS,N/A,,No,No,Clinical judgment - no action required
+W-006,WARNING,Data Quality,Document MedDRA version,All,Programming Lead,Phase 3,0.25,NOT_STARTED,Day 3,,No - Define-XML metadata,Yes,Add MedDRA version to Define-XML
+W-007,WARNING,Data Quality,Validate AE dates within study period,All,Programming Lead,Phase 3,0.5,NOT_STARTED,Day 3,,"Yes - SQL query provided",Yes,Check AESTDTC/AEENDTC vs RFSTDTC/RFENDTC
+W-008,WARNING,Data Quality,Check for duplicate event entries,TBD,Clinical Data Manager,Phase 3,1.0,NOT_STARTED,Day 3,,No - Manual review,Optional,Review similar events on same date
+VALIDATION-001,VALIDATION,Final QA,Re-run full validation suite,All,QA Team,Phase 3,1.0,NOT_STARTED,Day 3,,Yes - Full validation script,Yes,Confirm compliance score ≥95%
+VALIDATION-002,VALIDATION,Final QA,Verify zero critical errors,All,QA Team,Phase 3,0.5,NOT_STARTED,Day 3,,Yes - Error count check,Yes,Confirm no critical errors remain
+VALIDATION-003,VALIDATION,Final QA,Cross-domain validation,All,QA Team,Phase 3,1.0,NOT_STARTED,Day 3,,"Yes - Cross-domain scripts",Yes,Validate against DM SV TV domains
+DOCUMENTATION-001,DOCUMENTATION,Deliverables,Generate Define-XML metadata,All,Programming Lead,Phase 3,1.0,NOT_STARTED,Day 3,,Yes - Define-XML generator,Yes,Create Define-XML 2.1 for AE domain
+DOCUMENTATION-002,DOCUMENTATION,Deliverables,Update validation report,All,QA Team,Phase 3,0.5,NOT_STARTED,Day 3,,No - Manual report update,Yes,Document final compliance score and status
+DOCUMENTATION-003,DOCUMENTATION,Deliverables,Create audit trail,All,Programming Lead,Phase 3,0.5,NOT_STARTED,Day 3,,No - Manual documentation,Yes,Document all changes made with justification
+SIGNOFF-001,SIGNOFF,Approval,Programming Lead sign-off,All,Programming Lead,Phase 3,0,NOT_STARTED,Day 3,,N/A,N/A,Technical corrections validated
+SIGNOFF-002,SIGNOFF,Approval,Clinical Data Manager sign-off,All,Clinical Data Manager,Phase 3,0,NOT_STARTED,Day 3,,N/A,N/A,Clinical data integrity confirmed
+SIGNOFF-003,SIGNOFF,Approval,Safety Team Lead sign-off,All,Safety Team Lead,Phase 3,0,NOT_STARTED,Day 3,,N/A,N/A,SAE data completeness verified
+SIGNOFF-004,SIGNOFF,Approval,QA Manager sign-off,All,QA Manager,Phase 3,0,NOT_STARTED,Day 3,,N/A,N/A,Independent validation passed
+SIGNOFF-005,SIGNOFF,Approval,Regulatory Affairs sign-off,All,Regulatory Affairs,Phase 3,0,NOT_STARTED,Day 3,,N/A,N/A,Submission readiness approved
