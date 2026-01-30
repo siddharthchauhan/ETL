@@ -27,13 +27,13 @@ echo "================================================"
 
 # Load .env file manually to get all variables BEFORE Python starts
 if [ -f .env ]; then
-    echo "[1/4] Loading .env file..."
+    echo "[1/3] Loading .env file..."
     set -a  # automatically export all variables
     source .env
     set +a
     echo "      Loaded $(grep -c '=' .env 2>/dev/null || echo 0) variables from .env"
 else
-    echo "[1/4] Warning: .env file not found"
+    echo "[1/3] Warning: .env file not found"
 fi
 
 # CRITICAL: Set recursion limit BEFORE langgraph dev imports modules
@@ -41,7 +41,7 @@ fi
 export LANGGRAPH_DEFAULT_RECURSION_LIMIT=${LANGGRAPH_DEFAULT_RECURSION_LIMIT:-250}
 export LANGGRAPH_RECURSION_LIMIT=${LANGGRAPH_RECURSION_LIMIT:-250}
 
-echo "[2/4] Recursion limits configured:"
+echo "[2/3] Recursion limits configured:"
 echo "      LANGGRAPH_DEFAULT_RECURSION_LIMIT=$LANGGRAPH_DEFAULT_RECURSION_LIMIT"
 echo "      LANGGRAPH_RECURSION_LIMIT=$LANGGRAPH_RECURSION_LIMIT"
 
@@ -50,7 +50,7 @@ echo "      LANGGRAPH_RECURSION_LIMIT=$LANGGRAPH_RECURSION_LIMIT"
 # Uncomment if you need to reset assistant configs:
 # export LANGGRAPH_CLEAR_DB_ON_START=true
 
-echo "[3/4] Verifying langgraph installation..."
+echo "[3/3] Verifying langgraph installation..."
 if ! command -v langgraph &> /dev/null; then
     echo "      ERROR: langgraph command not found"
     echo "      Install with: pip install -U 'langgraph-cli[inmem]'"
@@ -58,24 +58,14 @@ if ! command -v langgraph &> /dev/null; then
 fi
 echo "      langgraph CLI found"
 
-echo "[4/5] Starting file server for generated documents..."
-# Start the file server in the background (serves PPTX, XLSX, DOCX, CSV downloads)
-python file_server.py &
-FILE_SERVER_PID=$!
-echo "      File server started (PID=$FILE_SERVER_PID, port=${FILE_SERVER_PORT:-8090})"
-
-# Cleanup file server on exit
-cleanup() {
-    echo ""
-    echo "[Cleanup] Stopping file server (PID=$FILE_SERVER_PID)..."
-    kill $FILE_SERVER_PID 2>/dev/null
-}
-trap cleanup EXIT
-
-echo "[5/5] Starting langgraph dev..."
+echo "[4/4] Starting langgraph dev..."
+echo "      (File server on port ${FILE_SERVER_PORT:-8090} auto-starts via document_tools.py)"
 echo "================================================"
 echo ""
 
 # Start langgraph dev with any additional arguments
 # --host 0.0.0.0 binds to all interfaces (required for external access from Flowise, etc.)
+# Note: The embedded file server (port 8090) with skills, feedback, file downloads,
+# and notification APIs auto-starts as a daemon thread when document_tools.py is
+# imported by the LangGraph graphs. No separate process needed.
 exec langgraph dev --host 0.0.0.0 "$@"
