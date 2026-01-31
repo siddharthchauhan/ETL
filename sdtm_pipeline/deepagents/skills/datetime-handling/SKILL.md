@@ -67,20 +67,61 @@ def to_iso8601_date(date_value):
 
     Handles:
     - 01/15/2024 (MM/DD/YYYY)
+    - 9/17/08 (M/D/YY - 2-digit year, no leading zeros)
     - 15-JAN-2024 (DD-MON-YYYY)
+    - 15-JAN-08 (DD-MON-YY - 2-digit year)
     - 20240115 (YYYYMMDD)
+    - 200809 (YYYYMM - partial date, returns YYYY-MM)
     - 2024-01-15 (already ISO)
+    - 2024-01 (partial ISO, year-month only)
+    - pandas Timestamp objects
     """
     if pd.isna(date_value) or date_value == '':
         return ''
 
+    # Handle pandas Timestamp / datetime objects
+    if isinstance(date_value, (pd.Timestamp, datetime)):
+        return date_value.strftime('%Y-%m-%d')
+
+    # Handle numeric YYYYMMDD or YYYYMM
+    if isinstance(date_value, (int, float)):
+        str_val = str(int(date_value))
+        if len(str_val) == 8:
+            try:
+                return datetime.strptime(str_val, '%Y%m%d').strftime('%Y-%m-%d')
+            except ValueError:
+                pass
+        elif len(str_val) == 6:
+            try:
+                return datetime.strptime(str_val, '%Y%m').strftime('%Y-%m')
+            except ValueError:
+                pass
+
     date_str = str(date_value).strip()
 
-    # Already ISO 8601
+    # Already ISO 8601 (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
     if re.match(r'^\d{4}-\d{2}-\d{2}', date_str):
+        return date_str[:10]
+
+    # Partial ISO (YYYY-MM)
+    if re.match(r'^\d{4}-\d{2}$', date_str):
         return date_str
 
-    # Try common formats
+    # YYYYMMDD (8 digits)
+    if len(date_str) == 8 and date_str.isdigit():
+        try:
+            return datetime.strptime(date_str, '%Y%m%d').strftime('%Y-%m-%d')
+        except ValueError:
+            pass
+
+    # YYYYMM (6 digits) → partial date
+    if len(date_str) == 6 and date_str.isdigit():
+        try:
+            return datetime.strptime(date_str, '%Y%m').strftime('%Y-%m')
+        except ValueError:
+            pass
+
+    # Try common formats (4-digit year first, then 2-digit year)
     formats = [
         '%m/%d/%Y',      # 01/15/2024
         '%d/%m/%Y',      # 15/01/2024
@@ -89,6 +130,12 @@ def to_iso8601_date(date_value):
         '%Y%m%d',        # 20240115
         '%m-%d-%Y',      # 01-15-2024
         '%Y/%m/%d',      # 2024/01/15
+        '%d %b %Y',      # 15 JAN 2024
+        '%b %d, %Y',     # JAN 15, 2024
+        '%m/%d/%y',      # 9/17/08, 01/15/24 (2-digit year)
+        '%d/%m/%y',      # 17/09/08 (2-digit year)
+        '%d-%b-%y',      # 15-JAN-08 (2-digit year)
+        '%m-%d-%y',      # 01-15-08 (2-digit year)
     ]
 
     for fmt in formats:
@@ -405,7 +452,37 @@ dm_df["BRTHDTC"] = pd.to_datetime(source["BIRTH_DATE"])  # Creates datetime obje
 dm_df["BRTHDTC"] = source["BIRTH_DATE"].apply(to_iso8601_date)  # Creates string
 ```
 
-### Mistake 2: Including Unknown Components in Partial Dates
+### Mistake 2: Not Handling 2-Digit Year Formats
+
+**Wrong**: Only parsing `%m/%d/%Y` (4-digit year)
+```python
+formats = ['%m/%d/%Y']  # Misses 9/17/08 → returns raw value
+```
+
+**Correct**: Include 2-digit year formats (`%y`) after 4-digit year formats
+```python
+formats = [
+    '%m/%d/%Y',   # 01/15/2024 (4-digit year - try first)
+    '%m/%d/%y',   # 9/17/08 (2-digit year - fallback)
+]
+```
+
+**Note**: Python's `%y` uses a pivot year of 2000: values 00-68 map to 2000-2068, values 69-99 map to 1969-1999.
+
+### Mistake 3: Ignoring YYYYMM (6-digit) Partial Dates
+
+**Wrong**: Only checking for 8-digit YYYYMMDD
+```python
+if len(date_str) == 8 and date_str.isdigit():  # Misses 200809
+```
+
+**Correct**: Also handle 6-digit YYYYMM → return partial ISO date
+```python
+if len(date_str) == 6 and date_str.isdigit():
+    return datetime.strptime(date_str, '%Y%m').strftime('%Y-%m')  # "2008-09"
+```
+
+### Mistake 4: Including Unknown Components in Partial Dates
 
 **Wrong**: `"2024-UN-UN"` or `"2024-99-99"`
 

@@ -454,21 +454,71 @@ def melt_horizontal_to_vertical_lb(
 
 
 def _convert_date_for_melt(date_value) -> str:
-    """Convert various date formats to ISO 8601 for MELT transformation."""
+    """Convert various date formats to ISO 8601 for MELT transformation.
+
+    Handles: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, YYYYMMDD, YYYYMM,
+             M/D/YY, MM/DD/YY (2-digit year), DD-MON-YYYY, DD-MON-YY,
+             and pandas Timestamp objects.
+    """
     if pd.isna(date_value):
         return ""
 
-    date_str = str(date_value)
+    # Handle pandas Timestamp / datetime objects directly
+    if isinstance(date_value, (pd.Timestamp, datetime)):
+        return date_value.strftime("%Y-%m-%d")
 
-    # Already ISO format
-    if len(date_str) >= 10 and date_str[4:5] == '-' and date_str[7:8] == '-':
+    # Handle numeric formats (YYYYMMDD as int/float, or YYYYMM)
+    if isinstance(date_value, (int, float)):
+        str_val = str(int(date_value))
+        if len(str_val) == 8:  # YYYYMMDD
+            try:
+                dt = datetime.strptime(str_val, "%Y%m%d")
+                return dt.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+        elif len(str_val) == 6:  # YYYYMM → partial date
+            try:
+                dt = datetime.strptime(str_val, "%Y%m")
+                return dt.strftime("%Y-%m")
+            except ValueError:
+                pass
+
+    date_str = str(date_value).strip()
+
+    # Already ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+    if re.match(r'^\d{4}-\d{2}-\d{2}', date_str):
         return date_str[:10]
 
-    # Try various formats
+    # Partial ISO (YYYY-MM)
+    if re.match(r'^\d{4}-\d{2}$', date_str):
+        return date_str
+
+    # YYYYMMDD (8 digits)
+    if len(date_str) == 8 and date_str.isdigit():
+        try:
+            dt = datetime.strptime(date_str, "%Y%m%d")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # YYYYMM (6 digits) → partial date
+    if len(date_str) == 6 and date_str.isdigit():
+        try:
+            dt = datetime.strptime(date_str, "%Y%m")
+            return dt.strftime("%Y-%m")
+        except ValueError:
+            pass
+
+    # Try various formats (4-digit year first, then 2-digit year)
     formats = [
-        "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d",
+        "%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%Y%m%d",
         "%d-%b-%Y", "%d %b %Y", "%b %d, %Y",
-        "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"
+        "%m-%d-%Y", "%d-%B-%Y",
+        "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S",
+        "%m/%d/%y",    # 9/17/08, 01/15/24 (2-digit year)
+        "%d/%m/%y",    # 17/09/08 (2-digit year)
+        "%d-%b-%y",    # 15-JAN-08 (2-digit year)
+        "%m-%d-%y",    # 01-15-08 (2-digit year)
     ]
 
     for fmt in formats:
@@ -762,28 +812,72 @@ class BaseDomainTransformer(ABC):
         pass
 
     def _convert_date_to_iso(self, value: Any) -> Optional[str]:
-        """Convert date value to ISO 8601 format."""
+        """Convert date value to ISO 8601 format.
+
+        Handles: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, YYYYMMDD, YYYYMM,
+                 M/D/YY, MM/DD/YY (2-digit year), DD-MON-YYYY, DD-MON-YY,
+                 and pandas Timestamp objects.
+        """
         if pd.isna(value):
             return None
 
         try:
-            # Handle YYYYMMDD format
+            # Handle pandas Timestamp / datetime objects directly
+            if isinstance(value, (pd.Timestamp, datetime)):
+                return value.strftime("%Y-%m-%d")
+
+            # Handle numeric formats (YYYYMMDD as int/float, or YYYYMM)
             if isinstance(value, (int, float)):
                 str_val = str(int(value))
-                if len(str_val) == 8:
+                if len(str_val) == 8:  # YYYYMMDD
                     dt = datetime.strptime(str_val, "%Y%m%d")
                     return dt.strftime("%Y-%m-%d")
+                elif len(str_val) == 6:  # YYYYMM → partial date
+                    dt = datetime.strptime(str_val, "%Y%m")
+                    return dt.strftime("%Y-%m")
 
             # Handle string dates
-            str_val = str(value)
+            str_val = str(value).strip()
+
+            # Already ISO 8601 (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+            if re.match(r'^\d{4}-\d{2}-\d{2}', str_val):
+                return str_val[:10]
+
+            # Partial ISO (YYYY-MM)
+            if re.match(r'^\d{4}-\d{2}$', str_val):
+                return str_val
+
+            # Year only (YYYY)
+            if re.match(r'^\d{4}$', str_val):
+                return str_val
+
+            # YYYYMMDD (8 digits)
             if len(str_val) == 8 and str_val.isdigit():
                 dt = datetime.strptime(str_val, "%Y%m%d")
                 return dt.strftime("%Y-%m-%d")
 
-            # Try common formats
-            for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]:
+            # YYYYMM (6 digits) → partial date
+            if len(str_val) == 6 and str_val.isdigit():
+                dt = datetime.strptime(str_val, "%Y%m")
+                return dt.strftime("%Y-%m")
+
+            # Try common formats (4-digit year first, then 2-digit year)
+            for fmt in [
+                "%m/%d/%Y",    # 01/15/2024
+                "%d/%m/%Y",    # 15/01/2024
+                "%Y/%m/%d",    # 2024/01/15
+                "%m-%d-%Y",    # 01-15-2024
+                "%d-%b-%Y",    # 15-JAN-2024
+                "%d-%B-%Y",    # 15-January-2024
+                "%d %b %Y",   # 15 JAN 2024
+                "%b %d, %Y",  # JAN 15, 2024
+                "%m/%d/%y",    # 9/17/08, 01/15/24 (2-digit year)
+                "%d/%m/%y",    # 17/09/08 (2-digit year)
+                "%d-%b-%y",    # 15-JAN-08 (2-digit year)
+                "%m-%d-%y",    # 01-15-08 (2-digit year)
+            ]:
                 try:
-                    dt = datetime.strptime(str_val[:10], fmt)
+                    dt = datetime.strptime(str_val, fmt)
                     return dt.strftime("%Y-%m-%d")
                 except ValueError:
                     continue

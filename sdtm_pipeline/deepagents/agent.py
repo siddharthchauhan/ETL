@@ -6,19 +6,34 @@ Main DeepAgent implementation for SDTM transformation pipeline.
 This is the unified SDTM agent that combines:
 - DeepAgents architecture (planning, subagent delegation, filesystem backend)
 - SDTM Chat capabilities (interactive conversion, knowledge base, web search)
-- Skills for clinical data standards, programming, and QA/validation
+- 18 Skills for progressive disclosure of domain expertise
 
 Architecture:
 - Main orchestrator agent with planning capabilities
 - Specialized subagents for domain-specific tasks
 - Filesystem backend for context management
 - 27 tools for complete SDTM pipeline operations
-- 3 skills for progressive disclosure of domain expertise
+- 18 skills for progressive disclosure of domain expertise
 
-Skills:
-- cdisc-standards: SDTM domain knowledge, controlled terminology, protocol interpretation
-- sdtm-programming: Python/SAS/R transformation patterns, date handling, ETL design
-- qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring, debugging
+Skills (18 total - automatically loaded based on task context):
+- cdisc-standards: SDTM domain knowledge, controlled terminology, protocols
+- sdtm-programming: Python/SAS/R transformation patterns, ETL design
+- qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring
+- mapping-specifications: Transformation DSL, mapping spec parsing
+- mapping-scenarios: 9 fundamental SDTM mapping patterns
+- sdtm-mapping: End-to-end raw-to-SDTM conversion following CDISC standards
+- clinical-domains: AE, DS, MH, CM, EX event/intervention domains
+- special-purpose-domains: DM, CO, SE, SV one-record domains
+- findings-domains: VS, LB, EG, PE vertical data structures
+- lb-domain-transformation: LB horizontal-to-vertical MELT, test code mapping
+- trial-design-domains: TA, TE, TV, TI, TS study design
+- datetime-handling: ISO 8601, partial dates, study day calculations
+- data-loading: S3 ingestion, EDC extraction, file scanning
+- neo4j-s3-integration: Graph loading, S3 uploads
+- knowledge-base: Pinecone queries, CDISC guidance retrieval
+- pipeline-orchestration: 7-phase ETL flow, subagent delegation
+- validation-best-practices: Error resolution, compliance strategies
+- document-generation: PowerPoint, Excel, Word, CSV, PDF creation
 """
 
 import os
@@ -56,7 +71,7 @@ class SDTMAgentConfig:
     study_id: str = "UNKNOWN"
 
     # Model configuration
-    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929"))
+    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250514"))
 
     # Paths
     workspace_dir: str = "./sdtm_workspace"
@@ -112,12 +127,9 @@ def create_sdtm_deep_agent(
     - Main orchestrator agent with planning (write_todos)
     - Filesystem backend for context management
     - 5 specialized subagents for domain expertise
-    - 3 skills for progressive disclosure of domain knowledge
+    - 18 skills for progressive disclosure of domain knowledge
 
-    Skills (loaded from skills_dir):
-    - cdisc-standards: CDISC SDTM knowledge, controlled terminology, protocol interpretation
-    - sdtm-programming: Python/SAS/R patterns, date handling, ETL design
-    - qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring
+    Skills (18 total - loaded from skills_dir, automatically discovered):
 
     Args:
         config: Agent configuration options

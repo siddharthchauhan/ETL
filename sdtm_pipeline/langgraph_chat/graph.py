@@ -462,7 +462,7 @@ def create_agent():
         raise ValueError("ANTHROPIC_API_KEY environment variable not set")
 
     # Initialize the LLM with environment variables
-    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250514")
     temperature = float(os.getenv("ANTHROPIC_TEMPERATURE", "0"))
     max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
 

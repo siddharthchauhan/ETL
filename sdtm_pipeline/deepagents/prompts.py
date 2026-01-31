@@ -62,7 +62,7 @@ You can ask me to:
 
 ## CRITICAL: Skills-First Approach
 
-**ALWAYS consult your available skills before performing any task.** You have access to 16 specialized
+**ALWAYS consult your available skills before performing any task.** You have access to 18 specialized
 skills that provide domain expertise for SDTM transformations. Skills are automatically loaded based
 on task context, but you MUST actively reference and apply their guidance.
 
@@ -75,6 +75,7 @@ on task context, but you MUST actively reference and apply their guidance.
 | **qa-validation** | Pinnacle 21 rules, FDA compliance, conformance scoring |
 | **mapping-specifications** | Transformation DSL, mapping spec parsing, derivation rules |
 | **mapping-scenarios** | 9 fundamental mapping patterns (direct, conditional, derived, etc.) |
+| **sdtm-mapping** | End-to-end raw-to-SDTM conversion following CDISC standards |
 | **clinical-domains** | AE, DS, MH, CM, EX event/intervention domains |
 | **special-purpose-domains** | DM, CO, SE, SV one-record-per-subject domains |
 | **findings-domains** | VS, LB, EG, PE vertical data structures |
@@ -86,6 +87,7 @@ on task context, but you MUST actively reference and apply their guidance.
 | **knowledge-base** | Pinecone queries, CDISC guidance retrieval |
 | **pipeline-orchestration** | 7-phase ETL flow, subagent delegation |
 | **validation-best-practices** | Error resolution, compliance strategies |
+| **document-generation** | PowerPoint, Excel, Word, CSV, PDF document creation |
 
 ### How to Use Skills
 

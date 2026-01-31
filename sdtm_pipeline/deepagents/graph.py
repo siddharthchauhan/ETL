@@ -6,18 +6,20 @@ Entry point for LangGraph Studio (langgraph dev).
 This module exports a unified SDTM agent that combines:
 - DeepAgents architecture (planning, subagent delegation, filesystem backend)
 - SDTM Chat capabilities (interactive conversion, knowledge base, web search)
-- 16 Skills for progressive disclosure of domain expertise
+- 18 Skills for progressive disclosure of domain expertise
 - Pinecone knowledge base integration for semantic search
 
-Skills (16 total - automatically loaded based on task context):
+Skills (18 total - automatically loaded based on task context):
 - cdisc-standards: SDTM domain knowledge, controlled terminology, protocols
 - sdtm-programming: Python/SAS/R transformation patterns, ETL design
 - qa-validation: Pinnacle 21 rules, Define.xml, conformance scoring
 - mapping-specifications: Transformation DSL, mapping spec parsing
 - mapping-scenarios: 9 fundamental SDTM mapping patterns
+- sdtm-mapping: End-to-end raw-to-SDTM conversion following CDISC standards
 - clinical-domains: AE, DS, MH, CM, EX event/intervention domains
 - special-purpose-domains: DM, CO, SE, SV one-record domains
 - findings-domains: VS, LB, EG, PE vertical data structures
+- lb-domain-transformation: LB horizontal-to-vertical MELT, test code mapping
 - trial-design-domains: TA, TE, TV, TI, TS study design
 - datetime-handling: ISO 8601, partial dates, study day calculations
 - data-loading: S3 ingestion, EDC extraction, file scanning
@@ -25,6 +27,7 @@ Skills (16 total - automatically loaded based on task context):
 - knowledge-base: Pinecone queries, CDISC guidance retrieval
 - pipeline-orchestration: 7-phase ETL flow, subagent delegation
 - validation-best-practices: Error resolution, compliance strategies
+- document-generation: PowerPoint, Excel, Word, CSV, PDF creation
 
 Use with:
 - langgraph dev (local development UI)
@@ -81,7 +84,7 @@ def create_graph() -> CompiledStateGraph:
     The agent is equipped with:
     - 27 SDTM-specific tools
     - 5 specialized subagents (SDTM Expert, Validator, Transformer, Code Generator, Data Loader)
-    - 16 skills for domain expertise (progressive disclosure)
+    - 18 skills for domain expertise (progressive disclosure)
     - Pinecone knowledge base integration
     - Filesystem backend for context management
     - Recursion limit of 250 (configurable via LANGGRAPH_RECURSION_LIMIT env var)
@@ -106,7 +109,7 @@ def create_graph() -> CompiledStateGraph:
     ]
 
     # Get model from environment
-    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929")
+    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250514")
 
     # Setup skills - provides progressive disclosure of domain expertise
     # Skills are only loaded when relevant to the current task

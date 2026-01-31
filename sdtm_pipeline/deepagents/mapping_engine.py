@@ -744,45 +744,91 @@ class TransformationRuleInterpreter:
         return ''
 
     def _convert_to_iso8601(self, value: str, fmt: str) -> str:
-        """Convert a date value to ISO 8601 format."""
+        """Convert a date value to ISO 8601 format.
+
+        Supports both explicit format hints and auto-detection fallback.
+        Handles 2-digit year formats (M/D/YY, MM/DD/YY) and 6-digit YYYYMM.
+        """
         value = str(value).strip()
         fmt = str(fmt).upper()
 
         if not value:
             return ''
 
-        try:
-            # Map format strings to Python strptime formats
-            format_map = {
-                'YYYYMMDD': '%Y%m%d',
-                'YYYY-MM-DD': '%Y-%m-%d',
-                'YYYYMM': '%Y%m',
-                'YYYY-MM': '%Y-%m',
-                'YYYY': '%Y',
-                'DD-MON-YYYY': '%d-%b-%Y',
-                'DD/MM/YYYY': '%d/%m/%Y',
-                'MM/DD/YYYY': '%m/%d/%Y',
-            }
+        # Map format strings to Python strptime formats
+        format_map = {
+            'YYYYMMDD': '%Y%m%d',
+            'YYYY-MM-DD': '%Y-%m-%d',
+            'YYYYMM': '%Y%m',
+            'YYYY-MM': '%Y-%m',
+            'YYYY': '%Y',
+            'DD-MON-YYYY': '%d-%b-%Y',
+            'DD/MM/YYYY': '%d/%m/%Y',
+            'MM/DD/YYYY': '%m/%d/%Y',
+            'DD-MON-YY': '%d-%b-%y',
+            'DD/MM/YY': '%d/%m/%y',
+            'MM/DD/YY': '%m/%d/%y',
+            'M/D/YY': '%m/%d/%y',
+        }
 
-            py_fmt = format_map.get(fmt, '%Y%m%d')
+        # Determine output precision from format
+        partial_formats = {'YYYYMM', 'YYYY-MM'}
+        year_only_formats = {'YYYY'}
 
-            # Try to parse
-            dt = datetime.strptime(value, py_fmt)
+        # Try the specified format first
+        py_fmt = format_map.get(fmt)
+        if py_fmt:
+            try:
+                dt = datetime.strptime(value, py_fmt)
+                if fmt in year_only_formats:
+                    return dt.strftime('%Y')
+                elif fmt in partial_formats:
+                    return dt.strftime('%Y-%m')
+                else:
+                    return dt.strftime('%Y-%m-%d')
+            except (ValueError, TypeError):
+                pass
 
-            # Return ISO 8601 format based on precision
-            if fmt in ('YYYYMMDD', 'YYYY-MM-DD', 'DD-MON-YYYY', 'DD/MM/YYYY', 'MM/DD/YYYY'):
+        # Auto-detection fallback: try all known formats
+        # Already ISO 8601
+        if re.match(r'^\d{4}-\d{2}-\d{2}', value):
+            return value[:10]
+        if re.match(r'^\d{4}-\d{2}$', value):
+            return value
+        if re.match(r'^\d{4}$', value):
+            return value
+
+        # Numeric-only values
+        if value.isdigit():
+            if len(value) == 8:  # YYYYMMDD
+                try:
+                    return datetime.strptime(value, '%Y%m%d').strftime('%Y-%m-%d')
+                except ValueError:
+                    pass
+            elif len(value) == 6:  # YYYYMM
+                try:
+                    return datetime.strptime(value, '%Y%m').strftime('%Y-%m')
+                except ValueError:
+                    pass
+
+        # Try common formats (4-digit year, then 2-digit year)
+        auto_formats = [
+            '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d',
+            '%m-%d-%Y', '%d-%b-%Y', '%d-%B-%Y',
+            '%d %b %Y', '%b %d, %Y',
+            '%m/%d/%y', '%d/%m/%y', '%d-%b-%y', '%m-%d-%y',
+        ]
+        for auto_fmt in auto_formats:
+            try:
+                dt = datetime.strptime(value, auto_fmt)
                 return dt.strftime('%Y-%m-%d')
-            elif fmt in ('YYYYMM', 'YYYY-MM'):
-                return dt.strftime('%Y-%m')
-            elif fmt == 'YYYY':
-                return dt.strftime('%Y')
-            else:
-                return dt.strftime('%Y-%m-%d')
-        except (ValueError, TypeError):
-            # If parsing fails, return original if it looks like ISO 8601
-            if re.match(r'^\d{4}(-\d{2}(-\d{2})?)?$', value):
-                return value
-            return ''
+            except (ValueError, TypeError):
+                continue
+
+        # If nothing worked, return original if it looks like ISO 8601
+        if re.match(r'^\d{4}(-\d{2}(-\d{2})?)?$', value):
+            return value
+        return ''
 
     def _func_format(self, args: List[Any], *_) -> str:
         """FORMAT(field, codelist) - Apply codelist/format mapping."""
