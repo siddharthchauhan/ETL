@@ -83,6 +83,40 @@ from sdtm_pipeline.langgraph_chat.tools import (
 
 
 # =============================================================================
+# OUTPUT TRUNCATION - Prevents token overflow (203K > 200K limit)
+# =============================================================================
+# Large tool outputs (column analyses, mapping specs) can consume 30K+ tokens
+# in a single step, blowing past the 200K context limit before the
+# SummarizationMiddleware (170K trigger) can intervene.
+#
+# Strategy: Keep tool outputs under ~8K chars (~2K tokens). Save full data
+# to workspace files and return a reference path in the truncated output.
+
+MAX_TOOL_OUTPUT_CHARS = 8000  # ~2K tokens
+
+
+async def _save_full_output(data: Dict[str, Any], filename: str) -> str:
+    """Save full tool output to workspace and return the file path."""
+    workspace = os.getenv("SDTM_WORKSPACE", "./sdtm_workspace")
+    details_dir = os.path.join(workspace, "_tool_outputs")
+    await async_makedirs(details_dir)
+    filepath = os.path.join(details_dir, filename)
+    content = json.dumps(data, indent=2, default=str)
+    async with aiofiles.open(filepath, "w") as f:
+        await f.write(content)
+    return filepath
+
+
+def _truncate_list(items: list, max_items: int, label: str = "items") -> list:
+    """Truncate a list, appending a sentinel noting how many were omitted."""
+    if len(items) <= max_items:
+        return items
+    truncated = items[:max_items]
+    truncated.append({"_truncated": f"... {len(items) - max_items} more {label} omitted. See full output file."})
+    return truncated
+
+
+# =============================================================================
 # DATA INGESTION TOOLS (Async)
 # =============================================================================
 
@@ -279,14 +313,24 @@ async def scan_source_files(directory: str) -> Dict[str, Any]:
         mapped = [f for f in files if f['mapped']]
         unmapped = [f for f in files if not f['mapped']]
 
-        return {
+        result = {
             "success": True,
             "total_files": len(files),
             "mapped_files": len(mapped),
             "unmapped_files": len(unmapped),
-            "files": files,
+            "files": _truncate_list(files, 30, "files"),
             "domains_found": list(set(f['target_domain'] for f in mapped if f['target_domain'])),
         }
+
+        # Save full output if truncated
+        if len(files) > 30:
+            full_path = await _save_full_output(
+                {**result, "files": files},
+                f"scan_source_files_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            )
+            result["full_output_file"] = full_path
+
+        return result
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -318,14 +362,24 @@ async def analyze_source_file(file_path: str) -> Dict[str, Any]:
             }
             columns.append(col_info)
 
-        return {
+        result = {
             "success": True,
             "file_name": os.path.basename(file_path),
             "row_count": len(df),
             "column_count": len(df.columns),
-            "columns": columns,
+            "columns": _truncate_list(columns, 25, "columns"),
             "memory_mb": round(df.memory_usage(deep=True).sum() / 1024 / 1024, 2),
         }
+
+        # Save full output if truncated
+        if len(columns) > 25:
+            full_path = await _save_full_output(
+                {**result, "columns": columns},
+                f"analyze_{os.path.basename(file_path)}_{datetime.now().strftime('%H%M%S')}.json"
+            )
+            result["full_output_file"] = full_path
+
+        return result
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -1672,7 +1726,7 @@ async def generate_intelligent_mapping(
                 "null_count": int(df[col].isna().sum()),
                 "null_pct": round(df[col].isna().sum() / len(df) * 100, 1),
                 "unique_values": int(df[col].nunique()),
-                "sample_values": [str(v) for v in df[col].dropna().head(5).tolist()],
+                "sample_values": [str(v) for v in df[col].dropna().head(3).tolist()],
             }
 
             # Infer content type from sample values
@@ -1839,16 +1893,28 @@ async def generate_intelligent_mapping(
             "mapped_count": len(column_mappings),
             "mapping_coverage_pct": round(len(column_mappings) / len(df.columns) * 100, 1),
             "generated_at": datetime.now().isoformat(),
-            "llm_context_for_review": {
-                "source_metadata": source_metadata,
-                "target_variables": target_variables,
-                "note": "Agent can use this context to refine mappings using semantic understanding"
-            }
         }
 
+        # Always save full spec to workspace (includes source_metadata + target_variables)
+        full_spec_with_context = {
+            **spec,
+            "source_metadata": source_metadata,
+            "target_variables": target_variables,
+        }
+        full_path = await _save_full_output(
+            full_spec_with_context,
+            f"mapping_spec_{domain}_{os.path.basename(source_file)}_{datetime.now().strftime('%H%M%S')}.json"
+        )
+
+        # Return truncated output — keep summaries, cap lists
         return {
             "success": True,
-            "mapping_spec": spec,
+            "mapping_spec": {
+                **spec,
+                "column_mappings": _truncate_list(column_mappings, 15, "mappings"),
+                "unmapped_required": _truncate_list(unmapped_required, 10, "required vars"),
+                "unmapped_sources": _truncate_list(unmapped_sources, 10, "source columns"),
+            },
             "summary": {
                 "columns_mapped": len(column_mappings),
                 "high_confidence": len([m for m in column_mappings if m["confidence"] >= 80]),
@@ -1857,7 +1923,8 @@ async def generate_intelligent_mapping(
                 "unmapped_required": len(unmapped_required),
                 "unmapped_sources": len(unmapped_sources),
             },
-            "recommendation": "Review mappings with confidence < 80. Agent should analyze unmapped columns and required variables."
+            "full_spec_file": full_path,
+            "recommendation": "Review mappings with confidence < 80. Full spec with source metadata saved to full_spec_file."
         }
 
     except Exception as e:
@@ -1930,6 +1997,11 @@ async def get_sdtm_variable_definitions(domain: str) -> Dict[str, Any]:
         else:
             other_vars.append(var_entry)
 
+    # Count required/expected instead of duplicating full variable entries
+    all_vars = identifiers + topic_vars + result_vars + timing_vars + other_vars
+    required_names = [v["variable"] for v in all_vars if v["core"] == "Req"]
+    expected_names = [v["variable"] for v in all_vars if v["core"] == "Exp"]
+
     return {
         "success": True,
         "domain": domain,
@@ -1941,8 +2013,8 @@ async def get_sdtm_variable_definitions(domain: str) -> Dict[str, Any]:
             "timing_variables": timing_vars,
             "other_variables": other_vars,
         },
-        "required_variables": [v for v in identifiers + topic_vars + result_vars + timing_vars + other_vars if v["core"] == "Req"],
-        "expected_variables": [v for v in identifiers + topic_vars + result_vars + timing_vars + other_vars if v["core"] == "Exp"],
+        "required_variable_names": required_names,
+        "expected_variable_names": expected_names,
     }
 
 
@@ -1977,7 +2049,7 @@ async def analyze_source_for_sdtm(
         for col in df.columns:
             # Get sample values
             non_null = df[col].dropna()
-            samples = non_null.head(10).tolist() if len(non_null) > 0 else []
+            samples = non_null.head(5).tolist() if len(non_null) > 0 else []
 
             # Analyze content patterns
             content_analysis = {
@@ -2024,7 +2096,7 @@ async def analyze_source_for_sdtm(
                 "null_count": int(df[col].isna().sum()),
                 "null_pct": round(df[col].isna().sum() / len(df) * 100, 1),
                 "unique_values": int(df[col].nunique()),
-                "sample_values": [str(v) for v in samples[:5]],
+                "sample_values": [str(v) for v in samples[:3]],
                 "content_analysis": content_analysis,
                 "sdtm_suggestions": sdtm_suggestions,
             })
@@ -2050,16 +2122,26 @@ async def analyze_source_for_sdtm(
         if any(kw in col_names_lower for kw in ["ecg", "eg_", "qt", "pr_interval"]):
             domain_suggestions.append({"domain": "EG", "reason": "ECG patterns found"})
 
-        return {
+        result = {
             "success": True,
             "file_name": os.path.basename(source_file),
             "row_count": len(df),
             "column_count": len(df.columns),
-            "columns_analysis": columns_analysis,
+            "columns_analysis": _truncate_list(columns_analysis, 20, "columns"),
             "domain_suggestions": domain_suggestions if not target_domain else [],
             "target_domain": target_domain,
             "recommendation": "Use generate_intelligent_mapping with this analysis context to create SDTM mappings."
         }
+
+        # Save full output if truncated
+        if len(columns_analysis) > 20:
+            full_path = await _save_full_output(
+                {**result, "columns_analysis": columns_analysis},
+                f"analyze_sdtm_{os.path.basename(source_file)}_{datetime.now().strftime('%H%M%S')}.json"
+            )
+            result["full_output_file"] = full_path
+
+        return result
 
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -4411,11 +4493,22 @@ async def generate_mapping_spec(
             "generated_at": datetime.now().isoformat(),
         }
 
+        # Save full spec to workspace, return truncated version
+        full_path = await _save_full_output(
+            {"success": True, "mapping_spec": spec},
+            f"mapping_spec_{domain}_{datetime.now().strftime('%H%M%S')}.json"
+        )
+
         return {
             "success": True,
-            "mapping_spec": spec,
+            "mapping_spec": {
+                **spec,
+                "column_mappings": _truncate_list(column_mappings, 20, "mappings"),
+                "source_columns": _truncate_list(list(df.columns), 30, "columns"),
+            },
             "columns_mapped": len(column_mappings),
             "columns_unmapped": len(df.columns) - len(column_mappings),
+            "full_spec_file": full_path,
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -6100,5 +6193,8 @@ from .document_tools import DOCUMENT_TOOLS
 # Feedback and learning tools
 from .feedback_tools import FEEDBACK_TOOLS
 
+# Healthcare connector tools (ClinicalTrials.gov, NPI, CMS, ICD-10, ChEMBL, bioRxiv)
+from .mcp_tools import HEALTHCARE_TOOLS
+
 # Combined tools for unified agent
-SDTM_TOOLS = DEEPAGENT_TOOLS + CHAT_TOOLS + DOCUMENT_TOOLS + FEEDBACK_TOOLS
+SDTM_TOOLS = DEEPAGENT_TOOLS + CHAT_TOOLS + DOCUMENT_TOOLS + FEEDBACK_TOOLS + HEALTHCARE_TOOLS

@@ -109,7 +109,7 @@ def create_graph() -> CompiledStateGraph:
     ]
 
     # Get model from environment
-    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250514")
+    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929")
 
     # Setup skills - provides progressive disclosure of domain expertise
     # Skills are only loaded when relevant to the current task
@@ -157,3 +157,10 @@ def create_graph() -> CompiledStateGraph:
 # Recursion limit is applied via .with_config() in create_graph()
 graph = create_graph()
 print(f"[SDTM Graph] Graph exported with recursion_limit={RECURSION_LIMIT}")
+
+# Report healthcare connector status
+try:
+    from .mcp_tools import get_healthcare_tools_status
+    print(f"[SDTM Graph] Healthcare connectors: {get_healthcare_tools_status()}")
+except Exception:
+    pass

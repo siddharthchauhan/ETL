@@ -71,7 +71,7 @@ class SDTMAgentConfig:
     study_id: str = "UNKNOWN"
 
     # Model configuration
-    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250514"))
+    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929"))
 
     # Paths
     workspace_dir: str = "./sdtm_workspace"

@@ -5,7 +5,7 @@
     "target_domain": "AE",
     "sdtm_version": "SDTM-IG 3.4",
     "created_by": "SDTM Mapping Generator",
-    "created_date": "2026-01-27T17:03:45.223293",
+    "created_date": "2026-01-31T23:41:05.684896",
     "description": "Mapping specification for AE domain transformation"
   },
   "source_files": [
@@ -25,7 +25,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Required variable. Study identifier from STUDY column (MAXIS-08)"
+      "comments": "Study Identifier - Required variable. Maps from STUDY source column containing 'MAXIS-08'"
     },
     {
       "sdtm_variable": "DOMAIN",
@@ -36,7 +36,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Required variable. Domain abbreviation for Adverse Events"
+      "comments": "Domain Abbreviation - Required variable. Fixed value for Adverse Events domain"
     },
     {
       "sdtm_variable": "USUBJID",
@@ -47,7 +47,7 @@
       "transformation": null,
       "transformation_type": "CONCAT",
       "controlled_terminology": null,
-      "comments": "Required variable. Unique subject identifier. Need to extract subject ID from source data structure"
+      "comments": "Unique Subject Identifier - Required variable. Standard derivation combining study, site, and subject identifiers. INVSITE present in source."
     },
     {
       "sdtm_variable": "AESEQ",
@@ -55,21 +55,21 @@
       "type": "Num",
       "core": "Req",
       "source_column": "AESEQ",
-      "transformation": "Use source value if valid, otherwise derive",
+      "transformation": "Use as-is if valid, otherwise regenerate",
       "transformation_type": "SEQUENCE",
       "controlled_terminology": null,
-      "comments": "Required variable. Sequence number per subject. Source has AESEQ column but should validate sequential ordering"
+      "comments": "Sequence Number - Required variable. Source has AESEQ column. Validate and regenerate if needed to ensure sequential ordering per subject"
     },
     {
       "sdtm_variable": "AETERM",
       "label": "Reported Term for the Adverse Event",
       "type": "Char",
       "core": "Req",
-      "source_column": "AEVERB",
-      "transformation": "COPY(AEVERB)",
+      "source_column": "AECOD",
+      "transformation": "Use reported term as-is",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "Required variable. Reported term for adverse event as recorded by investigator"
+      "comments": "Reported Term for the Adverse Event - Required variable. AECOD contains verbatim terms like 'NAUSEA', 'INTERMITTENT VOMITING', etc."
     },
     {
       "sdtm_variable": "AEDECOD",
@@ -77,10 +77,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AEPTT",
-      "transformation": "COPY(AEPTT)",
+      "transformation": "Use MedDRA Preferred Term",
       "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA Preferred Term",
-      "comments": "Expected variable. Dictionary-derived term (MedDRA Preferred Term)"
+      "controlled_terminology": "MedDRA",
+      "comments": "Dictionary-Derived Term - Expected variable. AEPTT contains MedDRA Preferred Terms like 'NAUSEA', 'VOMITING', 'BACK PAIN'"
     },
     {
       "sdtm_variable": "AEBODSYS",
@@ -88,10 +88,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AESCT",
-      "transformation": "COPY(AESCT)",
+      "transformation": "Use MedDRA System Organ Class",
       "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA SOC",
-      "comments": "Expected variable. Body System or Organ Class from MedDRA SOC"
+      "controlled_terminology": "MedDRA",
+      "comments": "Body System or Organ Class - Expected variable. AESCT contains SOC terms like 'GASTROINTESTINAL DISORDERS'"
     },
     {
       "sdtm_variable": "AESOC",
@@ -99,98 +99,10 @@
       "type": "Char",
       "core": "Perm",
       "source_column": "AESCT",
-      "transformation": "Same as AEBODSYS",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": "MedDRA SOC",
-      "comments": "Permissible variable. Primary System Organ Class"
-    },
-    {
-      "sdtm_variable": "AESOCCD",
-      "label": "Primary System Organ Class Code",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AESCC",
-      "transformation": "Convert to numeric",
+      "transformation": "Use MedDRA Primary System Organ Class",
       "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA SOC Code",
-      "comments": "Permissible variable. Primary System Organ Class Code"
-    },
-    {
-      "sdtm_variable": "AEPTCD",
-      "label": "Preferred Term Code",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AEPTC",
-      "transformation": "Convert to numeric",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA PT Code",
-      "comments": "Permissible variable. Preferred Term Code from MedDRA"
-    },
-    {
-      "sdtm_variable": "AEHLT",
-      "label": "High Level Term",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AEHTT",
-      "transformation": "COPY(AEHTT)",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA HLT",
-      "comments": "Permissible variable. High Level Term from MedDRA"
-    },
-    {
-      "sdtm_variable": "AEHLTCD",
-      "label": "High Level Term Code",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AEHTC",
-      "transformation": "Convert to numeric",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA HLT Code",
-      "comments": "Permissible variable. High Level Term Code"
-    },
-    {
-      "sdtm_variable": "AEHLGT",
-      "label": "High Level Group Term",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AEHGT1",
-      "transformation": "COPY(AEHGT1)",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA HLGT",
-      "comments": "Permissible variable. High Level Group Term (source column appears empty)"
-    },
-    {
-      "sdtm_variable": "AEHLGTCD",
-      "label": "High Level Group Term Code",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AEHGC",
-      "transformation": "Convert to numeric",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA HLGT Code",
-      "comments": "Permissible variable. High Level Group Term Code"
-    },
-    {
-      "sdtm_variable": "AELLT",
-      "label": "Lowest Level Term",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AELTT",
-      "transformation": "COPY(AELTT)",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA LLT",
-      "comments": "Permissible variable. Lowest Level Term from MedDRA"
-    },
-    {
-      "sdtm_variable": "AELLTCD",
-      "label": "Lowest Level Term Code",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AELTC",
-      "transformation": "Convert to numeric",
-      "transformation_type": "COPY",
-      "controlled_terminology": "MedDRA LLT Code",
-      "comments": "Permissible variable. Lowest Level Term Code"
+      "controlled_terminology": "MedDRA",
+      "comments": "Primary System Organ Class - Permissible variable. Same as AEBODSYS for primary SOC"
     },
     {
       "sdtm_variable": "AESEV",
@@ -198,10 +110,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AESEV",
-      "transformation": "Map to CDISC controlled terminology: MILD->MILD, MODERATE->MODERATE, SEVERE->SEVERE",
+      "transformation": "Map to CDISC controlled terminology: Keep MILD/MODERATE/SEVERE as-is",
       "transformation_type": "MAP",
       "controlled_terminology": "AESEV",
-      "comments": "Expected variable. Severity/Intensity. Source already contains MILD/MODERATE/SEVERE values"
+      "comments": "Severity/Intensity - Expected variable. Source already contains CDISC terms (MILD, MODERATE, SEVERE). Validate against AESEV codelist"
     },
     {
       "sdtm_variable": "AESER",
@@ -209,21 +121,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AESER",
-      "transformation": "Map Y->Y, N->N",
-      "transformation_type": "MAP",
+      "transformation": "Validate against NY codelist",
+      "transformation_type": "COPY",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Serious Event flag (Yes/No)"
-    },
-    {
-      "sdtm_variable": "AESLIFE",
-      "label": "Is Life Threatening",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AESERL",
-      "transformation": "Map to Y/N codelist",
-      "transformation_type": "MAP",
-      "controlled_terminology": "NY",
-      "comments": "Expected variable. Is event life threatening"
+      "comments": "Serious Event - Expected variable. Source has AESER column. Ensure values are Y or N only"
     },
     {
       "sdtm_variable": "AEACN",
@@ -231,21 +132,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AEACT",
-      "transformation": "Map to ACN codelist values",
+      "transformation": "Map to ACN codelist",
       "transformation_type": "MAP",
       "controlled_terminology": "ACN",
-      "comments": "Expected variable. Action taken with study treatment"
-    },
-    {
-      "sdtm_variable": "AEACNOTH",
-      "label": "Other Action Taken",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AEACTL",
-      "transformation": "COPY(AEACTL)",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Other action taken (free text description)"
+      "comments": "Action Taken with Study Treatment - Expected variable. AEACT contains action taken information. Map to standard ACN values (DOSE REDUCED, DOSE NOT CHANGED, DRUG WITHDRAWN, etc.)"
     },
     {
       "sdtm_variable": "AEREL",
@@ -253,21 +143,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AEREL",
-      "transformation": "Map source values to AEREL codelist: POSSIBLE->POSSIBLE, UNLIKELY->UNLIKELY, UNRELATED->NOT RELATED",
+      "transformation": "Map to AEREL codelist",
       "transformation_type": "MAP",
       "controlled_terminology": "AEREL",
-      "comments": "Expected variable. Causality/relationship to study treatment"
-    },
-    {
-      "sdtm_variable": "AEREL",
-      "label": "Causality",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "AERELL",
-      "transformation": "Map: POSSIBLE->POSSIBLE, UNLIKELY->UNLIKELY, UNRELATED->NOT RELATED, PROBABLE->PROBABLE, RELATED->RELATED",
-      "transformation_type": "MAP",
-      "controlled_terminology": "AEREL",
-      "comments": "Alternative causality field (AERELL appears to be the populated field based on sample data)"
+      "comments": "Causality - Expected variable. Source has both AEREL and AERELL. Map values like 'POSSIBLE', 'UNLIKELY', 'UNRELATED' to AEREL codelist (NOT RELATED, POSSIBLY RELATED, PROBABLY RELATED, RELATED)"
     },
     {
       "sdtm_variable": "AEOUT",
@@ -275,21 +154,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AEOUTC",
-      "transformation": "Map to OUT codelist values",
+      "transformation": "Map to OUT codelist",
       "transformation_type": "MAP",
       "controlled_terminology": "OUT",
-      "comments": "Expected variable. Outcome of adverse event"
-    },
-    {
-      "sdtm_variable": "AEOUT",
-      "label": "Outcome of Adverse Event",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "AEOUTCL",
-      "transformation": "Map RESOLVED->RECOVERED/RESOLVED, map to standard OUT codelist",
-      "transformation_type": "MAP",
-      "controlled_terminology": "OUT",
-      "comments": "Alternative outcome field. AEOUTCL appears populated with values like RESOLVED"
+      "comments": "Outcome of Adverse Event - Expected variable. Source has AEOUTC and AEOUTCL. AEOUTCL shows 'RESOLVED'. Map to OUT codelist (RECOVERED/RESOLVED, RECOVERING/RESOLVING, NOT RECOVERED/NOT RESOLVED, FATAL, UNKNOWN)"
     },
     {
       "sdtm_variable": "AESTDTC",
@@ -297,21 +165,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AESTDT",
-      "transformation": "Convert numeric date format to ISO 8601: YYYYMMDD->YYYY-MM-DD, YYYYMM->YYYY-MM, YYYY->YYYY",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Expected variable. Start date of adverse event in ISO 8601 format. Handle partial dates appropriately"
-    },
-    {
-      "sdtm_variable": "AESTDY",
-      "label": "Study Day of Start of Adverse Event",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AESTDT",
-      "transformation": "Calculate study day: AESTDT - Treatment Start Date + 1 (if AESTDT >= TRT Start), else AESTDT - Treatment Start Date",
+      "transformation": "Convert to ISO 8601 format",
       "transformation_type": "DATE_FORMAT",
       "controlled_terminology": null,
-      "comments": "Permissible variable. Study day of start of adverse event relative to treatment start"
+      "comments": "Start Date/Time of Adverse Event - Expected variable. Source has numeric dates (20080910, 200812). Convert to ISO 8601 format preserving precision"
     },
     {
       "sdtm_variable": "AEENDTC",
@@ -319,65 +176,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "AEENDT",
-      "transformation": "Convert numeric date format to ISO 8601: YYYYMMDD->YYYY-MM-DD, YYYYMM->YYYY-MM, YYYY->YYYY",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Expected variable. End date of adverse event in ISO 8601 format. Handle partial dates and nulls"
-    },
-    {
-      "sdtm_variable": "AEENDY",
-      "label": "Study Day of End of Adverse Event",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AEENDT",
-      "transformation": "Calculate study day: AEENDT - Treatment Start Date + 1 (if AEENDT >= TRT Start), else AEENDT - Treatment Start Date",
+      "transformation": "Convert to ISO 8601 format",
       "transformation_type": "DATE_FORMAT",
       "controlled_terminology": null,
-      "comments": "Permissible variable. Study day of end of adverse event relative to treatment start"
-    },
-    {
-      "sdtm_variable": "AEDTC",
-      "label": "Date/Time of Collection",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AESTDT",
-      "transformation": "Use AESTDTC value",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Date/Time of adverse event collection (typically same as start date)"
-    },
-    {
-      "sdtm_variable": "AEDY",
-      "label": "AEDY",
-      "type": "Num",
-      "core": "Perm",
-      "source_column": "AESTDT",
-      "transformation": "Set equal to AESTDY",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Study day of adverse event collection"
-    },
-    {
-      "sdtm_variable": "AECONTRT",
-      "label": "Concomitant or Additional Trtmnt Given",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AETRT",
-      "transformation": "Map Y->Y, N->N",
-      "transformation_type": "MAP",
-      "controlled_terminology": "NY",
-      "comments": "Permissible variable. Concomitant or Additional Treatment Given"
-    },
-    {
-      "sdtm_variable": "AESITE",
-      "label": "AESITE",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "INVSITE",
-      "transformation": "COPY(INVSITE)",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Investigational site identifier (if AESITE is used for site location)"
+      "comments": "End Date/Time of Adverse Event - Expected variable. Source has numeric dates with some nulls. Convert to ISO 8601 format preserving precision"
     },
     {
       "sdtm_variable": "AESPID",
@@ -386,20 +188,130 @@
       "core": "Perm",
       "source_column": "PrimaryKEY",
       "transformation": "Convert to character",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Sponsor-defined identifier (unique event identifier from EDC)"
-    },
-    {
-      "sdtm_variable": "AETERM",
-      "label": "Reported Term for the Adverse Event",
-      "type": "Char",
-      "core": "Req",
-      "source_column": "DCMNAME",
-      "transformation": "Use as supplemental source if AEVERB is empty",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Alternative source for reported term if needed"
+      "comments": "Sponsor-Defined Identifier - Permissible variable. PrimaryKEY can serve as unique AE identifier within the study"
+    },
+    {
+      "sdtm_variable": "AEMODIFY",
+      "label": "Modified Reported Term",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AEVERB",
+      "transformation": "Use if different from AETERM",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Modified Reported Term - Permissible variable. AEVERB may contain investigator-modified verbatim term"
+    },
+    {
+      "sdtm_variable": "AESOCCD",
+      "label": "Primary System Organ Class Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "AESCC",
+      "transformation": "Convert to numeric",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "MedDRA",
+      "comments": "Primary System Organ Class Code - Permissible variable. MedDRA SOC numeric code"
+    },
+    {
+      "sdtm_variable": "AEHLGTCD",
+      "label": "High Level Group Term Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "AEHGC",
+      "transformation": "Convert to numeric",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "MedDRA",
+      "comments": "High Level Group Term Code - Permissible variable. MedDRA HLGT numeric code"
+    },
+    {
+      "sdtm_variable": "AEHLGT",
+      "label": "High Level Group Term",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AEHGT1",
+      "transformation": "Use MedDRA HLGT term",
+      "transformation_type": "COPY",
+      "controlled_terminology": "MedDRA",
+      "comments": "High Level Group Term - Permissible variable. All values are null in sample, may be populated in full dataset"
+    },
+    {
+      "sdtm_variable": "AEHLTCD",
+      "label": "High Level Term Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "AEHTC",
+      "transformation": "Convert to numeric",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "MedDRA",
+      "comments": "High Level Term Code - Permissible variable. MedDRA HLT numeric code"
+    },
+    {
+      "sdtm_variable": "AEHLT",
+      "label": "High Level Term",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AEHTT",
+      "transformation": "Use MedDRA HLT term",
+      "transformation_type": "COPY",
+      "controlled_terminology": "MedDRA",
+      "comments": "High Level Term - Permissible variable. AEHTT contains terms like 'NAUSEA AND VOMITING SYMPTOMS'"
+    },
+    {
+      "sdtm_variable": "AELLTCD",
+      "label": "Lowest Level Term Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "AELTC",
+      "transformation": "Convert to numeric",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "MedDRA",
+      "comments": "Lowest Level Term Code - Permissible variable. MedDRA LLT numeric code"
+    },
+    {
+      "sdtm_variable": "AELLT",
+      "label": "Lowest Level Term",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AELTT",
+      "transformation": "Use MedDRA LLT term",
+      "transformation_type": "COPY",
+      "controlled_terminology": "MedDRA",
+      "comments": "Lowest Level Term - Permissible variable. MedDRA Lowest Level Term"
+    },
+    {
+      "sdtm_variable": "AEPTCD",
+      "label": "Preferred Term Code",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "AEPTC",
+      "transformation": "Convert to numeric",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "MedDRA",
+      "comments": "Preferred Term Code - Permissible variable. MedDRA PT numeric code corresponding to AEPTT"
+    },
+    {
+      "sdtm_variable": "AEACNOTH",
+      "label": "Other Action Taken",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AEACTL",
+      "transformation": "Use for other actions taken",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Other Action Taken - Permissible variable. Free text for actions not covered by AEACN codelist"
+    },
+    {
+      "sdtm_variable": "AEPATT",
+      "label": "Pattern of Adverse Event",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AEPTT",
+      "transformation": "Derive pattern if applicable",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Pattern of Adverse Event - Permissible variable. May need derivation logic based on recurrence and temporal patterns"
     },
     {
       "sdtm_variable": "AESDTH",
@@ -410,7 +322,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Results in death flag (derive from serious event criteria if not in source)"
+      "comments": "Results in Death - Expected variable. Derive from seriousness criteria. Check AESERL for death indicator"
     },
     {
       "sdtm_variable": "AESHOSP",
@@ -421,7 +333,18 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Requires or prolongs hospitalization (derive from serious event criteria if not in source)"
+      "comments": "Requires or Prolongs Hospitalization - Expected variable. Check AESERL for hospitalization indicator"
+    },
+    {
+      "sdtm_variable": "AESLIFE",
+      "label": "Is Life Threatening",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "NY",
+      "comments": "Is Life Threatening - Expected variable. Check AESERL for life-threatening indicator"
     },
     {
       "sdtm_variable": "AESDISAB",
@@ -432,7 +355,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Persist or significant disability/incapacity (derive from serious event criteria)"
+      "comments": "Persist or Signif Disability/Incapacity - Expected variable. Check AESERL for disability indicator"
     },
     {
       "sdtm_variable": "AESCONG",
@@ -443,7 +366,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Congenital anomaly or birth defect (derive from serious event criteria)"
+      "comments": "Congenital Anomaly or Birth Defect - Expected variable. Check AESERL for congenital anomaly indicator"
     },
     {
       "sdtm_variable": "AESMIE",
@@ -454,7 +377,18 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Expected variable. Other medically important serious event (derive from serious event criteria)"
+      "comments": "Other Medically Important Serious Event - Expected variable. Check AESERL for other medically important criteria"
+    },
+    {
+      "sdtm_variable": "AECONTRT",
+      "label": "Concomitant or Additional Trtmnt Given",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AETRT",
+      "transformation": "Map Y/N to controlled terminology",
+      "transformation_type": "MAP",
+      "controlled_terminology": "NY",
+      "comments": "Concomitant or Additional Trtmnt Given - Permissible variable. AETRT indicates if treatment was given (Y/N)"
     },
     {
       "sdtm_variable": "VISIT",
@@ -462,120 +396,65 @@
       "type": "Char",
       "core": "Perm",
       "source_column": "VISIT",
-      "transformation": "COPY(VISIT)",
+      "transformation": "Use as-is",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "SDTM Timing variable. Visit name (can be used for supplemental context, not part of core AE domain)"
+      "comments": "Visit Name - SDTM Timing variable. Links AE to visit structure if applicable"
     },
     {
-      "sdtm_variable": "AESEQ",
-      "label": "Sequence Number",
+      "sdtm_variable": "AESTDY",
+      "label": "Study Day of Start of Adverse Event",
       "type": "Num",
-      "core": "Req",
-      "source_column": "REPEATSN",
-      "transformation": "Use as alternative or validation for sequence number if AESEQ is not reliable",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "May represent repeat or sequence information from EDC"
-    },
-    {
-      "sdtm_variable": "AEPRESP",
-      "label": "Pre-Specified Adverse Event",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AEANYL",
-      "transformation": "Map to Y/N",
-      "transformation_type": "MAP",
-      "controlled_terminology": "NY",
-      "comments": "Permissible variable. Pre-specified adverse event of special interest (if AEANYL indicates analysis flag)"
-    },
-    {
-      "sdtm_variable": "AEMODIFY",
-      "label": "Modified Reported Term",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "QUALIFYV",
-      "transformation": "COPY(QUALIFYV)",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Permissible variable. Modified reported term (if source contains modified or qualified term)"
-    },
-    {
-      "sdtm_variable": "SUPPAE.QVAL",
-      "label": "SUPPAE.QVAL",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AEQS1",
-      "transformation": "Create SUPPAE record with QNAM='AEQS1'",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Supplemental qualifier - appears to be study-specific question. Map to SUPPAE domain"
-    },
-    {
-      "sdtm_variable": "SUPPAE.QVAL",
-      "label": "SUPPAE.QVAL",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "SUBEVE",
-      "transformation": "Create SUPPAE record with QNAM='SUBEVE'",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Supplemental qualifier - sub-event information. Map to SUPPAE domain"
-    },
-    {
-      "sdtm_variable": "SUPPAE.QVAL",
-      "label": "SUPPAE.QVAL",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "CPEVENT",
-      "transformation": "Create SUPPAE record with QNAM='CPEVENT' if needed for traceability",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Supplemental qualifier - case report page event type. Map to SUPPAE if needed"
-    },
-    {
-      "sdtm_variable": "SUPPAE.QVAL",
-      "label": "SUPPAE.QVAL",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "PT",
-      "transformation": "Create SUPPAE record with QNAM='PT' if represents additional preferred term version",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "May represent preferred term version or alternative coding. Sample shows '1-Jan' which may be version date"
-    },
-    {
-      "sdtm_variable": "SUPPAE.QVAL",
-      "label": "SUPPAE.QVAL",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "AECOD",
-      "transformation": "Create SUPPAE record with QNAM='AECOD' if represents alternative coding system",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Alternative or legacy coding field - contains terms similar to AEVERB. Map to SUPPAE if needed for traceability"
-    },
-    {
-      "sdtm_variable": "AEOCCUR",
-      "label": "Adverse Event Occurrence",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "",
-      "transformation": null,
-      "transformation_type": "DERIVE",
-      "controlled_terminology": "NY",
-      "comments": "Permissible variable. Adverse Event Occurrence flag - always Y in AE domain"
-    },
-    {
-      "sdtm_variable": "EPOCH",
-      "label": "Epoch",
-      "type": "Char",
       "core": "Perm",
       "source_column": "",
       "transformation": null,
       "transformation_type": "DATE_FORMAT",
-      "controlled_terminology": "EPOCH",
-      "comments": "SDTM Timing variable. Trial epoch during which AE occurred"
+      "controlled_terminology": null,
+      "comments": "Study Day of Start of Adverse Event - Permissible variable. Requires reference start date from DM domain"
+    },
+    {
+      "sdtm_variable": "AEENDY",
+      "label": "Study Day of End of Adverse Event",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Study Day of End of Adverse Event - Permissible variable. Requires reference start date from DM domain"
+    },
+    {
+      "sdtm_variable": "AERELNST",
+      "label": "Relationship to Non-Study Treatment",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "AERELL",
+      "transformation": "Map to AEREL codelist for non-study treatment relationship",
+      "transformation_type": "MAP",
+      "controlled_terminology": "AEREL",
+      "comments": "Causality for Non-Study Treatment - Permissible variable. AERELL may represent relationship to non-study treatment if study tracks this separately"
+    },
+    {
+      "sdtm_variable": "AEREPNUM",
+      "label": "AEREPNUM",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "REPEATSN",
+      "transformation": "Convert to numeric",
+      "transformation_type": "COPY",
+      "controlled_terminology": null,
+      "comments": "Repeat Number - Permissible variable. REPEATSN may indicate repeat occurrence number for recurring events"
+    },
+    {
+      "sdtm_variable": "AESUBEV",
+      "label": "AESUBEV",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "SUBEVE",
+      "transformation": "Use as-is",
+      "transformation_type": "COPY",
+      "controlled_terminology": null,
+      "comments": "Sub-Event - Permissible variable. SUBEVE may indicate this is a sub-event of a parent event"
     }
   ],
   "derivation_rules": {
@@ -585,20 +464,27 @@
     "AESTDY": "AESTDTC - RFSTDTC + 1 (if AESTDTC >= RFSTDTC) else AESTDTC - RFSTDTC",
     "AEENDY": "AEENDTC - RFSTDTC + 1 (if AEENDTC >= RFSTDTC) else AEENDTC - RFSTDTC",
     "STUDYID": "Use value from STUDY column",
-    "AESOC": "Same as AEBODSYS",
-    "AEREL": "Use AERELL as primary source if AEREL is not populated or for validation",
-    "AEOUT": "Use AEOUTCL as primary source, map to standard terminology",
-    "AEDTC": "Set equal to AESTDTC",
-    "AEDY": "Set equal to AESTDY",
-    "AETERM": "Use as supplemental source if AEVERB is empty",
-    "AESDTH": "Derive from AESER and seriousness criteria: if death occurred, set to Y, else N",
-    "AESHOSP": "Derive from AESER and seriousness criteria: if hospitalization occurred, set to Y, else N",
-    "AESDISAB": "Derive from AESER and seriousness criteria: if disability occurred, set to Y, else N",
-    "AESCONG": "Derive from AESER and seriousness criteria: if congenital anomaly, set to Y, else N",
-    "AESMIE": "Derive from AESER and seriousness criteria: if other medically important event, set to Y, else N",
-    "SUPPAE.QVAL": "Create SUPPAE record with QNAM='AEQS1'",
-    "AEOCCUR": "Set to 'Y' for all records (since these are adverse events that occurred)",
-    "EPOCH": "Derive from visit date/treatment dates: map to TREATMENT, FOLLOW-UP, etc. based on timing"
+    "AESEV": "Apply BR-AE-003: Map 1/MILD -> MILD, 2/MODERATE -> MODERATE, 3/SEVERE -> SEVERE",
+    "AEREL": "Use AEREL if present, otherwise use AERELL as fallback",
+    "AEOUT": "Use AEOUTC if present, otherwise use AEOUTCL",
+    "AESTDTC": "Convert AESTDT from numeric YYYYMMDD or YYYYMM format to ISO 8601 (YYYY-MM-DD or YYYY-MM). Handle partial dates: 200812 -> 2008-12, 20080910 -> 2008-09-10",
+    "AEENDTC": "Convert AEENDT from numeric YYYYMMDD or YYYYMM format to ISO 8601 (YYYY-MM-DD or YYYY-MM). Handle partial dates and nulls (148 null values present)",
+    "AESPID": "Convert numeric PrimaryKEY to character string",
+    "AEMODIFY": "Populate only if AEVERB differs from AECOD, indicating modified term",
+    "AESOCCD": "Convert AESCC to numeric MedDRA SOC code",
+    "AEHLGTCD": "Convert AEHGC to numeric MedDRA HLGT code",
+    "AEHLTCD": "Convert AEHTC to numeric MedDRA HLT code",
+    "AELLTCD": "Convert AELTC to numeric MedDRA LLT code",
+    "AEPTCD": "Convert AEPTC to numeric MedDRA PT code",
+    "AEACNOTH": "Populate when action taken is 'OTHER' with description from AEACTL",
+    "AEPATT": "Analyze multiple records per subject to identify patterns (INTERMITTENT, CONTINUOUS, SINGLE EVENT)",
+    "AESDTH": "Derive from AESER='Y' and AEOUT='FATAL' or AESERL serious criteria",
+    "AESHOSP": "Derive from AESERL serious criteria for hospitalization",
+    "AESLIFE": "Derive from AESERL serious criteria for life-threatening",
+    "AESDISAB": "Derive from AESERL serious criteria for disability",
+    "AESCONG": "Derive from AESERL serious criteria for congenital anomaly",
+    "AESMIE": "Derive from AESERL serious criteria for medically important event",
+    "AERELNST": "Use AERELL if tracking relationship to non-study treatment separately"
   },
   "controlled_terminologies": {
     "AESER": [
@@ -627,7 +513,8 @@
       "UNKNOWN"
     ],
     "AEACN": "MILD, MODERATE, SEVERE",
-    "AEACNOTH": "MILD, MODERATE, SEVERE"
+    "AEACNOTH": "MILD, MODERATE, SEVERE",
+    "AERELNST": "MILD, MODERATE, SEVERE"
   },
   "data_quality_rules": []
 }

@@ -462,7 +462,7 @@ def create_agent():
         raise ValueError("ANTHROPIC_API_KEY environment variable not set")
 
     # Initialize the LLM with environment variables
-    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250514")
+    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
     temperature = float(os.getenv("ANTHROPIC_TEMPERATURE", "0"))
     max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
 
@@ -520,7 +520,10 @@ def create_agent():
 
         # Always use our consolidated system prompt (includes all 16 skills)
         # Append learned context if available
-        system_content = FULL_SYSTEM_PROMPT + adaptive_context
+        # Include current date so the LLM knows the real-world date
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")
+        system_content = f"Today's date is {current_date}.\n\n" + FULL_SYSTEM_PROMPT + adaptive_context
         messages = [SystemMessage(content=system_content)] + non_system_messages
 
         response = llm_with_tools.invoke(messages)
