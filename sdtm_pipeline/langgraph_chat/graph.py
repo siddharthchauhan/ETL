@@ -470,7 +470,9 @@ def create_agent():
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
-        api_key=api_key
+        api_key=api_key,
+        timeout=7200,
+        max_retries=3,
     )
 
     # Bind tools to the LLM

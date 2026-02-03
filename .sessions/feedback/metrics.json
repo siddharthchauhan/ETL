@@ -1,8 +1,8 @@
 {
   "total_interactions": 9,
-  "total_feedback_events": 28,
-  "positive_rate": 0.25,
-  "negative_rate": 0.14285714285714285,
+  "total_feedback_events": 29,
+  "positive_rate": 0.2413793103448276,
+  "negative_rate": 0.13793103448275862,
   "copy_rate": 0.4444444444444444,
   "regeneration_rate": 0.4444444444444444,
   "pipeline_success_rate": 0.0,
@@ -14,8 +14,8 @@
   "signal_counts": {
     "thumbs_up": 3,
     "response_regenerated": 4,
-    "dwell_time": 17,
+    "dwell_time": 18,
     "response_copied": 4
   },
-  "computed_at": "2026-02-01T06:20:16.121613Z"
+  "computed_at": "2026-02-02T13:39:51.838984Z"
 }

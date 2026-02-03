@@ -1,0 +1,474 @@
+AE_Domain_Transformation
+========================
+Generated: February 02, 2026
+
+/******************************************************************************
+* Program:      sdtm_ae_transformation.sas
+* Purpose:      Transform raw EDC adverse events data to SDTM AE domain
+* Study:        [STUDY_ID]
+* Domain:       AE - Adverse Events
+* Version:      1.0
+* Created:      2024-01-28
+* Programmer:   Agentic SDTM Pipeline Manager
+* 
+* Description:  Transforms source adverse events data to CDISC SDTM AE domain
+*               following SDTM-IG v3.4 specifications
+*
+* Input:        raw.adverse_events (source EDC data)
+*               sdtm.dm (for RFSTDTC reference dates)
+* Output:       sdtm.ae (SDTM Adverse Events domain)
+*
+* Modifications:
+* Date       Programmer    Description
+* ---------- ------------- --------------------------------------------------
+* 2024-01-28 Auto          Initial program generation
+******************************************************************************/
+
+*--- MACRO VARIABLES ---------------------------------------------------------*;
+%let study_id = STUDYID001;  /* Replace with actual study ID */
+%let data_path = /path/to/data;  /* Replace with actual data path */
+
+*--- LIBNAME ASSIGNMENTS -----------------------------------------------------*;
+libname raw "&data_path/raw" access=readonly;
+libname sdtm "&data_path/sdtm";
+libname work temp;
+
+*--- FORMAT DEFINITIONS ------------------------------------------------------*;
+proc format;
+    * Severity mapping;
+    value $aesev_fmt
+        'MILD', 'GRADE 1', '1'           = 'MILD'
+        'MODERATE', 'GRADE 2', '2'       = 'MODERATE'
+        'SEVERE', 'GRADE 3', '3'         = 'SEVERE'
+        'LIFE-THREATENING', 'GRADE 4', '4' = 'SEVERE'
+        'DEATH', 'GRADE 5', '5'          = 'SEVERE'
+        other                            = 'UNKNOWN';
+    
+    * Serious event flag;
+    value $aeser_fmt
+        'Y', 'YES', '1', 'TRUE'  = 'Y'
+        'N', 'NO', '0', 'FALSE'  = 'N'
+        other                    = '';
+    
+    * Outcome mapping;
+    value $out_fmt
+        'FATAL'                                    = 'FATAL'
+        'NOT RECOVERED', 'NOT RESOLVED'            = 'NOT RECOVERED/NOT RESOLVED'
+        'RECOVERED', 'RESOLVED'                    = 'RECOVERED/RESOLVED'
+        'RECOVERED WITH SEQUELAE', 'RESOLVED WITH SEQUELAE' = 'RECOVERED/RESOLVED WITH SEQUELAE'
+        'RECOVERING', 'RESOLVING'                  = 'RECOVERING/RESOLVING'
+        'UNKNOWN'                                  = 'UNKNOWN'
+        other                                      = 'UNKNOWN';
+    
+    * Action taken with study treatment;
+    value $aeacn_fmt
+        'DOSE INCREASED'         = 'DOSE INCREASED'
+        'DOSE NOT CHANGED'       = 'DOSE NOT CHANGED'
+        'DOSE REDUCED'           = 'DOSE REDUCED'
+        'DOSE RATE REDUCED'      = 'DOSE RATE REDUCED'
+        'DRUG INTERRUPTED'       = 'DRUG INTERRUPTED'
+        'DRUG WITHDRAWN'         = 'DRUG WITHDRAWN'
+        'NOT APPLICABLE'         = 'NOT APPLICABLE'
+        'UNKNOWN'                = 'UNKNOWN'
+        other                    = 'UNKNOWN';
+    
+    * Causality assessment;
+    value $aerel_fmt
+        'NOT RELATED'            = 'NOT RELATED'
+        'UNLIKELY'               = 'UNLIKELY RELATED'
+        'POSSIBLY'               = 'POSSIBLY RELATED'
+        'PROBABLY'               = 'PROBABLY RELATED'
+        'DEFINITELY', 'RELATED'  = 'RELATED'
+        other                    = 'UNKNOWN';
+    
+    * Yes/No mapping for SAE criteria flags;
+    value $yn_fmt
+        'Y', 'YES', '1', 'TRUE'  = 'Y'
+        'N', 'NO', '0', 'FALSE'  = 'N'
+        other                    = '';
+run;
+
+*--- MACRO: ISO 8601 DATE CONVERSION -----------------------------------------*;
+%macro iso8601_date(datevar);
+    %if &datevar ne %then %do;
+        if not missing(&datevar) then 
+            &datevar._dtc = put(&datevar, is8601da.);
+        else 
+            &datevar._dtc = '';
+    %end;
+%mend iso8601_date;
+
+*--- MACRO: CALCULATE STUDY DAY ----------------------------------------------*;
+%macro calc_study_day(dtc_var, dy_var, rfstdtc);
+    /* Calculate study day relative to reference start date */
+    if not missing(&dtc_var) and not missing(&rfstdtc) then do;
+        _days_diff = intck('day', input(&rfstdtc, yymmdd10.), input(&dtc_var, yymmdd10.));
+        if _days_diff >= 0 then 
+            &dy_var = _days_diff + 1;
+        else 
+            &dy_var = _days_diff;
+    end;
+%mend calc_study_day;
+
+*--- STEP 1: READ AND PREPROCESS SOURCE DATA ---------------------------------*;
+data work.ae_source;
+    set raw.adverse_events;
+    
+    * Keep only records with valid subject and AE identifiers;
+    if not missing(subject_id) and not missing(ae_id);
+    
+    * Standardize text fields;
+    ae_term_verbatim = upcase(strip(ae_term_verbatim));
+run;
+
+*--- STEP 2: GET REFERENCE DATES FROM DM DOMAIN -----------------------------*;
+proc sql;
+    create table work.ae_with_rfstdtc as
+    select 
+        a.*,
+        d.RFSTDTC,
+        d.USUBJID as DM_USUBJID
+    from work.ae_source as a
+    left join sdtm.dm as d
+        on a.subject_id = d.SUBJID;
+quit;
+
+*--- STEP 3: TRANSFORM TO SDTM AE DOMAIN ------------------------------------*;
+data work.ae_transform;
+    length 
+        STUDYID   $20
+        DOMAIN    $2
+        USUBJID   $40
+        AESEQ     8
+        AETERM    $200
+        AEMODIFY  $200
+        AEDECOD   $200
+        AELLT     $200
+        AELLTCD   8
+        AEPTCD    8
+        AEHLT     $200
+        AEHLTCD   8
+        AEHLGT    $200
+        AEHLGTCD  8
+        AEBODSYS  $200
+        AESOC     $200
+        AESOCCD   8
+        AESEV     $40
+        AESER     $1
+        AEACN     $40
+        AEREL     $40
+        AEOUT     $40
+        AESCAN    $1
+        AESCONG   $1
+        AESDISAB  $1
+        AESDTH    $1
+        AESHOSP   $1
+        AESLIFE   $1
+        AESMIE    $1
+        AECONTRT  $200
+        AESTDTC   $20
+        AEENDTC   $20
+        AESTDY    8
+        AEENDY    8
+        AEDUR     8
+        AEPRESP   $1
+        AEOCCUR   $1
+        EPOCH     $40
+        AELLT_CD  8
+    ;
+    
+    set work.ae_with_rfstdtc;
+    
+    *--- IDENTIFIER VARIABLES -----------------------------------------------*;
+    * Study Identifier;
+    STUDYID = "&study_id";
+    
+    * Domain abbreviation;
+    DOMAIN = 'AE';
+    
+    * Unique Subject Identifier (from DM);
+    USUBJID = DM_USUBJID;
+    
+    * Sequence Number (will be assigned after sorting);
+    * Left blank for now, will be generated in next step;
+    
+    *--- TOPIC VARIABLES ----------------------------------------------------*;
+    * Reported Term for the Adverse Event (verbatim);
+    AETERM = strip(ae_term_verbatim);
+    
+    * Modified Reported Term (if investigator modified the term);
+    if not missing(ae_term_modified) then 
+        AEMODIFY = strip(upcase(ae_term_modified));
+    
+    * Dictionary-Derived Term (MedDRA Preferred Term);
+    AEDECOD = strip(upcase(preferred_term));
+    if missing(AEDECOD) then AEDECOD = AETERM;  /* Default to verbatim if no coding */
+    
+    *--- MEDDRA HIERARCHY ---------------------------------------------------*;
+    * Lowest Level Term (LLT);
+    AELLT = strip(upcase(meddra_llt));
+    AELLTCD = input(meddra_llt_code, best.);
+    
+    * Preferred Term Code;
+    AEPTCD = input(meddra_pt_code, best.);
+    
+    * High Level Term (HLT);
+    AEHLT = strip(upcase(meddra_hlt));
+    AEHLTCD = input(meddra_hlt_code, best.);
+    
+    * High Level Group Term (HLGT);
+    AEHLGT = strip(upcase(meddra_hlgt));
+    AEHLGTCD = input(meddra_hlgt_code, best.);
+    
+    * Body System or Organ Class (SOC);
+    AEBODSYS = strip(upcase(meddra_soc));
+    AESOC = strip(upcase(meddra_soc));
+    AESOCCD = input(meddra_soc_code, best.);
+    
+    *--- RECORD QUALIFIERS --------------------------------------------------*;
+    * Severity;
+    AESEV = put(upcase(strip(severity)), $aesev_fmt.);
+    
+    * Serious Event Flag;
+    AESER = put(upcase(strip(serious_flag)), $aeser_fmt.);
+    
+    * Action Taken with Study Treatment;
+    AEACN = put(upcase(strip(action_taken)), $aeacn_fmt.);
+    
+    * Relationship to Study Treatment;
+    AEREL = put(upcase(strip(causality)), $aerel_fmt.);
+    
+    * Outcome of Adverse Event;
+    AEOUT = put(upcase(strip(outcome)), $out_fmt.);
+    
+    *--- SERIOUS EVENT CRITERIA FLAGS ---------------------------------------*;
+    * Results in congenital anomaly;
+    AESCONG = put(strip(sae_congenital), $yn_fmt.);
+    
+    * Results in persistent or significant disability;
+    AESDISAB = put(strip(sae_disability), $yn_fmt.);
+    
+    * Results in death;
+    AESDTH = put(strip(sae_death), $yn_fmt.);
+    
+    * Requires or prolongs hospitalization;
+    AESHOSP = put(strip(sae_hospitalization), $yn_fmt.);
+    
+    * Is life threatening;
+    AESLIFE = put(strip(sae_life_threatening), $yn_fmt.);
+    
+    * Other medically important event;
+    AESMIE = put(strip(sae_other_important), $yn_fmt.);
+    
+    *--- CONCOMITANT TREATMENT ----------------------------------------------*;
+    * Concomitant Treatment for AE;
+    if not missing(ae_treatment) then 
+        AECONTRT = strip(upcase(ae_treatment));
+    
+    *--- TIMING VARIABLES ---------------------------------------------------*;
+    * Start Date/Time of Adverse Event;
+    %iso8601_date(ae_start_date);
+    AESTDTC = ae_start_date_dtc;
+    
+    * End Date/Time of Adverse Event;
+    %iso8601_date(ae_end_date);
+    AEENDTC = ae_end_date_dtc;
+    
+    * Study Day of Start;
+    %calc_study_day(AESTDTC, AESTDY, RFSTDTC);
+    
+    * Study Day of End;
+    %calc_study_day(AEENDTC, AEENDY, RFSTDTC);
+    
+    * Duration of Adverse Event (days);
+    if not missing(ae_start_date) and not missing(ae_end_date) then 
+        AEDUR = ae_end_date - ae_start_date + 1;
+    
+    *--- PRE-SPECIFIED FLAGS ------------------------------------------------*;
+    * Pre-Specified Event (from protocol);
+    AEPRESP = put(strip(pre_specified), $yn_fmt.);
+    
+    * Occurrence indicator (for pre-specified events);
+    if AEPRESP = 'Y' then do;
+        if not missing(AETERM) then AEOCCUR = 'Y';
+        else AEOCCUR = 'N';
+    end;
+    
+    *--- EPOCH --------------------------------------------------------------*;
+    * Trial Epoch (SCREENING, TREATMENT, FOLLOW-UP);
+    EPOCH = upcase(strip(study_epoch));
+    if missing(EPOCH) then EPOCH = 'TREATMENT';  /* Default assumption */
+    
+    * Drop temporary variables;
+    drop ae_start_date_dtc ae_end_date_dtc _days_diff;
+run;
+
+*--- STEP 4: SORT AND ASSIGN SEQUENCE NUMBERS -------------------------------*;
+proc sort data=work.ae_transform;
+    by USUBJID AESTDTC AETERM;
+run;
+
+data work.ae_sequenced;
+    set work.ae_transform;
+    by USUBJID;
+    
+    retain AESEQ;
+    
+    if first.USUBJID then AESEQ = 1;
+    else AESEQ + 1;
+run;
+
+*--- STEP 5: QUALITY CHECKS --------------------------------------------------*;
+* Check for missing required variables;
+proc sql;
+    title 'AE Domain - Missing Required Variables Check';
+    select 
+        'STUDYID' as Variable, 
+        sum(missing(STUDYID)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'DOMAIN' as Variable, 
+        sum(missing(DOMAIN)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'USUBJID' as Variable, 
+        sum(missing(USUBJID)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'AESEQ' as Variable, 
+        sum(missing(AESEQ)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'AETERM' as Variable, 
+        sum(missing(AETERM)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'AEDECOD' as Variable, 
+        sum(missing(AEDECOD)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced
+    union all
+    select 
+        'AESTDTC' as Variable, 
+        sum(missing(AESTDTC)) as Missing_Count,
+        count(*) as Total_Records
+    from work.ae_sequenced;
+quit;
+
+* Check for duplicate USUBJID + AESEQ;
+proc sql;
+    title 'AE Domain - Duplicate USUBJID + AESEQ Check';
+    select USUBJID, AESEQ, count(*) as Record_Count
+    from work.ae_sequenced
+    group by USUBJID, AESEQ
+    having count(*) > 1;
+quit;
+
+* Check controlled terminology compliance;
+proc freq data=work.ae_sequenced;
+    tables AESEV AESER AEACN AEREL AEOUT / missing;
+    title 'AE Domain - Controlled Terminology Frequency';
+run;
+
+* Check SAE consistency;
+proc sql;
+    title 'AE Domain - SAE Flag Consistency Check';
+    select AESER, 
+           sum(AESCONG='Y') as Congenital,
+           sum(AESDISAB='Y') as Disability,
+           sum(AESDTH='Y') as Death,
+           sum(AESHOSP='Y') as Hospitalization,
+           sum(AESLIFE='Y') as Life_Threatening,
+           sum(AESMIE='Y') as Other_Important
+    from work.ae_sequenced
+    group by AESER;
+quit;
+
+*--- STEP 6: VARIABLE ORDERING AND FINAL DATASET ----------------------------*;
+data sdtm.ae;
+    retain 
+        STUDYID DOMAIN USUBJID AESEQ
+        AETERM AEMODIFY AEDECOD
+        AELLT AELLTCD AEPTCD
+        AEHLT AEHLTCD AEHLGT AEHLGTCD
+        AEBODSYS AESOC AESOCCD
+        AESEV AESER
+        AEACN AEREL AEOUT
+        AESCAN AESCONG AESDISAB AESDTH AESHOSP AESLIFE AESMIE
+        AECONTRT
+        AESTDTC AEENDTC AESTDY AEENDY AEDUR
+        AEPRESP AEOCCUR
+        EPOCH;
+    set work.ae_sequenced;
+run;
+
+*--- STEP 7: EXPORT TO XPT FORMAT FOR SUBMISSION ----------------------------*;
+libname xptout xport "&data_path/xpt/ae.xpt";
+data xptout.ae;
+    set sdtm.ae;
+run;
+libname xptout clear;
+
+*--- STEP 8: GENERATE SUMMARY REPORT ----------------------------------------*;
+proc sql;
+    title 'AE Domain - Summary Statistics';
+    select 
+        count(*) as Total_AE_Records,
+        count(distinct USUBJID) as Subjects_with_AEs,
+        count(distinct case when AESER='Y' then USUBJID else . end) as Subjects_with_SAEs,
+        sum(case when AESER='Y' then 1 else 0 end) as Total_SAEs
+    from sdtm.ae;
+quit;
+
+* AE Frequency by System Organ Class;
+proc freq data=sdtm.ae order=freq;
+    tables AEBODSYS / nocum;
+    title 'AE Domain - Frequency by Body System (SOC)';
+run;
+
+* AE by Severity and Seriousness;
+proc freq data=sdtm.ae;
+    tables AESEV * AESER / nopercent nocum;
+    title 'AE Domain - Severity by Seriousness';
+run;
+
+* Most common Preferred Terms;
+proc freq data=sdtm.ae order=freq;
+    tables AEDECOD / nocum out=ae_freq(keep=AEDECOD COUNT PERCENT);
+    title 'AE Domain - Top Preferred Terms';
+    where AEDECOD ne '';
+run;
+
+proc print data=ae_freq(obs=20);
+    title 'AE Domain - Top 20 Most Frequent Adverse Events';
+run;
+
+* SAE Criteria Distribution;
+proc freq data=sdtm.ae;
+    tables AESCONG AESDISAB AESDTH AESHOSP AESLIFE AESMIE / nocum;
+    title 'AE Domain - SAE Criteria Flags';
+    where AESER = 'Y';
+run;
+
+* Relationship to Study Treatment;
+proc freq data=sdtm.ae;
+    tables AEREL * AESER / nopercent nocum;
+    title 'AE Domain - Causality by Seriousness';
+run;
+
+*--- STEP 9: CLEANUP ---------------------------------------------------------*;
+proc datasets library=work nolist;
+    delete ae_source ae_with_rfstdtc ae_transform ae_sequenced ae_freq;
+quit;
+
+*--- END OF PROGRAM ----------------------------------------------------------*;

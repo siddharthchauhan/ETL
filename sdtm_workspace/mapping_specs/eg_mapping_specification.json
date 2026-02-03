@@ -1,0 +1,337 @@
+{
+  "metadata": {
+    "study_id": "MAXIS-08",
+    "source_domain": "ECG.csv",
+    "target_domain": "EG",
+    "sdtm_version": "SDTM-IG 3.4",
+    "created_by": "SDTM Mapping Generator",
+    "created_date": "2026-02-02T09:33:23.546291",
+    "description": "Mapping specification for EG domain transformation"
+  },
+  "source_files": [
+    {
+      "filename": "ECG.csv",
+      "records": 60,
+      "columns": 11
+    }
+  ],
+  "variable_mappings": [
+    {
+      "sdtm_variable": "STUDYID",
+      "label": "STUDYID",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Study identifier from STUDY column - Required variable"
+    },
+    {
+      "sdtm_variable": "DOMAIN",
+      "label": "DOMAIN",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Domain code for ECG - Required variable, always 'EG'"
+    },
+    {
+      "sdtm_variable": "SUBJID",
+      "label": "SUBJID",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "PT",
+      "transformation": "PT",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Subject identifier from PT column - Required variable"
+    },
+    {
+      "sdtm_variable": "USUBJID",
+      "label": "USUBJID",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "CONCAT",
+      "controlled_terminology": null,
+      "comments": "Unique subject identifier - Required variable. Concatenate study, site, and subject ID"
+    },
+    {
+      "sdtm_variable": "EGSEQ",
+      "label": "EGSEQ",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "SEQUENCE",
+      "controlled_terminology": null,
+      "comments": "Sequence number for ECG records per subject - Required variable, ordered by date and test code"
+    },
+    {
+      "sdtm_variable": "EGCAT",
+      "label": "EGCAT",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "DCMNAME",
+      "transformation": "COPY(DCMNAME)",
+      "transformation_type": "COPY",
+      "controlled_terminology": null,
+      "comments": "Category for ECG - maps from DCMNAME (value: 'ECG')"
+    },
+    {
+      "sdtm_variable": "EGTEST",
+      "label": "EGTEST",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGFDG",
+      "transformation": "Extract interpretation descriptor",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "ECG test name - Expected variable. Set to 'ECG Interpretation' when overall finding exists"
+    },
+    {
+      "sdtm_variable": "EGTESTCD",
+      "label": "EGTESTCD",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "ECGFDG",
+      "transformation": "Standardize test code",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "EGTESTCD",
+      "comments": "ECG test code - Expected variable. Use 'INTP' for interpretation findings"
+    },
+    {
+      "sdtm_variable": "EGORRES",
+      "label": "EGORRES",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGFDG",
+      "transformation": "Parse original result",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Original ECG result as collected - Expected variable. Contains values like 'NORMAL', 'ABNORMAL; NCS'"
+    },
+    {
+      "sdtm_variable": "EGSTRESC",
+      "label": "EGSTRESC",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGFDG",
+      "transformation": "Standardize result in standard format",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "EGSTRESC",
+      "comments": "Standardized ECG result - Expected variable. Extract primary finding (NORMAL/ABNORMAL)"
+    },
+    {
+      "sdtm_variable": "EGSTAT",
+      "label": "EGSTAT",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGANY",
+      "transformation": "Map Y/N to NOT DONE status",
+      "transformation_type": "MAP",
+      "controlled_terminology": "EGSTAT",
+      "comments": "Completion status - Expected variable. Set to 'NOT DONE' when ECGANY = 'N'"
+    },
+    {
+      "sdtm_variable": "EGREASND",
+      "label": "EGREASND",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGANY",
+      "transformation": "Derive reason for not done",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Reason ECG not done - Expected variable when EGSTAT = 'NOT DONE'"
+    },
+    {
+      "sdtm_variable": "EGCLSIG",
+      "label": "EGCLSIG",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGFDG",
+      "transformation": "Map finding to clinical significance",
+      "transformation_type": "MAP",
+      "controlled_terminology": "EGCLSIG",
+      "comments": "Clinical significance - Permissible variable. Extract from ECGFDG notation (NCS = Not Clinically Significant)"
+    },
+    {
+      "sdtm_variable": "VISIT",
+      "label": "VISIT",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "CPEVENT",
+      "transformation": "CPEVENT",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Visit name - Expected variable. Maps from CPEVENT (e.g., 'BASELINE', 'END OF CYCLE 1')"
+    },
+    {
+      "sdtm_variable": "VISITNUM",
+      "label": "VISITNUM",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "VISIT",
+      "transformation": "Convert to numeric visit number",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Visit number - Expected variable. Numeric visit identifier from source VISIT column"
+    },
+    {
+      "sdtm_variable": "EGDTC",
+      "label": "EGDTC",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "ECGDT",
+      "transformation": "Convert YYYYMMDD numeric to ISO 8601 format (YYYY-MM-DD)",
+      "transformation_type": "DATE_FORMAT",
+      "controlled_terminology": null,
+      "comments": "Date/time of ECG collection in ISO 8601 format - Expected variable. Convert from numeric YYYYMMDD (e.g., 20080903.0 to '2008-09-03')"
+    },
+    {
+      "sdtm_variable": "EGDY",
+      "label": "EGDY",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "ECGDT",
+      "transformation": "Calculate study day",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Study day of ECG collection relative to reference start date - Expected variable. Requires RFSTDTC from DM domain"
+    },
+    {
+      "sdtm_variable": "SITEID",
+      "label": "SITEID",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "INVSITE",
+      "transformation": "Extract site identifier",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Study site identifier - may be used in USUBJID derivation. Source shows format 'C008_408'"
+    },
+    {
+      "sdtm_variable": "EGNAM",
+      "label": "EGNAM",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "ECG vendor/laboratory name - Permissible variable. Not present in source, may be populated from external data"
+    },
+    {
+      "sdtm_variable": "EGMETHOD",
+      "label": "EGMETHOD",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "EGMETHOD",
+      "comments": "Method of ECG test - Permissible variable. Not present in source, may be populated from metadata or external data"
+    },
+    {
+      "sdtm_variable": "EGLOC",
+      "label": "EGLOC",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Location of ECG - Permissible variable. Not present in source"
+    },
+    {
+      "sdtm_variable": "EGEVAL",
+      "label": "EGEVAL",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "EGEVAL",
+      "comments": "Evaluator - Permissible variable. Identifies who evaluated the ECG. Not present in source"
+    },
+    {
+      "sdtm_variable": "EPOCH",
+      "label": "EPOCH",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "EPOCH",
+      "comments": "Epoch - Permissible variable. Trial epoch derived from visit/event timing"
+    },
+    {
+      "sdtm_variable": "EGREPNUM",
+      "label": "EGREPNUM",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "REPEATSN",
+      "transformation": "REPEATSN",
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Repetition number - Permissible variable. Indicates repeat measurement number within timepoint"
+    },
+    {
+      "sdtm_variable": "EGSEV",
+      "label": "EGSEV",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "SUBEVE",
+      "transformation": "Map sub-event to severity if applicable",
+      "transformation_type": "MAP",
+      "controlled_terminology": null,
+      "comments": "Severity/grade - Permissible variable. Only if SUBEVE represents severity; current data shows all zeros"
+    },
+    {
+      "sdtm_variable": "EGBLFL",
+      "label": "EGBLFL",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Baseline flag - Expected variable. Flag baseline ECG measurement per test code"
+    }
+  ],
+  "derivation_rules": {
+    "EGSEQ": "ROW_NUMBER() OVER (PARTITION BY USUBJID ORDER BY EGDTC)",
+    "USUBJID": "STUDYID || '-' || SITEID || '-' || SUBJID",
+    "DOMAIN": "'EG'",
+    "STUDYID": "STUDY",
+    "SUBJID": "PT",
+    "EGTEST": "IF ECGFDG IS NOT NULL THEN 'ECG Interpretation' ELSE NULL",
+    "EGTESTCD": "IF ECGFDG IS NOT NULL THEN 'INTP' ELSE NULL",
+    "EGORRES": "ECGFDG",
+    "EGSTRESC": "Parse and standardize ECGFDG (e.g., extract 'NORMAL' or 'ABNORMAL')",
+    "EGSTAT": "IF ECGANY = 'N' THEN 'NOT DONE' ELSE NULL",
+    "EGREASND": "IF ECGANY = 'N' THEN 'NOT PERFORMED' ELSE NULL",
+    "EGCLSIG": "IF ECGFDG LIKE '%NCS%' THEN 'NOT CLINICALLY SIGNIFICANT' ELSE IF ECGFDG LIKE '%ABNORMAL%' THEN 'CLINICALLY SIGNIFICANT' ELSE NULL",
+    "VISIT": "CPEVENT",
+    "VISITNUM": "VISIT",
+    "EGDTC": "IF ECGDT IS NOT NULL THEN TO_CHAR(TO_DATE(ECGDT, 'YYYYMMDD'), 'YYYY-MM-DD') ELSE NULL",
+    "EGDY": "IF EGDTC IS NOT NULL AND RFSTDTC IS NOT NULL THEN (EGDTC - RFSTDTC) + (1 IF EGDTC >= RFSTDTC ELSE 0)",
+    "SITEID": "INVSITE or extract site portion from INVSITE",
+    "EGNAM": "Name of ECG vendor/lab if available",
+    "EGMETHOD": "Method of ECG collection if available (e.g., '12 LEAD STANDARD ECG')",
+    "EGLOC": "Location on body where ECG was performed if available",
+    "EGEVAL": "Evaluator of ECG (e.g., 'INVESTIGATOR', 'ADJUDICATION COMMITTEE') if available",
+    "EPOCH": "Map CPEVENT to epoch (e.g., 'BASELINE' -> 'SCREENING', 'END OF CYCLE 1' -> 'TREATMENT', 'OFF-STUDY' -> 'FOLLOW-UP')",
+    "EGREPNUM": "REPEATSN",
+    "EGSEV": "SUBEVE (if represents severity scale)",
+    "EGBLFL": "IF CPEVENT = 'BASELINE' AND EGSTAT IS NULL THEN 'Y' ELSE NULL"
+  },
+  "controlled_terminologies": {
+    "EGLOC": "STANDING, SITTING, SUPINE, PRONE"
+  },
+  "data_quality_rules": []
+}

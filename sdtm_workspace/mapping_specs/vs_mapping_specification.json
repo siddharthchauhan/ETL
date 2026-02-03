@@ -5,7 +5,7 @@
     "target_domain": "VS",
     "sdtm_version": "SDTM-IG 3.4",
     "created_by": "SDTM Mapping Generator",
-    "created_date": "2026-01-27T16:24:15.914971",
+    "created_date": "2026-02-02T09:39:47.499216",
     "description": "Mapping specification for VS domain transformation"
   },
   "source_files": [
@@ -22,10 +22,10 @@
       "type": "Char",
       "core": "Req",
       "source_column": "STUDY",
-      "transformation": "Direct map",
+      "transformation": "Direct mapping",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "Study identifier from source STUDY column"
+      "comments": "Study identifier from source STUDY field (MAXIS-08)"
     },
     {
       "sdtm_variable": "DOMAIN",
@@ -36,7 +36,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Required domain code for Vital Signs"
+      "comments": "Required domain abbreviation for Vital Signs"
     },
     {
       "sdtm_variable": "USUBJID",
@@ -44,7 +44,7 @@
       "type": "Char",
       "core": "Req",
       "source_column": "PT",
-      "transformation": "Concatenate STUDY, INVSITE, and PT with hyphens",
+      "transformation": "Concatenate STUDY, INVSITE, and PT",
       "transformation_type": "CONCAT",
       "controlled_terminology": null,
       "comments": "Unique subject identifier constructed from study, site, and patient number"
@@ -66,10 +66,10 @@
       "type": "Num",
       "core": "Req",
       "source_column": "VTBPS2",
-      "transformation": "Map to 'SYSBP' when VTBPS2 is present",
+      "transformation": "Map to 'SYSBP' when VTBPS2 is not null",
       "transformation_type": "MAP",
       "controlled_terminology": "VSTESTCD",
-      "comments": "Test code derived based on which vital sign measurement is present. Creates multiple records per observation."
+      "comments": "Test short name mapped from source vital signs measurements. Multiple records per subject per timepoint for each vital sign type"
     },
     {
       "sdtm_variable": "VSTEST",
@@ -77,7 +77,7 @@
       "type": "Char",
       "core": "Req",
       "source_column": "VTBPS2",
-      "transformation": "Map to 'Systolic Blood Pressure' when VTBPS2 is present",
+      "transformation": "Map to 'Systolic Blood Pressure' when VTBPS2 is not null",
       "transformation_type": "MAP",
       "controlled_terminology": "VSTEST",
       "comments": "Test name corresponding to VSTESTCD"
@@ -87,11 +87,11 @@
       "label": "Result or Finding in Original Units",
       "type": "Char",
       "core": "Exp",
-      "source_column": "VTBPS2",
-      "transformation": "Convert numeric values to character",
+      "source_column": "VTBPS2, VTBPD2, VTTP2, VTRRT2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation": "Convert numeric to character",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Result in original units from source vital signs measurements"
+      "comments": "Original result value as collected in source, converted to character"
     },
     {
       "sdtm_variable": "VSORRESU",
@@ -100,31 +100,31 @@
       "core": "Exp",
       "source_column": "",
       "transformation": null,
-      "transformation_type": "ASSIGN",
+      "transformation_type": "MAP",
       "controlled_terminology": "UNIT",
-      "comments": "Original units assigned based on vital signs type and apparent units from source values"
+      "comments": "Original units for vital signs measurements based on test type"
     },
     {
       "sdtm_variable": "VSSTRESC",
       "label": "Character Result/Finding in Std Format",
       "type": "Char",
       "core": "Exp",
-      "source_column": "VTBPS2",
-      "transformation": "Same as VSORRES for numeric results",
+      "source_column": "VTBPS2, VTBPD2, VTTP2, VTRRT2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation": "Convert numeric to character, same as VSORRES",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Character result in standard format, same as original result"
+      "comments": "Standardized character result, same as VSORRES for numeric vital signs"
     },
     {
       "sdtm_variable": "VSSTRESN",
       "label": "Numeric Result/Finding in Standard Units",
       "type": "Num",
       "core": "Exp",
-      "source_column": "VTBPS2",
-      "transformation": "Convert measurements to standard units",
+      "source_column": "VTBPS2, VTBPD2, VTTP2, VTRRT2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation": "Direct numeric mapping",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Numeric result in standard units. Convert height in meters to cm."
+      "comments": "Numeric result value for vital signs"
     },
     {
       "sdtm_variable": "VSSTRESU",
@@ -133,31 +133,20 @@
       "core": "Exp",
       "source_column": "",
       "transformation": null,
-      "transformation_type": "DERIVE",
+      "transformation_type": "MAP",
       "controlled_terminology": "UNIT",
-      "comments": "Standard units - height standardized to cm"
+      "comments": "Standard units same as original units for vital signs"
     },
     {
-      "sdtm_variable": "VSDTC",
-      "label": "Date/Time of Measurements",
+      "sdtm_variable": "VSBLFL",
+      "label": "Baseline Flag",
       "type": "Char",
       "core": "Exp",
-      "source_column": "VTDT",
-      "transformation": "Convert YYYYMMDD numeric format to ISO 8601 YYYY-MM-DD",
-      "transformation_type": "CONCAT",
-      "controlled_terminology": null,
-      "comments": "Date and optional time of vital signs measurement in ISO 8601 format"
-    },
-    {
-      "sdtm_variable": "VSDTC",
-      "label": "Date/Time of Measurements",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "VTTM",
-      "transformation": "Combine date and time into ISO 8601 format",
+      "source_column": "CPEVENT",
+      "transformation": "Set to 'Y' if CPEVENT='BASELINE', else null",
       "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Time component included in VSDTC when available"
+      "controlled_terminology": "NY",
+      "comments": "Baseline flag derived from visit/event name"
     },
     {
       "sdtm_variable": "VISITNUM",
@@ -165,7 +154,7 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "VISIT",
-      "transformation": "Direct map",
+      "transformation": "Direct mapping",
       "transformation_type": "COPY",
       "controlled_terminology": null,
       "comments": "Visit number from source VISIT field"
@@ -176,54 +165,32 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "CPEVENT",
-      "transformation": "Direct map",
+      "transformation": "Direct mapping",
       "transformation_type": "COPY",
       "controlled_terminology": null,
       "comments": "Visit name from CPEVENT (e.g., BASELINE, CYCLE 1 WEEK 1)"
     },
     {
-      "sdtm_variable": "VSTPT",
-      "label": "Planned Time Point Name",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "VTTMP",
-      "transformation": "Map to standardized time point names",
-      "transformation_type": "MAP",
-      "controlled_terminology": null,
-      "comments": "Planned time point name standardized from source VTTMP field"
-    },
-    {
-      "sdtm_variable": "VSTPTNUM",
-      "label": "Planned Time Point Number",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "VTTMP",
-      "transformation": "Assign numeric value to time points",
-      "transformation_type": "ASSIGN",
-      "controlled_terminology": null,
-      "comments": "Numeric representation of planned time point for ordering"
-    },
-    {
-      "sdtm_variable": "VSBLFL",
-      "label": "Baseline Flag",
+      "sdtm_variable": "VSDTC",
+      "label": "Date/Time of Measurements",
       "type": "Char",
       "core": "Exp",
-      "source_column": "CPEVENT",
-      "transformation": "Flag baseline records",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": "NY",
-      "comments": "Baseline flag set to Y for baseline visit records"
+      "source_column": "VTDT",
+      "transformation": "Convert YYYYMMDD format to ISO 8601 YYYY-MM-DD",
+      "transformation_type": "CONCAT",
+      "controlled_terminology": null,
+      "comments": "Date of vital signs measurement converted to ISO 8601 format"
     },
     {
-      "sdtm_variable": "VSCAT",
-      "label": "Category for Vital Signs",
+      "sdtm_variable": "VSDTC",
+      "label": "Date/Time of Measurements",
       "type": "Char",
-      "core": "Perm",
-      "source_column": "DCMNAME",
-      "transformation": "Map to category",
-      "transformation_type": "MAP",
+      "core": "Exp",
+      "source_column": "VTTM",
+      "transformation": "Append time to date in ISO 8601 format if available",
+      "transformation_type": "CONCAT",
       "controlled_terminology": null,
-      "comments": "Category for vital signs from source DCMNAME"
+      "comments": "Date/time combined if time is available"
     },
     {
       "sdtm_variable": "VSSTAT",
@@ -234,106 +201,73 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "ND",
-      "comments": "Completion status set to NOT DONE when visit occurred but measurement missing"
+      "comments": "Completion status for vital signs not performed"
     },
     {
-      "sdtm_variable": "SUBJID",
-      "label": "SUBJID",
+      "sdtm_variable": "VSTPT",
+      "label": "Planned Time Point Name",
       "type": "Char",
       "core": "Perm",
-      "source_column": "PT",
-      "transformation": "Direct map",
-      "transformation_type": "COPY",
+      "source_column": "VTTMP",
+      "transformation": "Map timing values",
+      "transformation_type": "MAP",
       "controlled_terminology": null,
-      "comments": "Subject identifier from source PT column (permissible variable, not required)"
+      "comments": "Planned time point name from source timing field"
     },
     {
-      "sdtm_variable": "SITEID",
-      "label": "SITEID",
+      "sdtm_variable": "VSTPTNUM",
+      "label": "Planned Time Point Number",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "VTTMP",
+      "transformation": "Assign numeric value to time points",
+      "transformation_type": "ASSIGN",
+      "controlled_terminology": null,
+      "comments": "Numeric time point corresponding to VSTPT"
+    },
+    {
+      "sdtm_variable": "VSPOS",
+      "label": "Vital Signs Position of Subject",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "POSITION",
+      "comments": "Position of subject during vital signs measurement - not available in source"
+    },
+    {
+      "sdtm_variable": "VSCAT",
+      "label": "Category for Vital Signs",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "DCMNAME",
+      "transformation": "Map to appropriate category",
+      "transformation_type": "MAP",
+      "controlled_terminology": null,
+      "comments": "Category for vital signs from source data collection module name"
+    },
+    {
+      "sdtm_variable": "VSSCAT",
+      "label": "Subcategory for Vital Signs",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "VTTMP",
+      "transformation": "Map timing to subcategory",
+      "transformation_type": "MAP",
+      "controlled_terminology": null,
+      "comments": "Subcategory for vital signs based on timing context"
+    },
+    {
+      "sdtm_variable": "VSLOC",
+      "label": "Location of Vital Signs Measurement",
       "type": "Char",
       "core": "Perm",
       "source_column": "INVSITE",
-      "transformation": "Direct map",
-      "transformation_type": "COPY",
-      "controlled_terminology": null,
-      "comments": "Site identifier from INVSITE (used in USUBJID derivation)"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "VTBPD2",
-      "transformation": "Convert to character - Diastolic BP",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Diastolic blood pressure measurement creates separate VS record"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "VTRRT2",
-      "transformation": "Convert to character - Respiratory Rate",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Respiratory rate measurement creates separate VS record"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "VTTP2",
-      "transformation": "Convert to character - Pulse Rate",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Pulse rate measurement creates separate VS record"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "VTPLS2",
-      "transformation": "Convert to character - Pulse Rate (alternate)",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Alternate pulse rate field creates separate VS record"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "GNNUM1",
-      "transformation": "Convert to character - Weight",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Weight measurement (appears to be in kg based on range 47-92)"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "GNNUM2",
-      "transformation": "Convert to character - Height in cm",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Height measurement in centimeters (range 144.8-185)"
-    },
-    {
-      "sdtm_variable": "VSORRES",
-      "label": "Result or Finding in Original Units",
-      "type": "Char",
-      "core": "Exp",
-      "source_column": "GNNUM3",
-      "transformation": "Convert to character - Height in meters",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Height measurement in meters (range 1.38-2.13) - needs conversion to cm for standardization"
+      "transformation": "Map to location if represents measurement location",
+      "transformation_type": "MAP",
+      "controlled_terminology": "LOC",
+      "comments": "Location of measurement on body - not available in source"
     },
     {
       "sdtm_variable": "VSDY",
@@ -347,26 +281,37 @@
       "comments": "Study day relative to reference start date from DM domain"
     },
     {
+      "sdtm_variable": "EPOCH",
+      "label": "Epoch",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": null,
+      "comments": "Trial epoch derived from visit context"
+    },
+    {
+      "sdtm_variable": "VSDRVFL",
+      "label": "Derived Flag",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "NY",
+      "comments": "Derived flag - BSA is typically calculated from height and weight"
+    },
+    {
       "sdtm_variable": "VSSPID",
       "label": "Sponsor-Defined Identifier",
       "type": "Char",
       "core": "Perm",
       "source_column": "REPEATSN",
       "transformation": "Use as sponsor-defined identifier if needed",
-      "transformation_type": "COPY",
+      "transformation_type": "CONCAT",
       "controlled_terminology": null,
-      "comments": "Repeat sequence number - all values are 1, may be used for record tracking"
-    },
-    {
-      "sdtm_variable": "VSSCAT",
-      "label": "Subcategory for Vital Signs",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "QUALIFYV",
-      "transformation": "Map to subcategory if represents data quality flag",
-      "transformation_type": "MAP",
-      "controlled_terminology": null,
-      "comments": "QUALIFYV appears to represent visit type or data qualification status (values 1-5)"
+      "comments": "Sponsor-defined identifier combining repeat sequence and visit"
     }
   ],
   "derivation_rules": {
@@ -376,19 +321,32 @@
     "VSSTRESC": "VSORRES converted to standard format",
     "VSSTRESN": "Numeric conversion of VSSTRESC where applicable",
     "VSBLFL": "'Y' for baseline records, null otherwise",
-    "VSTESTCD": "CASE WHEN VTBPS2 IS NOT NULL THEN 'SYSBP' WHEN VTBPD2 IS NOT NULL THEN 'DIABP' WHEN VTRRT2 IS NOT NULL THEN 'RESP' WHEN VTTP2 IS NOT NULL THEN 'PULSE' WHEN VTPLS2 IS NOT NULL THEN 'PULSE' WHEN VTTMP IS NOT NULL THEN 'TEMP' WHEN GNNUM1 IS NOT NULL THEN 'WEIGHT' WHEN GNNUM2 IS NOT NULL THEN 'HEIGHT' WHEN GNNUM3 IS NOT NULL THEN 'HEIGHT' END",
-    "VSTEST": "CASE WHEN VTBPS2 IS NOT NULL THEN 'Systolic Blood Pressure' WHEN VTBPD2 IS NOT NULL THEN 'Diastolic Blood Pressure' WHEN VTRRT2 IS NOT NULL THEN 'Respiratory Rate' WHEN VTTP2 IS NOT NULL THEN 'Pulse Rate' WHEN VTPLS2 IS NOT NULL THEN 'Pulse Rate' WHEN VTTMP IS NOT NULL THEN 'Temperature' WHEN GNNUM1 IS NOT NULL THEN 'Weight' WHEN GNNUM2 IS NOT NULL THEN 'Height' WHEN GNNUM3 IS NOT NULL THEN 'Height' END",
-    "VSORRES": "CASE WHEN VTBPS2 IS NOT NULL THEN CHAR(VTBPS2) WHEN VTBPD2 IS NOT NULL THEN CHAR(VTBPD2) WHEN VTRRT2 IS NOT NULL THEN CHAR(VTRRT2) WHEN VTTP2 IS NOT NULL THEN CHAR(VTTP2) WHEN VTPLS2 IS NOT NULL THEN CHAR(VTPLS2) WHEN VTTMP IS NOT NULL THEN VTTMP WHEN GNNUM1 IS NOT NULL THEN CHAR(GNNUM1) WHEN GNNUM2 IS NOT NULL THEN CHAR(GNNUM2) WHEN GNNUM3 IS NOT NULL THEN CHAR(GNNUM3) END",
-    "VSORRESU": "CASE WHEN VSTESTCD IN ('SYSBP','DIABP') THEN 'mmHg' WHEN VSTESTCD = 'RESP' THEN 'breaths/min' WHEN VSTESTCD = 'PULSE' THEN 'beats/min' WHEN VSTESTCD = 'TEMP' THEN 'C' WHEN VSTESTCD = 'WEIGHT' AND GNNUM1 IS NOT NULL THEN 'kg' WHEN VSTESTCD = 'HEIGHT' AND GNNUM2 IS NOT NULL THEN 'cm' WHEN VSTESTCD = 'HEIGHT' AND GNNUM3 IS NOT NULL THEN 'm' END",
-    "VSSTRESU": "CASE WHEN VSTESTCD IN ('SYSBP','DIABP') THEN 'mmHg' WHEN VSTESTCD = 'RESP' THEN 'breaths/min' WHEN VSTESTCD = 'PULSE' THEN 'beats/min' WHEN VSTESTCD = 'TEMP' THEN 'C' WHEN VSTESTCD = 'WEIGHT' THEN 'kg' WHEN VSTESTCD = 'HEIGHT' THEN 'cm' END",
-    "VSDTC": "SUBSTR(CHAR(VTDT),1,4) || '-' || SUBSTR(CHAR(VTDT),5,2) || '-' || SUBSTR(CHAR(VTDT),7,2) || IF(VTTM IS NOT NULL, 'T' || VTTM, '')",
-    "VSTPT": "CASE WHEN VTTMP = 'PRE-INFUSION' THEN 'PRE-DOSE' WHEN VTTMP = 'POST-INFUSION' THEN 'POST-DOSE' WHEN VTTMP = 'DURING INFUSION' THEN 'DURING INFUSION' WHEN VTTMP = 'BASELINE VITAL SIGNS' THEN 'BASELINE' ELSE VTTMP END",
-    "VSTPTNUM": "CASE WHEN VTTMP = 'BASELINE VITAL SIGNS' THEN 0 WHEN VTTMP = 'PRE-INFUSION' THEN 1 WHEN VTTMP = 'DURING INFUSION' THEN 2 WHEN VTTMP = 'POST-INFUSION' THEN 3 END",
-    "VSCAT": "CASE WHEN DCMNAME = 'VITALS' THEN 'VITAL SIGNS' END",
-    "VSSTAT": "CASE WHEN VSORRES IS NULL AND VTDT IS NOT NULL THEN 'NOT DONE' ELSE NULL END",
-    "VSDY": "(VTDT - RFSTDTC) + 1 if VTDT >= RFSTDTC, else (VTDT - RFSTDTC)",
-    "VSSCAT": "CASE WHEN QUALIFYV = 1 THEN 'QUALIFYING' WHEN QUALIFYV IN (2,3,4,5) THEN 'FOLLOW-UP' END"
+    "VSTESTCD": "CASE WHEN VTBPS2 IS NOT NULL THEN 'SYSBP' WHEN VTBPD2 IS NOT NULL THEN 'DIABP' WHEN VTTP2 IS NOT NULL THEN 'PULSE' WHEN VTTMP IS NOT NULL THEN 'TEMP' WHEN VTRRT2 IS NOT NULL THEN 'RESP' WHEN VTPLS2 IS NOT NULL THEN 'PULSE' WHEN GNNUM1 IS NOT NULL THEN 'WEIGHT' WHEN GNNUM2 IS NOT NULL THEN 'HEIGHT' WHEN GNNUM3 IS NOT NULL THEN 'BSA' END",
+    "VSTEST": "CASE WHEN VTBPS2 IS NOT NULL THEN 'Systolic Blood Pressure' WHEN VTBPD2 IS NOT NULL THEN 'Diastolic Blood Pressure' WHEN VTTP2 IS NOT NULL THEN 'Pulse Rate' WHEN VTTMP IS NOT NULL THEN 'Temperature' WHEN VTRRT2 IS NOT NULL THEN 'Respiratory Rate' WHEN VTPLS2 IS NOT NULL THEN 'Pulse Rate' WHEN GNNUM1 IS NOT NULL THEN 'Weight' WHEN GNNUM2 IS NOT NULL THEN 'Height' WHEN GNNUM3 IS NOT NULL THEN 'Body Surface Area' END",
+    "VSORRES": "CASE WHEN VSTESTCD='SYSBP' THEN CHAR(VTBPS2) WHEN VSTESTCD='DIABP' THEN CHAR(VTBPD2) WHEN VSTESTCD='PULSE' THEN COALESCE(CHAR(VTTP2), CHAR(VTPLS2)) WHEN VSTESTCD='RESP' THEN CHAR(VTRRT2) WHEN VSTESTCD='WEIGHT' THEN CHAR(GNNUM1) WHEN VSTESTCD='HEIGHT' THEN CHAR(GNNUM2) WHEN VSTESTCD='BSA' THEN CHAR(GNNUM3) END",
+    "VSORRESU": "CASE WHEN VSTESTCD IN ('SYSBP','DIABP') THEN 'mmHg' WHEN VSTESTCD='PULSE' THEN 'beats/min' WHEN VSTESTCD='RESP' THEN 'breaths/min' WHEN VSTESTCD='WEIGHT' THEN 'kg' WHEN VSTESTCD='HEIGHT' THEN 'cm' WHEN VSTESTCD='BSA' THEN 'm\u00b2' END",
+    "VSSTRESU": "CASE WHEN VSTESTCD IN ('SYSBP','DIABP') THEN 'mmHg' WHEN VSTESTCD='PULSE' THEN 'beats/min' WHEN VSTESTCD='RESP' THEN 'breaths/min' WHEN VSTESTCD='WEIGHT' THEN 'kg' WHEN VSTESTCD='HEIGHT' THEN 'cm' WHEN VSTESTCD='BSA' THEN 'm\u00b2' END",
+    "VSDTC": "SUBSTR(CHAR(VTDT),1,4) || '-' || SUBSTR(CHAR(VTDT),5,2) || '-' || SUBSTR(CHAR(VTDT),7,2)",
+    "VSSTAT": "CASE WHEN VSSTRESN IS NULL THEN 'NOT DONE' ELSE NULL END",
+    "VSTPT": "CASE WHEN VTTMP='PRE-INFUSION' THEN 'PRE-INFUSION' WHEN VTTMP='DURING INFUSION' THEN 'DURING INFUSION' WHEN VTTMP='POST-INFUSION' THEN 'POST-INFUSION' WHEN VTTMP='BASELINE VITAL SIGNS' THEN 'BASELINE' ELSE VTTMP END",
+    "VSTPTNUM": "CASE WHEN VTTMP='BASELINE VITAL SIGNS' THEN 0 WHEN VTTMP='PRE-INFUSION' THEN 1 WHEN VTTMP='DURING INFUSION' THEN 2 WHEN VTTMP='POST-INFUSION' THEN 3 ELSE NULL END",
+    "VSPOS": "NULL (not available in source data, would typically be SITTING, STANDING, SUPINE)",
+    "VSCAT": "CASE WHEN DCMNAME='VITALS' THEN 'VITAL SIGNS' ELSE DCMNAME END",
+    "VSSCAT": "CASE WHEN VTTMP IN ('PRE-INFUSION','DURING INFUSION','POST-INFUSION') THEN 'INFUSION RELATED' WHEN VTTMP='BASELINE VITAL SIGNS' THEN 'BASELINE' ELSE NULL END",
+    "VSLOC": "NULL (INVSITE represents investigator site, not measurement location)",
+    "VSDY": "VSDTC - RFSTDTC + 1 (if VSDTC >= RFSTDTC) or VSDTC - RFSTDTC (if VSDTC < RFSTDTC)",
+    "EPOCH": "CASE WHEN CPEVENT='BASELINE' THEN 'SCREENING' WHEN CPEVENT LIKE 'CYCLE%' THEN 'TREATMENT' WHEN VISIT=998 THEN 'FOLLOW-UP' ELSE 'TREATMENT' END",
+    "VSDRVFL": "CASE WHEN VSTESTCD='BSA' THEN 'Y' ELSE NULL END",
+    "VSSPID": "CHAR(REPEATSN) || '_' || CHAR(VISIT)"
   },
-  "controlled_terminologies": {},
+  "controlled_terminologies": {
+    "VSPOS": [
+      "SITTING",
+      "STANDING",
+      "SUPINE",
+      "PRONE"
+    ],
+    "VSLOC": "STANDING, SITTING, SUPINE, PRONE"
+  },
   "data_quality_rules": []
 }

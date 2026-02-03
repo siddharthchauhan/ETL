@@ -5,7 +5,7 @@
     "target_domain": "LB",
     "sdtm_version": "SDTM-IG 3.4",
     "created_by": "SDTM Mapping Generator",
-    "created_date": "2026-01-27T17:19:07.724462",
+    "created_date": "2026-02-02T09:36:01.782791",
     "description": "Mapping specification for LB domain transformation"
   },
   "source_files": [
@@ -25,7 +25,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Study identifier mapped from STUDY column. Value: 'MAXIS-08'"
+      "comments": "Study identifier from STUDY column ('MAXIS-08')"
     },
     {
       "sdtm_variable": "DOMAIN",
@@ -36,7 +36,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Domain abbreviation for Laboratory Test Results - hardcoded as 'LB'"
+      "comments": "Constant value 'LB' for Laboratory domain"
     },
     {
       "sdtm_variable": "USUBJID",
@@ -47,7 +47,7 @@
       "transformation": null,
       "transformation_type": "CONCAT",
       "controlled_terminology": null,
-      "comments": "Unique subject identifier derived from STUDY, INVSITE (site), and PT (patient). Example: 'MAXIS-08-C008_408-01-01'"
+      "comments": "Unique subject identifier concatenating study, site (INVSITE='C008_408'), and patient (PT='01-01')"
     },
     {
       "sdtm_variable": "LBSEQ",
@@ -58,7 +58,7 @@
       "transformation": null,
       "transformation_type": "SEQUENCE",
       "controlled_terminology": null,
-      "comments": "Sequence number for each lab test record per subject, ordered by visit number, repeat sequence, and lab parameter"
+      "comments": "Sequence number per subject ordered by visit, repeat sequence, and lab parameter"
     },
     {
       "sdtm_variable": "LBTESTCD",
@@ -66,10 +66,10 @@
       "type": "Num",
       "core": "Req",
       "source_column": "LPARM",
-      "transformation": "Map lab parameter names to CDISC LBTESTCD controlled terminology",
+      "transformation": "Map to LBTESTCD controlled terminology: HEMOGLOBIN->HGB, HEMATOCRIT->HCT, WBC->WBC, NEUTROPHILS->NEUT, LYMPHOCYTES->LYMPH, etc.",
       "transformation_type": "MAP",
       "controlled_terminology": "LBTESTCD",
-      "comments": "Lab test short name. Map LPARM values: HEMOGLOBIN->HGB, HEMATOCRIT->HCT, WBC->WBC, NEUTROPHILS->NEUT, LYMPHOCYTES->LYMPH, GRANULOCYTES->GRAN, IG->IG, etc."
+      "comments": "Lab test short code derived from LPARM (e.g., 'HEMOGLOBIN' maps to 'HGB'). Handle LABQSN for additional tests like GRANULOCYTES->GRAN, IG->IG"
     },
     {
       "sdtm_variable": "LBTEST",
@@ -77,10 +77,10 @@
       "type": "Char",
       "core": "Req",
       "source_column": "LPARM",
-      "transformation": "Map lab parameter names to CDISC LBTEST controlled terminology",
+      "transformation": "Map to LBTEST controlled terminology: HEMOGLOBIN->Hemoglobin, HEMATOCRIT->Hematocrit, WBC->Leukocytes, NEUTROPHILS->Neutrophils, LYMPHOCYTES->Lymphocytes, etc.",
       "transformation_type": "MAP",
       "controlled_terminology": "LBTEST",
-      "comments": "Lab test full name. Map LPARM values: HEMOGLOBIN->Hemoglobin, HEMATOCRIT->Hematocrit, WBC->Leukocytes, NEUTROPHILS->Neutrophils, LYMPHOCYTES->Lymphocytes, GRANULOCYTES->Granulocytes, IG->Immature Granulocytes"
+      "comments": "Lab test full name derived from LPARM. Use LABQSN if LPARM is null. Convert to proper case/standard terminology"
     },
     {
       "sdtm_variable": "LBCAT",
@@ -91,7 +91,7 @@
       "transformation": "Map 'LAB_HAEM' to 'HEMATOLOGY'",
       "transformation_type": "MAP",
       "controlled_terminology": null,
-      "comments": "Category for lab test. DCMNAME value 'LAB_HAEM' indicates hematology laboratory tests"
+      "comments": "Category for lab test. DCMNAME='LAB_HAEM' indicates Hematology tests"
     },
     {
       "sdtm_variable": "LBORRES",
@@ -99,10 +99,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "LVALUE2",
-      "transformation": "Convert numeric to character, preserve null values",
+      "transformation": "Convert numeric to character, preserving original precision",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "Result or finding in original units as character. Source has 210 null values representing not done or missing results"
+      "comments": "Original lab result as collected. Source LVALUE2 has null_count=210 indicating some missing results"
     },
     {
       "sdtm_variable": "LBORRESU",
@@ -110,10 +110,10 @@
       "type": "Num",
       "core": "Exp",
       "source_column": "LUNIT2",
-      "transformation": "Map to CDISC UNIT controlled terminology",
-      "transformation_type": "MAP",
+      "transformation": "Use LUNIT2 if available, otherwise use LUNIT1",
+      "transformation_type": "DERIVE",
       "controlled_terminology": "UNIT",
-      "comments": "Original units. LUNIT2 appears to be converted units (G/DL, 10^3/UL). Map G/DL->g/dL, 10^3/UL->10^3/uL. 1210 null values use LUNIT1 instead"
+      "comments": "Original units. LUNIT2 has values like 'G/DL', '10^3/UL' (null_count=1210). LUNIT1 has 'G/L', '%', '10^9/L' (no nulls). Prefer LUNIT2 when available"
     },
     {
       "sdtm_variable": "LBORNRLO",
@@ -124,7 +124,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Reference range lower limit in original units - not provided in source data"
+      "comments": "Reference range lower limit in original units. Not present in source; requires external reference range lookup based on LBTESTCD, age, gender"
     },
     {
       "sdtm_variable": "LBORNRHI",
@@ -135,7 +135,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Reference range upper limit in original units - not provided in source data"
+      "comments": "Reference range upper limit in original units. Not present in source; requires external reference range lookup"
     },
     {
       "sdtm_variable": "LBSTRESC",
@@ -143,10 +143,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "LVALUE2",
-      "transformation": "Convert numeric to character in standard format, preserve null values",
+      "transformation": "Convert to character in standard format, handle missing as empty string",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Character result in standard format. Same as LBORRES when numeric. Null when test not performed"
+      "comments": "Character result in standard format. Same as LBORRES unless standardization needed"
     },
     {
       "sdtm_variable": "LBSTRESN",
@@ -154,21 +154,21 @@
       "type": "Num",
       "core": "Exp",
       "source_column": "LVALUE2",
-      "transformation": "Use numeric value as-is after unit standardization",
+      "transformation": "Use numeric value directly after unit standardization",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Numeric result in standard units. LVALUE2 contains numeric values when units are in LUNIT2 (standardized). Apply conversion when only LUNIT1 available"
+      "comments": "Numeric result in standard units. Apply conversion if standardizing from LUNIT2 to LUNIT1 or standard SI units"
     },
     {
       "sdtm_variable": "LBSTRESU",
       "label": "Standard Units",
       "type": "Char",
       "core": "Exp",
-      "source_column": "LUNIT2",
-      "transformation": "Map to CDISC UNIT controlled terminology for standard units",
+      "source_column": "LUNIT1",
+      "transformation": "Map to standard CDISC UNIT codelist",
       "transformation_type": "MAP",
       "controlled_terminology": "UNIT",
-      "comments": "Standard units. Map G/DL->g/dL, 10^3/UL->10^3/uL, G/L->g/L, %->%, 10^9/L->10^9/L"
+      "comments": "Standard units. LUNIT1 appears to be standardized units (G/L, %, 10^9/L). Map '10^9/L' to 'E9/L', verify % context"
     },
     {
       "sdtm_variable": "LBSTNRLO",
@@ -179,7 +179,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Reference range lower limit in standard units - not provided in source data. Should be populated from lab reference ranges"
+      "comments": "Reference range lower limit in standard units. Derive from LBORNRLO with unit conversion"
     },
     {
       "sdtm_variable": "LBSTNRHI",
@@ -190,7 +190,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Reference range upper limit in standard units - not provided in source data. Should be populated from lab reference ranges"
+      "comments": "Reference range upper limit in standard units. Derive from LBORNRHI with unit conversion"
     },
     {
       "sdtm_variable": "LBNRIND",
@@ -201,7 +201,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NRIND",
-      "comments": "Reference range indicator. Derived after populating reference ranges. Values: LOW, NORMAL, HIGH, ABNORMAL"
+      "comments": "Reference range indicator. Derive by comparing LBSTRESN to reference ranges. Values: NORMAL, ABNORMAL, HIGH, LOW"
     },
     {
       "sdtm_variable": "LBSPEC",
@@ -212,7 +212,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "SPECTYPE",
-      "comments": "Specimen type - not explicitly in source. For hematology tests, typically BLOOD or WHOLE BLOOD. May need to derive from test type or external data"
+      "comments": "Specimen type. For HEMATOLOGY (LBCAT), typically 'BLOOD' or 'WHOLE BLOOD'. Not in source, derive from LBCAT or external metadata"
     },
     {
       "sdtm_variable": "LBBLFL",
@@ -220,10 +220,10 @@
       "type": "Char",
       "core": "Perm",
       "source_column": "CPEVENT",
-      "transformation": "IF CPEVENT = 'BASELINE' OR VISIT = 1 THEN 'Y' ELSE NULL",
+      "transformation": "IF CPEVENT = 'BASELINE' AND QUALIFYV = 1 THEN 'Y' ELSE NULL",
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Baseline flag. Set to 'Y' when CPEVENT is 'BASELINE' or VISIT is 1, representing the baseline measurement for each subject"
+      "comments": "Baseline flag. Set to 'Y' for baseline visit where CPEVENT='BASELINE' and QUALIFYV=1 (qualifying visit)"
     },
     {
       "sdtm_variable": "VISITNUM",
@@ -231,10 +231,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "VISIT",
-      "transformation": "Use numeric visit number as-is",
+      "transformation": "Use numeric visit number directly",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "Visit number from source VISIT field. Values range from 1 to 998 (998 likely represents unscheduled visit)"
+      "comments": "Visit number from VISIT column (values 1-998, with 998 likely representing unscheduled visits)"
     },
     {
       "sdtm_variable": "VISIT",
@@ -242,10 +242,10 @@
       "type": "Char",
       "core": "Exp",
       "source_column": "CPEVENT",
-      "transformation": "Use visit name as-is",
+      "transformation": "Use visit name from CPEVENT",
       "transformation_type": "COPY",
       "controlled_terminology": null,
-      "comments": "Visit name from CPEVENT (e.g., 'BASELINE'). Contains descriptive visit names"
+      "comments": "Visit name from CPEVENT (e.g., 'BASELINE'). Contains descriptive visit labels"
     },
     {
       "sdtm_variable": "LBDTC",
@@ -254,9 +254,9 @@
       "core": "Exp",
       "source_column": "",
       "transformation": null,
-      "transformation_type": "DERIVE",
+      "transformation_type": "DATE_FORMAT",
       "controlled_terminology": null,
-      "comments": "Date/time of specimen collection in ISO 8601 format. Not present in source data - typically comes from visit dates or separate lab collection log"
+      "comments": "Date/Time of specimen collection in ISO 8601 format. Not present in provided source columns - requires date field from EDC"
     },
     {
       "sdtm_variable": "LBDY",
@@ -265,9 +265,20 @@
       "core": "Perm",
       "source_column": "",
       "transformation": null,
-      "transformation_type": "DERIVE",
+      "transformation_type": "DATE_FORMAT",
       "controlled_terminology": null,
-      "comments": "Study day of specimen collection. Derived from LBDTC and reference start date (RFSTDTC from DM domain)"
+      "comments": "Study day of specimen collection. Requires reference start date (RFSTDTC) from DM domain"
+    },
+    {
+      "sdtm_variable": "LBSPID",
+      "label": "Sponsor-Defined Identifier",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "REPEATSN",
+      "transformation": "Use as sponsor-defined identifier for repeat/replicate tests",
+      "transformation_type": "COPY",
+      "controlled_terminology": null,
+      "comments": "Sponsor-defined identifier. REPEATSN indicates repeat sequence number (1-10) which can identify replicate samples"
     },
     {
       "sdtm_variable": "LBSTAT",
@@ -275,10 +286,10 @@
       "type": "Char",
       "core": "Perm",
       "source_column": "QUALIFYV",
-      "transformation": "IF QUALIFYV = 2 THEN 'NOT DONE' ELSE NULL",
+      "transformation": "IF LVALUE2 IS NULL THEN 'NOT DONE' ELSE NULL",
       "transformation_type": "DERIVE",
       "controlled_terminology": "ND",
-      "comments": "Completion status. QUALIFYV appears to be a qualification flag where 2 may indicate not done/not performed. Null when test was performed (QUALIFYV=1)"
+      "comments": "Completion status. Set to 'NOT DONE' when LBORRES is null (210 records). QUALIFYV=2 may also indicate non-qualifying/not done"
     },
     {
       "sdtm_variable": "LBREASND",
@@ -289,18 +300,18 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Reason test not done. Should be populated when LBSTAT='NOT DONE'. Not directly available in source"
+      "comments": "Reason test not done. Not present in source data - would need additional field to capture reason"
     },
     {
-      "sdtm_variable": "LBSPID",
-      "label": "Sponsor-Defined Identifier",
+      "sdtm_variable": "LBSCAT",
+      "label": "Subcategory for Lab Test",
       "type": "Char",
       "core": "Perm",
-      "source_column": "REPEATSN",
-      "transformation": "Convert to character string",
-      "transformation_type": "COPY",
+      "source_column": "SUBEVE",
+      "transformation": "Map SUBEVE to subcategory: 0='SCHEDULED', 1='UNSCHEDULED', 2='REPEAT'",
+      "transformation_type": "MAP",
       "controlled_terminology": null,
-      "comments": "Sponsor-defined identifier. REPEATSN appears to be a repeat sequence number (1-10) that could serve as specimen or sample identifier within visit"
+      "comments": "Subcategory for lab test. SUBEVE values (0,1,2) may indicate scheduled vs unscheduled collection timing"
     },
     {
       "sdtm_variable": "LBNAM",
@@ -311,29 +322,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Vendor name or laboratory name. Not provided in source data"
-    },
-    {
-      "sdtm_variable": "LBSCAT",
-      "label": "Subcategory for Lab Test",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "SUBEVE",
-      "transformation": "Use to create subcategory if needed",
-      "transformation_type": "DERIVE",
-      "controlled_terminology": null,
-      "comments": "Subcategory for lab test. SUBEVE (0-2) may indicate sub-events or unscheduled collections"
-    },
-    {
-      "sdtm_variable": "LBFAST",
-      "label": "Fasting Status",
-      "type": "Char",
-      "core": "Perm",
-      "source_column": "",
-      "transformation": null,
-      "transformation_type": "DERIVE",
-      "controlled_terminology": "NY",
-      "comments": "Fasting status (Y/N). Not provided in source data but important for certain lab tests"
+      "comments": "Laboratory vendor name. Not in source data - requires external metadata or separate vendor tracking"
     },
     {
       "sdtm_variable": "LBMETHOD",
@@ -344,7 +333,18 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "METHOD",
-      "comments": "Method of test or examination. Not provided in source data"
+      "comments": "Method of test or examination. Not in source - requires lab procedure documentation"
+    },
+    {
+      "sdtm_variable": "LBFAST",
+      "label": "Fasting Status",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "",
+      "transformation": null,
+      "transformation_type": "DERIVE",
+      "controlled_terminology": "NY",
+      "comments": "Fasting status (Y/N). Not in source - requires separate fasting status data collection"
     },
     {
       "sdtm_variable": "LBDRVFL",
@@ -355,29 +355,7 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": "NY",
-      "comments": "Derived flag. Would be 'Y' for calculated/derived lab values. All source values appear to be observed results"
-    },
-    {
-      "sdtm_variable": "LBORRESU",
-      "label": "Original Units",
-      "type": "Num",
-      "core": "Exp",
-      "source_column": "LUNIT1",
-      "transformation": "Map to CDISC UNIT controlled terminology when LUNIT2 is null",
-      "transformation_type": "MAP",
-      "controlled_terminology": "UNIT",
-      "comments": "Alternative original units when LUNIT2 is not available. LUNIT1 contains G/L, %, 10^9/L units. Map %->%, G/L->g/L, 10^9/L->10^9/L"
-    },
-    {
-      "sdtm_variable": "LBTESTCD",
-      "label": "Lab Test or Examination Short Name",
-      "type": "Num",
-      "core": "Req",
-      "source_column": "LABQSN",
-      "transformation": "Map to LBTESTCD controlled terminology when LPARM is insufficient",
-      "transformation_type": "MAP",
-      "controlled_terminology": "LBTESTCD",
-      "comments": "Additional lab qualifier present in only 6 records. Values: GRANULOCYTES, IG. May represent additional tests or qualifiers to main LPARM. Map GRANULOCYTES->GRAN, IG->IG"
+      "comments": "Derived flag. Set to 'Y' if lab value is calculated (e.g., ratios, differentials calculated from absolute counts)"
     },
     {
       "sdtm_variable": "EPOCH",
@@ -388,18 +366,18 @@
       "transformation": null,
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Trial epoch. Not in source but can be derived from visit number ranges or external study design metadata"
+      "comments": "Trial epoch (e.g., SCREENING, TREATMENT, FOLLOW-UP). Requires trial visit mapping"
     },
     {
-      "sdtm_variable": "VISITDY",
-      "label": "VISITDY",
-      "type": "Num",
+      "sdtm_variable": "SITEID",
+      "label": "SITEID",
+      "type": "Char",
       "core": "Perm",
-      "source_column": "",
-      "transformation": null,
+      "source_column": "INVSITE",
+      "transformation": "Extract site portion from INVSITE (e.g., '408' from 'C008_408')",
       "transformation_type": "DERIVE",
       "controlled_terminology": null,
-      "comments": "Planned study day of visit. Should come from trial visit schedule based on VISITNUM"
+      "comments": "Study site identifier. INVSITE format 'C008_408' appears to be country_site"
     }
   ],
   "derivation_rules": {
@@ -411,23 +389,21 @@
     "LBNRIND": "Derived: 'NORMAL' if LBSTNRLO <= LBSTRESN <= LBSTNRHI, 'LOW' if < LBSTNRLO, 'HIGH' if > LBSTNRHI",
     "LBBLFL": "'Y' for baseline records, null otherwise",
     "STUDYID": "STUDY",
-    "LBORRESU": "Use LUNIT2 when available, otherwise use LUNIT1",
-    "LBORNRLO": "Not available in source - leave null or populate from reference data",
-    "LBORNRHI": "Not available in source - leave null or populate from reference data",
-    "LBSTRESU": "Use LUNIT2 when available, otherwise convert LUNIT1 to standard CDISC units",
-    "LBSTNRLO": "Not available in source - leave null or populate from reference data",
-    "LBSTNRHI": "Not available in source - leave null or populate from reference data",
-    "LBSPEC": "Derive based on LBCAT. For HEMATOLOGY, typically 'BLOOD' or 'WHOLE BLOOD'",
-    "LBDTC": "Not available in source - must be obtained from another source dataset",
-    "LBDY": "LBDTC - RFSTDTC + 1 (if LBDTC >= RFSTDTC) or LBDTC - RFSTDTC (if LBDTC < RFSTDTC)",
-    "LBREASND": "IF LBSTAT = 'NOT DONE' THEN populate reason, ELSE NULL",
-    "LBNAM": "Not available in source - populate if vendor information exists",
-    "LBSCAT": "IF SUBEVE > 0 THEN 'UNSCHEDULED' ELSE NULL",
-    "LBFAST": "Not available in source - populate if fasting status is collected",
-    "LBMETHOD": "Not available in source - populate if method information exists",
-    "LBDRVFL": "NULL for all records as no derived values present",
-    "EPOCH": "Derive from VISITNUM or external trial design data (e.g., SCREENING, TREATMENT, FOLLOW-UP)",
-    "VISITDY": "Derive from trial visit schedule - planned study day of visit"
+    "LBORRESU": "COALESCE(LUNIT2, LUNIT1)",
+    "LBORNRLO": "Derive from reference data or metadata if available",
+    "LBORNRHI": "Derive from reference data or metadata if available",
+    "LBSTNRLO": "Apply same conversion factor as LBSTRESN",
+    "LBSTNRHI": "Apply same conversion factor as LBSTRESN",
+    "LBSPEC": "'BLOOD' or 'SERUM' based on test category",
+    "LBDTC": "Requires date/time from source not provided in sample. Look for date columns in full dataset",
+    "LBDY": "(LBDTC_DATE - RFSTDTC_DATE) + 1 if LBDTC >= RFSTDTC, else (LBDTC_DATE - RFSTDTC_DATE)",
+    "LBREASND": "Populate when LBSTAT='NOT DONE'. Requires reason field from source",
+    "LBNAM": "Derive from external lab vendor information if available",
+    "LBMETHOD": "Derive from lab manual or metadata based on LBTESTCD",
+    "LBFAST": "Derive from visit requirements or fasting status field if available",
+    "LBDRVFL": "'Y' for calculated/derived lab values, NULL for directly measured",
+    "EPOCH": "Map from trial visits or TV domain based on VISITNUM",
+    "SITEID": "SUBSTR(INVSITE, INSTR(INVSITE, '_') + 1)"
   },
   "controlled_terminologies": {
     "LBNRIND": [

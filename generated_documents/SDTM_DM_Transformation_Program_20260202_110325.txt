@@ -1,0 +1,376 @@
+SDTM_DM_Transformation_Program
+==============================
+Generated: February 02, 2026
+
+/******************************************************************************
+* Program:      sdtm_dm_transformation.sas
+* Purpose:      Transform raw EDC demographics data to SDTM DM domain
+* Study:        [STUDY_ID]
+* Domain:       DM - Demographics
+* Version:      1.0
+* Created:      2024-01-28
+* Programmer:   Agentic SDTM Pipeline Manager
+* 
+* Description:  Transforms source demographics data to CDISC SDTM DM domain
+*               following SDTM-IG v3.4 specifications
+*
+* Input:        raw.demographics (source EDC data)
+* Output:       sdtm.dm (SDTM Demographics domain)
+*
+* Modifications:
+* Date       Programmer    Description
+* ---------- ------------- --------------------------------------------------
+* 2024-01-28 Auto          Initial program generation
+******************************************************************************/
+
+*--- MACRO VARIABLES ---------------------------------------------------------*;
+%let study_id = STUDYID001;  /* Replace with actual study ID */
+%let data_path = /path/to/data;  /* Replace with actual data path */
+
+*--- LIBNAME ASSIGNMENTS -----------------------------------------------------*;
+libname raw "&data_path/raw" access=readonly;
+libname sdtm "&data_path/sdtm";
+libname work temp;
+
+*--- FORMAT DEFINITIONS ------------------------------------------------------*;
+* Define formats for controlled terminology mapping;
+proc format;
+    * Sex mapping;
+    value $sex_fmt
+        'M', 'MALE'           = 'M'
+        'F', 'FEMALE'         = 'F'
+        'U', 'UNKNOWN'        = 'U'
+        'UNDIFFERENTIATED'    = 'UNDIFFERENTIATED'
+        other                 = 'U';
+    
+    * Race mapping (CDISC CT);
+    value $race_fmt
+        'AMERICAN INDIAN OR ALASKA NATIVE' = 'AMERICAN INDIAN OR ALASKA NATIVE'
+        'ASIAN'                            = 'ASIAN'
+        'BLACK OR AFRICAN AMERICAN'        = 'BLACK OR AFRICAN AMERICAN'
+        'NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER' = 'NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER'
+        'WHITE'                            = 'WHITE'
+        'MULTIPLE'                         = 'MULTIPLE'
+        'OTHER'                            = 'OTHER'
+        'UNKNOWN'                          = 'UNKNOWN'
+        'NOT REPORTED'                     = 'NOT REPORTED'
+        other                              = 'UNKNOWN';
+    
+    * Ethnicity mapping;
+    value $ethnic_fmt
+        'HISPANIC OR LATINO'     = 'HISPANIC OR LATINO'
+        'NOT HISPANIC OR LATINO' = 'NOT HISPANIC OR LATINO'
+        'NOT REPORTED'           = 'NOT REPORTED'
+        'UNKNOWN'                = 'UNKNOWN'
+        other                    = 'UNKNOWN';
+    
+    * Country codes (ISO 3166-1 alpha-3);
+    value $country_fmt
+        'USA', 'US', 'UNITED STATES' = 'USA'
+        'CAN', 'CA', 'CANADA'        = 'CAN'
+        'GBR', 'GB', 'UK'            = 'GBR'
+        other                        = upcase(trim(left(_value_)));
+run;
+
+*--- MACRO: ISO 8601 DATE CONVERSION -----------------------------------------*;
+%macro iso8601_date(datevar);
+    /* Convert SAS date to ISO 8601 format (YYYY-MM-DD) */
+    %if &datevar ne %then %do;
+        if not missing(&datevar) then 
+            &datevar._dtc = put(&datevar, is8601da.);
+        else 
+            &datevar._dtc = '';
+    %end;
+%mend iso8601_date;
+
+%macro iso8601_datetime(datetimevar);
+    /* Convert SAS datetime to ISO 8601 format (YYYY-MM-DDTHH:MM:SS) */
+    %if &datetimevar ne %then %do;
+        if not missing(&datetimevar) then 
+            &datetimevar._dtc = put(&datetimevar, is8601dt.);
+        else 
+            &datetimevar._dtc = '';
+    %end;
+%mend iso8601_datetime;
+
+*--- STEP 1: READ AND PREPROCESS SOURCE DATA ---------------------------------*;
+data work.dm_source;
+    set raw.demographics;
+    
+    * Keep only subjects with valid subject IDs;
+    if not missing(subject_id);
+    
+    * Remove duplicates if present;
+    * Note: Adjust by= variables based on source data structure;
+run;
+
+proc sort data=work.dm_source nodupkey;
+    by subject_id;
+run;
+
+*--- STEP 2: TRANSFORM TO SDTM DM DOMAIN ------------------------------------*;
+data work.dm_transform;
+    length 
+        STUDYID   $20
+        DOMAIN    $2
+        USUBJID   $40
+        SUBJID    $20
+        RFSTDTC   $20
+        RFENDTC   $20
+        RFXSTDTC  $20
+        RFXENDTC  $20
+        RFICDTC   $20
+        RFPENDTC  $20
+        DTHDTC    $20
+        DTHFL     $1
+        SITEID    $20
+        INVID     $20
+        INVNAM    $200
+        BRTHDTC   $20
+        AGE       8
+        AGEU      $10
+        SEX       $20
+        RACE      $100
+        ETHNIC    $100
+        ARMCD     $20
+        ARM       $200
+        ACTARMCD  $20
+        ACTARM    $200
+        COUNTRY   $3
+        DMDTC     $20
+        DMDY      8
+    ;
+    
+    set work.dm_source;
+    
+    *--- IDENTIFIER VARIABLES -----------------------------------------------*;
+    * Study Identifier;
+    STUDYID = "&study_id";
+    
+    * Domain abbreviation;
+    DOMAIN = 'DM';
+    
+    * Subject Identifier for the Study;
+    SUBJID = strip(put(subject_id, best.));
+    
+    * Unique Subject Identifier: STUDYID-SITEID-SUBJID pattern;
+    USUBJID = catx('-', STUDYID, strip(site_id), SUBJID);
+    
+    *--- TOPIC VARIABLES ----------------------------------------------------*;
+    * No topic variable in DM (SUBJID serves as topic);
+    
+    *--- TIMING VARIABLES ---------------------------------------------------*;
+    * Subject Reference Start Date/Time (usually first study drug date or randomization);
+    %iso8601_date(ref_start_date);
+    RFSTDTC = ref_start_date_dtc;
+    
+    * Subject Reference End Date/Time (last contact or study completion);
+    %iso8601_date(ref_end_date);
+    RFENDTC = ref_end_date_dtc;
+    
+    * Date/Time of First Study Treatment;
+    %iso8601_date(first_dose_date);
+    RFXSTDTC = first_dose_date_dtc;
+    
+    * Date/Time of Last Study Treatment;
+    %iso8601_date(last_dose_date);
+    RFXENDTC = last_dose_date_dtc;
+    
+    * Date/Time of Informed Consent;
+    %iso8601_date(consent_date);
+    RFICDTC = consent_date_dtc;
+    
+    * Date/Time of End of Participation;
+    %iso8601_date(end_participation_date);
+    RFPENDTC = end_participation_date_dtc;
+    
+    *--- RECORD QUALIFIERS --------------------------------------------------*;
+    * Study Site Identifier;
+    SITEID = strip(site_id);
+    
+    * Investigator Identifier and Name;
+    INVID = strip(investigator_id);
+    INVNAM = strip(upcase(investigator_name));
+    
+    * Date/Time of Birth (ISO 8601);
+    %iso8601_date(birth_date);
+    BRTHDTC = birth_date_dtc;
+    
+    * Age calculation;
+    if not missing(ref_start_date) and not missing(birth_date) then do;
+        AGE = floor((intck('month', birth_date, ref_start_date) 
+                    - (day(ref_start_date) < day(birth_date))) / 12);
+        AGEU = 'YEARS';
+    end;
+    else do;
+        * If age is provided directly in source;
+        if not missing(age_value) then do;
+            AGE = age_value;
+            AGEU = upcase(strip(age_units));
+            * Default to YEARS if not specified;
+            if missing(AGEU) then AGEU = 'YEARS';
+        end;
+    end;
+    
+    * Sex (apply controlled terminology);
+    SEX = put(upcase(strip(sex)), $sex_fmt.);
+    
+    * Race (apply controlled terminology);
+    RACE = put(upcase(strip(race)), $race_fmt.);
+    
+    * Ethnicity (apply controlled terminology);
+    ETHNIC = put(upcase(strip(ethnicity)), $ethnic_fmt.);
+    
+    * Country (ISO 3166-1 alpha-3 code);
+    COUNTRY = put(upcase(strip(country)), $country_fmt.);
+    
+    *--- ARM VARIABLES ------------------------------------------------------*;
+    * Planned Arm Code and Description;
+    ARMCD = strip(planned_arm_code);
+    ARM = strip(upcase(planned_arm_desc));
+    
+    * Actual Arm Code and Description (if randomization changed);
+    ACTARMCD = strip(actual_arm_code);
+    ACTARM = strip(upcase(actual_arm_desc));
+    
+    * If no actual arm, use planned arm;
+    if missing(ACTARMCD) then ACTARMCD = ARMCD;
+    if missing(ACTARM) then ACTARM = ARM;
+    
+    *--- DEATH VARIABLES ----------------------------------------------------*;
+    * Date/Time of Death;
+    if not missing(death_date) then do;
+        %iso8601_date(death_date);
+        DTHDTC = death_date_dtc;
+        DTHFL = 'Y';
+    end;
+    
+    *--- DM COLLECTION DATE -------------------------------------------------*;
+    * Date/Time of Demographics Collection;
+    %iso8601_date(dm_collection_date);
+    DMDTC = dm_collection_date_dtc;
+    
+    * Study Day of Demographics Collection;
+    if not missing(dm_collection_date) and not missing(ref_start_date) then do;
+        if dm_collection_date >= ref_start_date then 
+            DMDY = dm_collection_date - ref_start_date + 1;
+        else 
+            DMDY = dm_collection_date - ref_start_date;
+    end;
+    
+    * Drop temporary variables;
+    drop ref_start_date_dtc ref_end_date_dtc first_dose_date_dtc 
+         last_dose_date_dtc consent_date_dtc end_participation_date_dtc
+         birth_date_dtc death_date_dtc dm_collection_date_dtc;
+run;
+
+*--- STEP 3: QUALITY CHECKS --------------------------------------------------*;
+* Check for missing required variables;
+proc sql;
+    title 'DM Domain - Missing Required Variables Check';
+    select 
+        'STUDYID' as Variable, 
+        sum(missing(STUDYID)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'DOMAIN' as Variable, 
+        sum(missing(DOMAIN)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'USUBJID' as Variable, 
+        sum(missing(USUBJID)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'SUBJID' as Variable, 
+        sum(missing(SUBJID)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'RFSTDTC' as Variable, 
+        sum(missing(RFSTDTC)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'AGE' as Variable, 
+        sum(missing(AGE)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform
+    union all
+    select 
+        'SEX' as Variable, 
+        sum(missing(SEX)) as Missing_Count,
+        count(*) as Total_Records
+    from work.dm_transform;
+quit;
+
+* Check for duplicate USUBJID;
+proc sql;
+    title 'DM Domain - Duplicate USUBJID Check';
+    select USUBJID, count(*) as Record_Count
+    from work.dm_transform
+    group by USUBJID
+    having count(*) > 1;
+quit;
+
+* Check controlled terminology compliance;
+proc freq data=work.dm_transform;
+    tables SEX RACE ETHNIC AGEU / missing;
+    title 'DM Domain - Controlled Terminology Frequency';
+run;
+
+*--- STEP 4: VARIABLE ORDERING AND FINAL DATASET ----------------------------*;
+data sdtm.dm;
+    retain 
+        STUDYID DOMAIN USUBJID SUBJID
+        RFSTDTC RFENDTC RFXSTDTC RFXENDTC RFICDTC RFPENDTC
+        DTHDTC DTHFL
+        SITEID INVID INVNAM
+        BRTHDTC AGE AGEU SEX RACE ETHNIC
+        ARMCD ARM ACTARMCD ACTARM
+        COUNTRY
+        DMDTC DMDY;
+    set work.dm_transform;
+run;
+
+*--- STEP 5: EXPORT TO XPT FORMAT FOR SUBMISSION ----------------------------*;
+libname xptout xport "&data_path/xpt/dm.xpt";
+data xptout.dm;
+    set sdtm.dm;
+run;
+libname xptout clear;
+
+*--- STEP 6: GENERATE SUMMARY REPORT ----------------------------------------*;
+proc sql;
+    title 'DM Domain - Summary Statistics';
+    select 
+        count(distinct USUBJID) as Total_Subjects,
+        count(distinct SITEID) as Total_Sites,
+        count(distinct ARMCD) as Total_Arms
+    from sdtm.dm;
+quit;
+
+proc freq data=sdtm.dm;
+    tables SEX * ARMCD / nocum nopercent;
+    title 'DM Domain - Sex by Treatment Arm';
+run;
+
+proc means data=sdtm.dm n mean median min max stddev;
+    var AGE;
+    class ARMCD;
+    title 'DM Domain - Age Statistics by Treatment Arm';
+run;
+
+*--- STEP 7: CLEANUP ---------------------------------------------------------*;
+proc datasets library=work nolist;
+    delete dm_source dm_transform;
+quit;
+
+*--- END OF PROGRAM ----------------------------------------------------------*;
