@@ -1,0 +1,321 @@
+{
+  "metadata": {
+    "study_id": "MAXIS-08",
+    "source_domain": "VITALS.csv",
+    "target_domain": "VS",
+    "sdtm_version": "SDTM-IG 3.4",
+    "created_by": "Enhanced SDTM Mapping Generator with ISO 8601",
+    "created_date": "2025-02-02",
+    "description": "Enhanced mapping specification for VS domain with proper ISO 8601 date/time formatting and vertical structure transformation"
+  },
+  "source_files": [
+    {
+      "filename": "VITALS.csv",
+      "path": "/Users/siddharth/Downloads/ETL/ETL/sdtm_workspace/source_data/Maxis-08 RAW DATA_CSV/VITALS.csv",
+      "records": 536,
+      "columns": 21
+    }
+  ],
+  "transformation_notes": [
+    "HORIZONTAL TO VERTICAL: Source data has one row per timepoint with multiple vital sign columns. SDTM requires one row per vital sign measurement.",
+    "ISO 8601 DATES: VTDT (YYYYMMDD numeric) must be converted to YYYY-MM-DD format.",
+    "TIME HANDLING: VTTM (HHMM numeric) must be converted to HH:MM and combined with date as YYYY-MM-DDTHH:MM.",
+    "TEST CODES: Each vital sign column becomes a separate record with VSTESTCD/VSTEST.",
+    "NOT DONE STATUS: Records with GNANYL='NOT DONE' should have VSSTAT='NOT DONE'."
+  ],
+  "variable_mappings": [
+    {
+      "sdtm_variable": "STUDYID",
+      "label": "Study Identifier",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "STUDY",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "Copy STUDY field directly",
+      "example": "MAXIS-08"
+    },
+    {
+      "sdtm_variable": "DOMAIN",
+      "label": "Domain Abbreviation",
+      "type": "Char",
+      "core": "Req",
+      "source_column": null,
+      "transformation_type": "ASSIGN",
+      "transformation_rule": "Constant value 'VS'",
+      "example": "VS"
+    },
+    {
+      "sdtm_variable": "USUBJID",
+      "label": "Unique Subject Identifier",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "STUDY, INVSITE, PT",
+      "transformation_type": "CONCAT",
+      "transformation_rule": "CONCAT(STUDY, '-', INVSITE, '-', PT) with formatting: STUDY-SITE-SUBJECT",
+      "example": "MAXIS-08-408-001"
+    },
+    {
+      "sdtm_variable": "VSSEQ",
+      "label": "Sequence Number",
+      "type": "Num",
+      "core": "Req",
+      "source_column": null,
+      "transformation_type": "SEQUENCE",
+      "transformation_rule": "Sequential numbering per USUBJID, ordered by VSDTC, VSTPTNUM, VSTESTCD",
+      "example": "1, 2, 3, ..."
+    },
+    {
+      "sdtm_variable": "VSTESTCD",
+      "label": "Vital Signs Test Short Name",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "VTBPS2, VTBPD2, VTRRT2, VTTP2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation_type": "TRANSPOSE",
+      "transformation_rule": "MELT operation - each vital sign column becomes a row with corresponding VSTESTCD",
+      "controlled_terminology": "VSTESTCD (C67153)",
+      "mapping_table": {
+        "VTBPS2": "SYSBP",
+        "VTBPD2": "DIABP",
+        "VTPLS2": "PULSE",
+        "VTRRT2": "RESP",
+        "VTTP2": "TEMP",
+        "GNNUM1": "WEIGHT",
+        "GNNUM2": "HEIGHT",
+        "GNNUM3": "BMI"
+      },
+      "example": "SYSBP"
+    },
+    {
+      "sdtm_variable": "VSTEST",
+      "label": "Vital Signs Test Name",
+      "type": "Char",
+      "core": "Req",
+      "source_column": "Derived from VSTESTCD",
+      "transformation_type": "MAP",
+      "transformation_rule": "Map VSTESTCD to full test name using CDISC CT",
+      "controlled_terminology": "VSTEST (C67154)",
+      "mapping_table": {
+        "SYSBP": "Systolic Blood Pressure",
+        "DIABP": "Diastolic Blood Pressure",
+        "PULSE": "Pulse Rate",
+        "RESP": "Respiratory Rate",
+        "TEMP": "Temperature",
+        "WEIGHT": "Weight",
+        "HEIGHT": "Height",
+        "BMI": "Body Mass Index"
+      },
+      "example": "Systolic Blood Pressure"
+    },
+    {
+      "sdtm_variable": "VSCAT",
+      "label": "Category for Vital Signs",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": null,
+      "transformation_type": "ASSIGN",
+      "transformation_rule": "Optional - can be used to categorize vital signs types",
+      "example": "VITAL SIGNS"
+    },
+    {
+      "sdtm_variable": "VSORRES",
+      "label": "Result or Finding in Original Units",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "VTBPS2, VTBPD2, VTRRT2, VTTP2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation_type": "TRANSPOSE",
+      "transformation_rule": "Extract value from corresponding source column, convert to character. Handle missing values.",
+      "example": "120"
+    },
+    {
+      "sdtm_variable": "VSORRESU",
+      "label": "Original Units",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "Derived from VSTESTCD",
+      "transformation_type": "MAP",
+      "transformation_rule": "Assign standard units based on test code",
+      "controlled_terminology": "UNIT (C71620)",
+      "mapping_table": {
+        "SYSBP": "mmHg",
+        "DIABP": "mmHg",
+        "PULSE": "beats/min",
+        "RESP": "breaths/min",
+        "TEMP": "C",
+        "WEIGHT": "kg",
+        "HEIGHT": "cm",
+        "BMI": "kg/m2"
+      },
+      "example": "mmHg"
+    },
+    {
+      "sdtm_variable": "VSSTRESC",
+      "label": "Character Result/Finding in Std Format",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "Same as VSORRES",
+      "transformation_type": "DERIVE",
+      "transformation_rule": "Copy VSORRES (no standardization needed for numeric vitals)",
+      "example": "120"
+    },
+    {
+      "sdtm_variable": "VSSTRESN",
+      "label": "Numeric Result/Finding in Standard Units",
+      "type": "Num",
+      "core": "Exp",
+      "source_column": "VTBPS2, VTBPD2, VTRRT2, VTTP2, VTPLS2, GNNUM1, GNNUM2, GNNUM3",
+      "transformation_type": "TRANSPOSE",
+      "transformation_rule": "Extract numeric value from source column",
+      "example": "120.0"
+    },
+    {
+      "sdtm_variable": "VSSTRESU",
+      "label": "Standard Units",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "Same as VSORRESU",
+      "transformation_type": "DERIVE",
+      "transformation_rule": "Copy VSORRESU (units already standard)",
+      "example": "mmHg"
+    },
+    {
+      "sdtm_variable": "VSSTAT",
+      "label": "Completion Status",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "GNANYL",
+      "transformation_type": "MAP",
+      "transformation_rule": "If GNANYL='NOT DONE' OR source value is missing, set to 'NOT DONE'",
+      "controlled_terminology": "ND (C66789)",
+      "example": "NOT DONE"
+    },
+    {
+      "sdtm_variable": "VSREASND",
+      "label": "Reason Not Done",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "GNANYL",
+      "transformation_type": "MAP",
+      "transformation_rule": "If VSSTAT='NOT DONE', populate with reason (e.g., GNANYL value)",
+      "example": "NOT DONE"
+    },
+    {
+      "sdtm_variable": "VSBLFL",
+      "label": "Baseline Flag",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "CPEVENT or SUBEVE",
+      "transformation_type": "DERIVE",
+      "transformation_rule": "Set to 'Y' if CPEVENT contains 'BASELINE' or SUBEVE='BASELINE VITAL SIGNS', else null",
+      "controlled_terminology": "NY (C66742)",
+      "example": "Y"
+    },
+    {
+      "sdtm_variable": "VISITNUM",
+      "label": "Visit Number",
+      "type": "Num",
+      "core": "Exp",
+      "source_column": "VISIT",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "Copy VISIT field as numeric",
+      "example": "1"
+    },
+    {
+      "sdtm_variable": "VISIT",
+      "label": "Visit Name",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "CPEVENT",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "Copy CPEVENT field (e.g., BASELINE, CYCLE 1 WEEK 1)",
+      "example": "BASELINE"
+    },
+    {
+      "sdtm_variable": "VSDTC",
+      "label": "Date/Time of Measurements",
+      "type": "Char",
+      "core": "Exp",
+      "source_column": "VTDT, VTTM",
+      "transformation_type": "DATE_FORMAT",
+      "transformation_rule": "ISO 8601 conversion:\n1. Convert VTDT from YYYYMMDD numeric (e.g., 20080826.0) to YYYY-MM-DD (2008-08-26)\n2. If VTTM exists, convert from HHMM numeric (e.g., 1100.0) to HH:MM (11:00)\n3. Combine as YYYY-MM-DDTHH:MM if time available, else YYYY-MM-DD only\n4. Handle partial dates if day/month missing\n5. Return empty string if VTDT is null",
+      "iso_8601_format": "YYYY-MM-DD or YYYY-MM-DDTHH:MM",
+      "python_code": "to_iso8601_date(VTDT) + ('T' + format_time(VTTM) if VTTM else '')",
+      "example": "2008-08-26 or 2008-09-03T11:00"
+    },
+    {
+      "sdtm_variable": "VSTPT",
+      "label": "Planned Time Point Name",
+      "type": "Char",
+      "core": "Perm",
+      "source_column": "SUBEVE",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "Copy SUBEVE field (e.g., PRE-INFUSION, DURING INFUSION, POST-INFUSION)",
+      "example": "PRE-INFUSION"
+    },
+    {
+      "sdtm_variable": "VSTPTNUM",
+      "label": "Planned Time Point Number",
+      "type": "Num",
+      "core": "Perm",
+      "source_column": "QUALIFYV",
+      "transformation_type": "DIRECT",
+      "transformation_rule": "Copy QUALIFYV field as numeric timepoint number",
+      "example": "1"
+    }
+  ],
+  "iso_8601_implementation": {
+    "description": "ISO 8601 date/time conversion for VSDTC variable",
+    "source_format": {
+      "VTDT": "Numeric YYYYMMDD format (e.g., 20080826.0)",
+      "VTTM": "Numeric HHMM format (e.g., 1100.0, 2305.0)"
+    },
+    "target_format": {
+      "complete_datetime": "YYYY-MM-DDTHH:MM (e.g., 2008-08-26T11:00)",
+      "date_only": "YYYY-MM-DD (e.g., 2008-08-26)",
+      "partial_date": "YYYY-MM or YYYY (if day/month unknown)"
+    },
+    "python_function": "to_iso8601_date() and to_iso8601_datetime()",
+    "handling_rules": [
+      "Convert VTDT numeric to string, insert hyphens: 20080826 → 2008-08-26",
+      "If VTTM present, convert to HH:MM format: 1100 → 11:00, 2305 → 23:05",
+      "Combine date and time with 'T' separator if time available",
+      "If VTDT is null/empty, return empty string",
+      "If VTTM is null, return date only (no time component)",
+      "Validate date ranges (month 1-12, day 1-31)",
+      "Character type required for VSDTC (never datetime object)"
+    ],
+    "examples": [
+      {
+        "VTDT": "20080826.0",
+        "VTTM": null,
+        "VSDTC": "2008-08-26"
+      },
+      {
+        "VTDT": "20080903.0",
+        "VTTM": "1100.0",
+        "VSDTC": "2008-09-03T11:00"
+      },
+      {
+        "VTDT": "20080910.0",
+        "VTTM": "2228.0",
+        "VSDTC": "2008-09-10T22:28"
+      },
+      {
+        "VTDT": null,
+        "VTTM": null,
+        "VSDTC": ""
+      }
+    ]
+  },
+  "validation_rules": [
+    "STUDYID, DOMAIN, USUBJID, VSSEQ, VSTESTCD, VSTEST are required (Core=Req)",
+    "VSDTC must be in ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:MM)",
+    "VSDTC must be character type, not numeric or datetime",
+    "VSTESTCD must use valid CDISC controlled terminology codes",
+    "VSORRESU and VSSTRESU must use valid UNIT codelist",
+    "VSSTRESN must be numeric type",
+    "VSSEQ must be unique within each USUBJID",
+    "VSBLFL must be 'Y' or null (not 'N')",
+    "If VSSTAT='NOT DONE', VSORRES should be null",
+    "VSTEST must match VSTESTCD per CDISC CT mapping"
+  ]
+}
