@@ -1,0 +1,109 @@
+{
+  "manifest_version": "1.0",
+  "manifest_type": "SDTM_DOMAIN_UPLOAD",
+  "study_id": "MAXIS-08",
+  "domain": "AE",
+  "upload_timestamp": "20250116_141500",
+  "upload_datetime_iso": "2025-01-16T14:15:00",
+  "bucket": "s3dcri",
+  "s3_prefix": "processed/MAXIS-08/AE",
+  "s3_base_path": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500",
+  "file_count": 5,
+  "files": {
+    "ae_domain.csv": {
+      "s3_key": "processed/MAXIS-08/AE/20250116_141500/ae_domain.csv",
+      "s3_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/ae_domain.csv",
+      "description": "SDTM AE domain dataset (Adverse Events)",
+      "content_type": "text/csv",
+      "record_count": 10,
+      "variable_count": 28,
+      "upload_status": "success",
+      "verification_status": "verified"
+    },
+    "ae_mapping_spec.json": {
+      "s3_key": "processed/MAXIS-08/AE/20250116_141500/ae_mapping_spec.json",
+      "s3_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/ae_mapping_spec.json",
+      "description": "AE domain mapping specification",
+      "content_type": "application/json",
+      "upload_status": "success",
+      "verification_status": "verified"
+    },
+    "ae_validation_report.json": {
+      "s3_key": "processed/MAXIS-08/AE/20250116_141500/ae_validation_report.json",
+      "s3_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/ae_validation_report.json",
+      "description": "CDISC conformance validation report",
+      "content_type": "application/json",
+      "upload_status": "success",
+      "verification_status": "verified"
+    },
+    "AE_TRANSFORMATION_COMPREHENSIVE_REPORT.md": {
+      "s3_key": "processed/MAXIS-08/AE/20250116_141500/AE_TRANSFORMATION_COMPREHENSIVE_REPORT.md",
+      "s3_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/AE_TRANSFORMATION_COMPREHENSIVE_REPORT.md",
+      "description": "Comprehensive transformation documentation",
+      "content_type": "text/markdown",
+      "upload_status": "success",
+      "verification_status": "verified"
+    },
+    "AE_VALIDATION_EXECUTIVE_SUMMARY_FINAL.md": {
+      "s3_key": "processed/MAXIS-08/AE/20250116_141500/AE_VALIDATION_EXECUTIVE_SUMMARY_FINAL.md",
+      "s3_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/AE_VALIDATION_EXECUTIVE_SUMMARY_FINAL.md",
+      "description": "Executive validation summary",
+      "content_type": "text/markdown",
+      "upload_status": "success",
+      "verification_status": "verified"
+    }
+  },
+  "upload_metadata": {
+    "uploader": "Data Loading Agent",
+    "pipeline_phase": "Phase 7 - Data Warehouse Loading",
+    "purpose": "Regulatory submission and downstream processing",
+    "verification_method": "S3 HEAD request confirmation",
+    "upload_tool": "upload_to_s3",
+    "atomic_upload": true,
+    "all_uploads_successful": true,
+    "upload_duration_seconds": 12
+  },
+  "data_summary": {
+    "ae_record_count": 10,
+    "ae_variable_count": 28,
+    "validation_score": 92.5,
+    "validation_status": "NEARLY READY",
+    "cdisc_conformance": "92.5% COMPLIANT",
+    "critical_issues": 1,
+    "warnings": 2,
+    "informational": 1,
+    "submission_ready": false,
+    "submission_blockers": [
+      "CT0046: Invalid controlled terminology value in AEOUT field"
+    ]
+  },
+  "sdtm_metadata": {
+    "sdtm_version": "SDTMIG 3.4",
+    "cdisc_ct_version": "2023-06-30",
+    "domain_class": "Events",
+    "required_variables": [
+      "STUDYID",
+      "DOMAIN",
+      "USUBJID",
+      "AESEQ",
+      "AETERM",
+      "AESTDTC"
+    ],
+    "meddra_version": "26.1",
+    "iso8601_compliant": true
+  },
+  "next_steps": [
+    "Load AE domain to Neo4j graph database using load_to_neo4j tool",
+    "Create [:HAS_ADVERSE_EVENT] relationships from DM (Demographics) nodes",
+    "Enable cross-domain analysis and temporal queries",
+    "Address validation blockers for submission readiness",
+    "Generate Define-XML 2.1 metadata",
+    "Create final regulatory submission package"
+  ],
+  "related_artifacts": {
+    "demographics_domain": "s3://s3dcri/processed/MAXIS-08/DM/",
+    "validation_reports": "s3://s3dcri/reports/MAXIS-08/validation/",
+    "mapping_specifications": "s3://s3dcri/processed/MAXIS-08/mapping_specs/"
+  },
+  "manifest_uri": "s3://s3dcri/processed/MAXIS-08/AE/20250116_141500/AE_S3_UPLOAD_MANIFEST.json"
+}

@@ -1,0 +1,168 @@
+{
+  "domain": "AE",
+  "description": "Adverse Events Domain Mapping Specification",
+  "study_id": "MAXIS-08",
+  "source_file": "AEVENT.csv",
+  "transformation_date": "2026-02-05T10:38:50.910709",
+  "sdtm_version": "3.4",
+  "records_transformed": 550,
+  "variable_mappings": [
+    {
+      "sdtm_var": "STUDYID",
+      "source": "Constant",
+      "value": "MAXIS-08"
+    },
+    {
+      "sdtm_var": "DOMAIN",
+      "source": "Constant",
+      "value": "AE"
+    },
+    {
+      "sdtm_var": "USUBJID",
+      "source": "Derived",
+      "logic": "STUDYID + '-' + SUBJID (from INVSITE)"
+    },
+    {
+      "sdtm_var": "AESEQ",
+      "source": "AESEQ",
+      "transformation": "Direct"
+    },
+    {
+      "sdtm_var": "AETERM",
+      "source": "AEVERB",
+      "transformation": "Direct"
+    },
+    {
+      "sdtm_var": "AEDECOD",
+      "source": "AEPTT",
+      "transformation": "Dictionary-derived term"
+    },
+    {
+      "sdtm_var": "AELLT",
+      "source": "AELTT",
+      "transformation": "MedDRA LLT"
+    },
+    {
+      "sdtm_var": "AELLTCD",
+      "source": "AELTC",
+      "transformation": "MedDRA LLT Code"
+    },
+    {
+      "sdtm_var": "AEPTCD",
+      "source": "AEPTC",
+      "transformation": "MedDRA PT Code"
+    },
+    {
+      "sdtm_var": "AEHLT",
+      "source": "AEHTT",
+      "transformation": "MedDRA HLT"
+    },
+    {
+      "sdtm_var": "AEHLTCD",
+      "source": "AEHTC",
+      "transformation": "MedDRA HLT Code"
+    },
+    {
+      "sdtm_var": "AEHLGT",
+      "source": "AEHGT1",
+      "transformation": "MedDRA HLGT"
+    },
+    {
+      "sdtm_var": "AEHLGTCD",
+      "source": "AEHGC",
+      "transformation": "MedDRA HLGT Code"
+    },
+    {
+      "sdtm_var": "AESOC",
+      "source": "AESCT",
+      "transformation": "MedDRA SOC"
+    },
+    {
+      "sdtm_var": "AESOCCD",
+      "source": "AESCC",
+      "transformation": "MedDRA SOC Code"
+    },
+    {
+      "sdtm_var": "AESTDTC",
+      "source": "AESTDT",
+      "transformation": "ISO 8601 conversion"
+    },
+    {
+      "sdtm_var": "AEENDTC",
+      "source": "AEENDT",
+      "transformation": "ISO 8601 conversion"
+    },
+    {
+      "sdtm_var": "AESEV",
+      "source": "AESEV",
+      "transformation": "Controlled terminology mapping"
+    },
+    {
+      "sdtm_var": "AESER",
+      "source": "AESERL",
+      "transformation": "Derived from serious event category"
+    },
+    {
+      "sdtm_var": "AESDTH",
+      "source": "AEOUTCL",
+      "transformation": "Derived: Y if outcome=death"
+    },
+    {
+      "sdtm_var": "AESHOSP",
+      "source": "AESERL",
+      "transformation": "Derived: Y if hospitalization"
+    },
+    {
+      "sdtm_var": "AESLIFE",
+      "source": "AESEV",
+      "transformation": "Derived: Y if life-threatening"
+    },
+    {
+      "sdtm_var": "AEOUT",
+      "source": "AEOUTCL",
+      "transformation": "Controlled terminology mapping"
+    },
+    {
+      "sdtm_var": "AEACN",
+      "source": "AEACTL",
+      "transformation": "Controlled terminology mapping"
+    },
+    {
+      "sdtm_var": "AEREL",
+      "source": "AERELL",
+      "transformation": "Controlled terminology mapping"
+    },
+    {
+      "sdtm_var": "AECONTRT",
+      "source": "AETRT",
+      "transformation": "Direct"
+    }
+  ],
+  "controlled_terminology": {
+    "AESEV": {
+      "MILD": "MILD",
+      "MODERATE": "MODERATE",
+      "SEVERE": "SEVERE",
+      "LIFE THREATENING": "LIFE THREATENING",
+      "FATAL": "FATAL"
+    },
+    "AEOUT": {
+      "RESOLVED": "RECOVERED/RESOLVED",
+      "CONTINUING": "NOT RECOVERED/NOT RESOLVED",
+      "PATIENT DIED": "FATAL",
+      "RESOLVED, WITH RESIDUAL EFFECTS": "RECOVERED/RESOLVED WITH SEQUELAE"
+    },
+    "AEACN": {
+      "NONE": "DOSE NOT CHANGED",
+      "INTERRUPTED": "DRUG INTERRUPTED",
+      "DISCONTINUED": "DRUG WITHDRAWN"
+    },
+    "AEREL": {
+      "UNRELATED": "NOT RELATED",
+      "UNLIKELY": "UNLIKELY RELATED",
+      "POSSIBLE": "POSSIBLY RELATED",
+      "PROBABLE": "PROBABLY RELATED",
+      "DEFINITE": "RELATED"
+    }
+  }
+}
