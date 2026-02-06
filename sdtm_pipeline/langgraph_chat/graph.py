@@ -11,6 +11,7 @@ Run with: langgraph dev
 
 import os
 import re
+import json
 from pathlib import Path
 from typing import Annotated, Literal, List, Dict, Optional
 from typing_extensions import TypedDict
@@ -194,6 +195,84 @@ try:
     from .tools import SDTM_TOOLS
 except ImportError:
     from sdtm_pipeline.langgraph_chat.tools import SDTM_TOOLS
+
+# Keep a copy of the full tool list so we can filter dynamically
+ALL_TOOLS = list(SDTM_TOOLS)
+
+# =============================================================================
+# CONNECTOR-BASED DYNAMIC TOOL FILTERING
+# =============================================================================
+# Maps frontend connector IDs to tool function names.
+# When a connector is disabled, its tools are excluded from the agent.
+
+CONNECTOR_TOOL_MAP = {
+    "clinicaltrials": ["search_clinical_trials", "get_clinical_trial_details"],
+    "npi-registry": ["search_npi_registry"],
+    "cms-coverage": ["search_cms_coverage"],
+    "icd10": ["search_icd10_codes"],
+    "chembl": ["search_chembl_compounds", "get_chembl_bioactivities"],
+    "biorxiv": ["search_biorxiv_papers"],
+    "aws-s3": ["load_data_from_s3", "upload_sdtm_to_s3"],
+    "neo4j": ["load_sdtm_to_neo4j"],
+    "pinecone": [
+        "search_knowledge_base", "get_sdtm_guidance", "get_validation_rules",
+        "get_mapping_specification", "get_controlled_terminology",
+        "get_business_rules", "search_sdtm_guidelines",
+        "search_dta_document", "upload_dta_to_knowledge_base",
+    ],
+}
+
+# Validate that CONNECTOR_TOOL_MAP references real tools
+_tool_names = {t.name for t in ALL_TOOLS}
+_mapped_tools = {name for tools in CONNECTOR_TOOL_MAP.values() for name in tools}
+_invalid = _mapped_tools - _tool_names
+if _invalid:
+    print(f"[SDTM Chat] WARNING: CONNECTOR_TOOL_MAP references non-existent tools: {_invalid}")
+
+_CONNECTORS_STATE_FILE = Path(__file__).parent.parent.parent / "connectors_state.json"
+
+
+def _load_connector_state() -> dict:
+    """Read connector state from the shared JSON file."""
+    if _CONNECTORS_STATE_FILE.exists():
+        try:
+            return json.loads(_CONNECTORS_STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"app_connectors": {}, "api_connectors": [], "mcp_connectors": []}
+
+
+def get_active_tools() -> list:
+    """Return the full tool list filtered by enabled connectors."""
+    state = _load_connector_state()
+    app_state = state.get("app_connectors", {})
+
+    disabled_tool_names: set = set()
+    for connector_id, tool_names in CONNECTOR_TOOL_MAP.items():
+        connector = app_state.get(connector_id, {})
+        if not connector.get("enabled", True):
+            disabled_tool_names.update(tool_names)
+
+    if not disabled_tool_names:
+        return list(ALL_TOOLS)
+
+    active = [t for t in ALL_TOOLS if t.name not in disabled_tool_names]
+    print(f"[SDTM Chat] Active tools: {len(active)}/{len(ALL_TOOLS)} (disabled: {', '.join(sorted(disabled_tool_names))})")
+    return active
+
+
+# Module-level active tools (refreshed on reload)
+ACTIVE_TOOLS = get_active_tools()
+
+
+def reload_connectors():
+    """Re-read connector state and update the active tool set.
+
+    Called by the file server after connector state is changed via the frontend.
+    """
+    global ACTIVE_TOOLS
+    ACTIVE_TOOLS = get_active_tools()
+    print(f"[SDTM Chat] Reloaded connectors: {len(ACTIVE_TOOLS)} active tools")
 
 
 # State definition
@@ -559,8 +638,9 @@ def create_agent():
         max_retries=3,
     )
 
-    # Bind tools to the LLM
-    llm_with_tools = llm.bind_tools(SDTM_TOOLS)
+    # Bind tools to the LLM (uses ACTIVE_TOOLS which respects connector state)
+    tools = ACTIVE_TOOLS
+    llm_with_tools = llm.bind_tools(tools)
 
     # Initialize adaptive prompt builder for learning injection
     try:
@@ -632,7 +712,7 @@ def create_agent():
 
     # Add nodes
     graph.add_node("chatbot", chatbot)
-    graph.add_node("tools", ToolNode(SDTM_TOOLS))
+    graph.add_node("tools", ToolNode(tools))
 
     # Add edges
     graph.add_edge(START, "chatbot")
@@ -647,7 +727,7 @@ def create_agent():
 
 # Create the agent instance for langgraph dev
 agent = create_agent()
-print(f"[SDTM Chat] Graph exported with recursion_limit={RECURSION_LIMIT}, skills={len(LOADED_SKILLS)}")
+print(f"[SDTM Chat] Graph exported with recursion_limit={RECURSION_LIMIT}, skills={len(LOADED_SKILLS)}, tools={len(ACTIVE_TOOLS)}")
 
 
 # For langgraph dev - expose the graph
