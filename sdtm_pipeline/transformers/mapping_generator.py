@@ -177,7 +177,7 @@ Available SDTM domains:
 Return ONLY the 2-letter domain code (e.g., DM, AE, VS, LB, CM, EX)."""
 
         try:
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-6")
             # Use streaming even for short calls to avoid timeout issues
             response_text = ""
             with self.client.messages.stream(
@@ -340,8 +340,8 @@ IMPORTANT: Include mappings for:
 Return ONLY valid JSON with comprehensive mappings."""
 
         try:
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
-            max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
+            model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-6")
+            max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "16000"))
 
             # Use streaming to avoid timeout for long-running operations
             response_text = ""

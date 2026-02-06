@@ -71,7 +71,7 @@ class SDTMAgentConfig:
     study_id: str = "UNKNOWN"
 
     # Model configuration
-    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929"))
+    model: str = field(default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "anthropic:claude-opus-4-6"))
 
     # Paths
     workspace_dir: str = "./sdtm_workspace"
@@ -98,7 +98,7 @@ class SDTMAgentConfig:
     max_critical_errors: int = 0
 
     # LangGraph configuration
-    recursion_limit: int = field(default_factory=lambda: int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "50")))
+    recursion_limit: int = field(default_factory=lambda: int(os.getenv("LANGGRAPH_RECURSION_LIMIT", "250")))
 
 
 # =============================================================================

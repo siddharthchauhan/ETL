@@ -57,7 +57,7 @@ mimetypes.add_type(
 # EMBEDDED FILE SERVER (daemon thread — auto-starts on import)
 # =============================================================================
 
-ALLOWED_EXTENSIONS = {".pptx", ".xlsx", ".docx", ".csv", ".pdf", ".txt", ".json", ".md"}
+ALLOWED_EXTENSIONS = {".pptx", ".xlsx", ".docx", ".csv", ".pdf", ".txt", ".json", ".md", ".png"}
 
 _file_server_started = False
 _file_server_lock = threading.Lock()
@@ -857,6 +857,134 @@ def _unique_filename(base_name: str, ext: str) -> str:
 
 
 # =============================================================================
+# CHART.JS IMAGE RENDERING (via QuickChart)
+# =============================================================================
+
+# Color palette matching the frontend Chart.js theme
+_CHART_COLORS = [
+    "rgba(59, 130, 246, 0.8)",   # blue
+    "rgba(37, 99, 235, 0.8)",    # darker blue
+    "rgba(96, 165, 250, 0.8)",   # lighter blue
+    "rgba(147, 197, 253, 0.8)",  # very light blue
+    "rgba(30, 64, 175, 0.8)",    # navy
+]
+
+_CHART_BORDER_COLORS = [
+    "rgba(59, 130, 246, 1)",
+    "rgba(37, 99, 235, 1)",
+    "rgba(96, 165, 250, 1)",
+    "rgba(147, 197, 253, 1)",
+    "rgba(30, 64, 175, 1)",
+]
+
+
+def _convert_chart_data_to_chartjs(chart_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert our ChartData format to a Chart.js config object for QuickChart."""
+    chart_type = chart_data.get("type", "bar")
+    data_rows = chart_data.get("data", [])
+    x_key = chart_data.get("xKey", "name")
+    y_key = chart_data.get("yKey", "value")
+    series = chart_data.get("series", None)
+    title = chart_data.get("title", "")
+    stacked = chart_data.get("stacked", False)
+
+    labels = [str(row.get(x_key, "")) for row in data_rows]
+
+    # Build datasets
+    if series:
+        data_keys = [s["dataKey"] for s in series]
+        dataset_names = [s.get("name", s["dataKey"]) for s in series]
+    else:
+        data_keys = [y_key]
+        dataset_names = [y_key]
+
+    datasets = []
+    for i, (key, name) in enumerate(zip(data_keys, dataset_names)):
+        color = _CHART_COLORS[i % len(_CHART_COLORS)]
+        border = _CHART_BORDER_COLORS[i % len(_CHART_BORDER_COLORS)]
+        ds = {
+            "label": name,
+            "data": [row.get(key, 0) for row in data_rows],
+            "backgroundColor": color,
+            "borderColor": border,
+            "borderWidth": 1,
+        }
+        if chart_type == "line":
+            ds["fill"] = False
+            ds["tension"] = 0.3
+        elif chart_type == "area":
+            ds["fill"] = True
+            ds["tension"] = 0.3
+        if stacked:
+            ds["stack"] = "stack"
+        datasets.append(ds)
+
+    # Map our types to Chart.js types
+    cjs_type = {
+        "bar": "bar",
+        "line": "line",
+        "area": "line",
+        "pie": "pie",
+        "scatter": "scatter",
+        "radar": "radar",
+        "composed": "bar",
+        "funnel": "horizontalBar",
+        "treemap": "horizontalBar",
+    }.get(chart_type, "bar")
+
+    # For pie/doughnut, restructure datasets
+    if cjs_type == "pie":
+        values = [row.get(y_key, 0) for row in data_rows]
+        bg_colors = [_CHART_COLORS[i % len(_CHART_COLORS)] for i in range(len(values))]
+        datasets = [{"data": values, "backgroundColor": bg_colors}]
+
+    config = {
+        "type": cjs_type,
+        "data": {"labels": labels, "datasets": datasets},
+        "options": {
+            "responsive": True,
+            "plugins": {
+                "title": {"display": bool(title), "text": title, "font": {"size": 16}},
+                "legend": {"display": len(datasets) > 1 or cjs_type == "pie"},
+            },
+        },
+    }
+
+    if stacked and cjs_type in ("bar", "line"):
+        config["options"]["scales"] = {
+            "x": {"stacked": True},
+            "y": {"stacked": True},
+        }
+
+    return config
+
+
+def _render_chart_image(chart_data: Dict[str, Any], width: int = 600, height: int = 400) -> bytes:
+    """
+    Render a Chart.js chart to PNG bytes using QuickChart.
+
+    Args:
+        chart_data: Our ChartData format dict (type, data, xKey, yKey, etc.)
+        width: Image width in pixels
+        height: Image height in pixels
+
+    Returns:
+        PNG image bytes
+    """
+    from quickchart import QuickChart
+
+    config = _convert_chart_data_to_chartjs(chart_data)
+
+    qc = QuickChart()
+    qc.width = width
+    qc.height = height
+    qc.config = config
+    qc.background_color = "white"
+
+    return qc.get_bytes()
+
+
+# =============================================================================
 # PRESENTATION (PPTX) TOOL
 # =============================================================================
 
@@ -875,6 +1003,8 @@ async def generate_presentation(
             - title (str): Slide title/heading
             - content (str): Slide body text (supports bullet points with newlines)
             - layout (str, optional): "title", "content", "two_column", or "blank"
+            - chart (dict, optional): Chart data to embed as an image. Format:
+                {"type": "bar"|"line"|"pie"|..., "data": [...], "xKey": "name", "yKey": "value", "title": "..."}
         subtitle: Optional subtitle for the title slide.
 
     Returns:
@@ -1022,6 +1152,22 @@ async def generate_presentation(
                     pg.font.color.rgb = TEXT_DARK
                     pg.space_after = Pt(6)
 
+            # Embed chart image if present
+            chart_data = slide_data.get("chart")
+            if chart_data and isinstance(chart_data, dict):
+                try:
+                    import io
+                    chart_bytes = _render_chart_image(chart_data, width=800, height=500)
+                    chart_stream = io.BytesIO(chart_bytes)
+                    # Position chart centered, below content
+                    sl.shapes.add_picture(
+                        chart_stream,
+                        Inches(2.5), Inches(3.5),
+                        Inches(8), Inches(3.5),
+                    )
+                except Exception as chart_err:
+                    print(f"[Document Tools] Warning: Could not embed chart in slide: {chart_err}")
+
         # Save
         _ensure_output_dir()
         filename = _unique_filename(title, "pptx")
@@ -1064,6 +1210,8 @@ async def generate_excel(
             - name (str): Sheet/tab name
             - headers (list[str]): Column headers
             - rows (list[list]): Row data (list of lists)
+            - chart (dict, optional): Chart data to embed as an image. Format:
+                {"type": "bar"|"line"|"pie"|..., "data": [...], "xKey": "name", "yKey": "value", "title": "..."}
 
     Returns:
         Metadata dict with filename, file_type, size_bytes, description, download_url.
@@ -1130,6 +1278,23 @@ async def generate_excel(
             # Freeze header row
             ws.freeze_panes = "A2"
 
+            # Embed chart image if present
+            chart_data = sheet_data.get("chart")
+            if chart_data and isinstance(chart_data, dict):
+                try:
+                    import io
+                    from openpyxl.drawing.image import Image as XlImage
+                    chart_bytes = _render_chart_image(chart_data, width=600, height=400)
+                    chart_stream = io.BytesIO(chart_bytes)
+                    img = XlImage(chart_stream)
+                    img.width = 600
+                    img.height = 400
+                    # Place chart below data rows
+                    chart_cell = f"A{len(rows) + 4}"
+                    ws.add_image(img, chart_cell)
+                except Exception as chart_err:
+                    print(f"[Document Tools] Warning: Could not embed chart in XLSX: {chart_err}")
+
         _ensure_output_dir()
         filename = _unique_filename(title, "xlsx")
         filepath = os.path.join(GENERATED_DOCS_DIR, filename)
@@ -1171,6 +1336,8 @@ async def generate_word_document(
             - heading (str): Section heading text
             - content (str): Section body (plain text or markdown-like bullet points)
             - level (int, optional): Heading level 1-3, defaults to 1
+            - chart (dict, optional): Chart data to embed as an image. Format:
+                {"type": "bar"|"line"|"pie"|..., "data": [...], "xKey": "name", "yKey": "value", "title": "..."}
 
     Returns:
         Metadata dict with filename, file_type, size_bytes, description, download_url.
@@ -1230,6 +1397,18 @@ async def generate_word_document(
                     doc.add_paragraph(text, style="List Number")
                 else:
                     doc.add_paragraph(line)
+
+            # Embed chart image if present
+            chart_data = section.get("chart")
+            if chart_data and isinstance(chart_data, dict):
+                try:
+                    import io
+                    from docx.shared import Inches as DocxInches
+                    chart_bytes = _render_chart_image(chart_data, width=700, height=400)
+                    chart_stream = io.BytesIO(chart_bytes)
+                    doc.add_picture(chart_stream, width=DocxInches(6))
+                except Exception as chart_err:
+                    print(f"[Document Tools] Warning: Could not embed chart in DOCX: {chart_err}")
 
         _ensure_output_dir()
         filename = _unique_filename(title, "docx")
@@ -1325,6 +1504,8 @@ async def generate_pdf(
             - heading (str): Section heading text
             - content (str): Section body (plain text or bullet points with newlines)
             - level (int, optional): Heading level 1-3, defaults to 1
+            - chart (dict, optional): Chart data to embed as an image. Format:
+                {"type": "bar"|"line"|"pie"|..., "data": [...], "xKey": "name", "yKey": "value", "title": "..."}
 
     Returns:
         Metadata dict with filename, file_type, size_bytes, description, download_url.
@@ -1378,6 +1559,23 @@ async def generate_pdf(
                 else:
                     pdf.multi_cell(0, 6, line)
             pdf.ln(4)
+
+            # Embed chart image if present
+            chart_data = section.get("chart")
+            if chart_data and isinstance(chart_data, dict):
+                try:
+                    import io
+                    import tempfile
+                    chart_bytes = _render_chart_image(chart_data, width=700, height=400)
+                    # fpdf2 needs a file path or name, write to temp file
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp.write(chart_bytes)
+                        tmp_path = tmp.name
+                    pdf.image(tmp_path, x=15, w=180)
+                    pdf.ln(4)
+                    os.unlink(tmp_path)
+                except Exception as chart_err:
+                    print(f"[Document Tools] Warning: Could not embed chart in PDF: {chart_err}")
 
         _ensure_output_dir()
         filename = _unique_filename(title, "pdf")

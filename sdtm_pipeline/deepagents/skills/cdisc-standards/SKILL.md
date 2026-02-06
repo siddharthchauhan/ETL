@@ -196,7 +196,7 @@ Use this skill when you need to understand domain structures, apply controlled t
 
 **When to use**: Validating and mapping raw data values to standardized codes.
 
-⚠️ **CRITICAL**: Always use EXACT CT values. Case and spelling must match precisely.
+IMPORTANT:**CRITICAL**: Always use EXACT CT values. Case and spelling must match precisely.
 
 #### Key Codelists
 
@@ -228,7 +228,7 @@ Use this skill when you need to understand domain structures, apply controlled t
 | With UTC | `2024-01-15T14:30:00Z` | UTC timezone |
 | With offset | `2024-01-15T14:30:00+05:30` | Specific timezone |
 
-⚠️ **CRITICAL**: 
+IMPORTANT:**CRITICAL**: 
 - NEVER use placeholders (e.g., `2024-01-XX`, `2024-UN-15`)
 - Omit unknown portions from the RIGHT
 - Valid partial: `2024-01` (day unknown)
@@ -253,7 +253,7 @@ Subject: 001
 USUBJID: ABC-001-101-001
 ```
 
-⚠️ **CRITICAL**: Format varies by sponsor. Always verify organizational standards.
+IMPORTANT:**CRITICAL**: Format varies by sponsor. Always verify organizational standards.
 
 #### 3.2 --SEQ (Sequence Number) Generation
 
@@ -268,7 +268,7 @@ df['--SEQ'] = range(1, len(df) + 1)  # ❌ NOT per subject
 
 #### 3.3 Study Day (--DY) Calculation
 
-⚠️ **CRITICAL: THERE IS NO DAY 0**
+IMPORTANT:**CRITICAL: THERE IS NO DAY 0**
 ```python
 def calculate_study_day(dtc: str, rfstdtc: str) -> int | None:
     """
@@ -442,7 +442,7 @@ QVAL: "headache, mild throbbing"
 
 ### Critical Workflow: Mapping Specification First
 
-⚠️ **MANDATORY**: Before writing ANY transformation code:
+IMPORTANT:**MANDATORY**: Before writing ANY transformation code:
 
 1. **Analyze** source data structure
 2. **Generate mapping specification** documenting source→target mappings

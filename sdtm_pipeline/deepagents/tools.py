@@ -5640,6 +5640,207 @@ async def create_sdtm_validation_dashboard(
     }
 
 
+@tool
+async def generate_mermaid_diagram(
+    diagram_type: str,
+    description: str,
+    nodes: Optional[List[Dict[str, str]]] = None,
+    edges: Optional[List[Dict[str, str]]] = None,
+) -> Dict[str, Any]:
+    """
+    Generate a Mermaid diagram that renders as an interactive visual in the chat.
+
+    Use this for: pipeline flows, domain relationships, data lineage, validation workflows,
+    architecture diagrams, transformation steps, and any process visualization.
+
+    Args:
+        diagram_type: Type of diagram. One of: "flowchart", "sequence", "class", "state", "er", "gantt"
+        description: Description of what the diagram should show
+        nodes: Optional list of nodes with "id" and "label" keys
+        edges: Optional list of edges with "from", "to", and optional "label" keys
+
+    Returns:
+        Mermaid diagram code to include in a ```mermaid code block
+    """
+    templates = {
+        "pipeline": """graph TD
+    P1[Phase 1: Data Ingestion] --> P2[Phase 2: Raw Data Validation]
+    P2 --> P3[Phase 3: Mapping Specification]
+    P3 --> P4[Phase 4: SDTM Transformation]
+    P4 --> P5[Phase 5: Target Data Generation]
+    P5 --> P6[Phase 6: Compliance Validation]
+    P6 --> P7[Phase 7: Data Warehouse Loading]""",
+
+        "domain_relationships": "erDiagram\n"
+            "    DM ||--o{ AE : \"has adverse events\"\n"
+            "    DM ||--o{ VS : \"has vital signs\"\n"
+            "    DM ||--o{ LB : \"has lab results\"\n"
+            "    DM ||--o{ CM : \"takes medications\"\n"
+            "    DM ||--o{ MH : \"has medical history\"\n"
+            "    DM ||--o{ DS : \"has disposition\"\n"
+            "    DM ||--o{ EX : \"receives exposure\"\n"
+            "    DM ||--o{ EG : \"has ECG results\"\n"
+            "    DM ||--o{ PE : \"has physical exams\"",
+
+        "validation_flow": """graph TD
+    V[Validation Engine] --> S[Structural Checks]
+    V --> C[CDISC Conformance]
+    V --> X[Cross-Domain Checks]
+    V --> F[FDA Business Rules]
+    S --> S1[Required Variables]
+    S --> S2[Data Types]
+    S --> S3[Controlled Terminology]
+    C --> C1[Variable Metadata]
+    C --> C2[Domain Structure]
+    X --> X1[USUBJID Consistency]
+    X --> X2[Date Ranges]
+    F --> F1[Pinnacle 21 Rules]
+    F --> F2[Submission Readiness]""",
+
+        "transformation_flow": """graph LR
+    A[Source EDC Data] --> B[Analyze Structure]
+    B --> C[Generate Mapping Spec]
+    C --> D[Apply Transformations]
+    D --> E[Derive Variables]
+    E --> F[Apply CT Values]
+    F --> G[Validate SDTM]
+    G --> H[Output Dataset]""",
+    }
+
+    # If nodes and edges are provided, build a custom diagram
+    if nodes and edges:
+        if diagram_type in ("flowchart", "flow"):
+            lines = ["graph TD"]
+            for node in nodes:
+                lines.append(f"    {node['id']}[{node['label']}]")
+            for edge in edges:
+                label = edge.get("label", "")
+                if label:
+                    lines.append(f"    {edge['from']} -->|{label}| {edge['to']}")
+                else:
+                    lines.append(f"    {edge['from']} --> {edge['to']}")
+            mermaid_code = "\n".join(lines)
+        elif diagram_type == "sequence":
+            lines = ["sequenceDiagram"]
+            for node in nodes:
+                lines.append(f"    participant {node['id']} as {node['label']}")
+            for edge in edges:
+                label = edge.get("label", "message")
+                lines.append(f"    {edge['from']}->>{ edge['to']}: {label}")
+            mermaid_code = "\n".join(lines)
+        else:
+            mermaid_code = templates.get("pipeline", "graph TD\n    A[Start] --> B[End]")
+    else:
+        # Try to match a template based on description keywords
+        desc_lower = description.lower()
+        if any(k in desc_lower for k in ("pipeline", "etl", "7-phase", "7 phase")):
+            mermaid_code = templates["pipeline"]
+        elif any(k in desc_lower for k in ("domain relationship", "er diagram", "entity")):
+            mermaid_code = templates["domain_relationships"]
+        elif any(k in desc_lower for k in ("validation", "compliance", "pinnacle")):
+            mermaid_code = templates["validation_flow"]
+        elif any(k in desc_lower for k in ("transformation", "conversion", "mapping flow")):
+            mermaid_code = templates["transformation_flow"]
+        else:
+            # Return a basic flowchart template for the agent to customize
+            mermaid_code = "graph TD\n    A[Start] --> B[Process]\n    B --> C[End]"
+
+    return {
+        "success": True,
+        "diagram_type": diagram_type,
+        "mermaid_code": mermaid_code,
+        "instructions": (
+            "Include this in your response as a ```mermaid code block. "
+            "You may customize the diagram based on the specific context. "
+            "Always add a brief text explanation alongside the diagram."
+        ),
+    }
+
+
+@tool
+async def generate_chart_image(
+    chart_type: str,
+    data: List[Dict[str, Any]],
+    title: str,
+    x_key: str = "name",
+    y_key: str = "value",
+    series: Optional[List[Dict[str, str]]] = None,
+    width: int = 600,
+    height: int = 400,
+) -> Dict[str, Any]:
+    """
+    Generate a Chart.js chart as a downloadable PNG image file.
+
+    Use this tool when you need a standalone chart image (e.g., for sharing or
+    embedding in external documents). For charts displayed in the chat window,
+    use the create_bar_chart / create_line_chart / etc. tools instead.
+
+    Args:
+        chart_type: Chart type - "bar", "line", "area", "pie", "scatter", "radar"
+        data: List of data point dicts (e.g., [{"name": "A", "value": 10}, ...])
+        title: Chart title
+        x_key: Key for x-axis labels (default: "name")
+        y_key: Key for y-axis values (default: "value")
+        series: Optional list of series dicts for multi-series charts
+                (e.g., [{"dataKey": "dm", "name": "DM"}, {"dataKey": "ae", "name": "AE"}])
+        width: Image width in pixels (default: 600)
+        height: Image height in pixels (default: 400)
+
+    Returns:
+        Metadata dict with filename, download_url, and instructions.
+
+    IMPORTANT: After calling this tool, include the returned metadata in your
+    response using a ```generated-file``` code block so the user can download it.
+    """
+    import asyncio
+
+    chart_data = {
+        "type": chart_type,
+        "title": title,
+        "data": data,
+        "xKey": x_key,
+        "yKey": y_key,
+    }
+    if series:
+        chart_data["series"] = series
+
+    def _render():
+        from sdtm_pipeline.deepagents.document_tools import (
+            _render_chart_image,
+            _ensure_output_dir,
+            _unique_filename,
+            _get_download_url,
+            GENERATED_DOCS_DIR,
+        )
+        import os
+
+        png_bytes = _render_chart_image(chart_data, width=width, height=height)
+        _ensure_output_dir()
+        filename = _unique_filename(title, "png")
+        filepath = os.path.join(GENERATED_DOCS_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(png_bytes)
+        return filepath, filename
+
+    filepath, filename = await asyncio.to_thread(_render)
+    size_bytes = os.path.getsize(filepath)
+
+    from sdtm_pipeline.deepagents.document_tools import _get_download_url
+
+    return {
+        "success": True,
+        "filename": filename,
+        "file_type": "png",
+        "size_bytes": size_bytes,
+        "description": f"Chart.js {chart_type} chart image: {title}",
+        "download_url": _get_download_url(filename),
+        "instruction": (
+            "Include the following generated-file code block in your response "
+            "so the user can download the file."
+        ),
+    }
+
+
 # Visualization tools list (Frontend-compatible)
 VISUALIZATION_TOOLS = [
     create_bar_chart,
@@ -5651,6 +5852,8 @@ VISUALIZATION_TOOLS = [
     create_funnel_chart,
     create_composed_chart,
     create_sdtm_validation_dashboard,
+    generate_mermaid_diagram,
+    generate_chart_image,
 ]
 
 
@@ -6113,7 +6316,7 @@ WEB_SCRAPING_TOOLS = [
 DEEPAGENT_TOOLS = [
     # Bash Execution (async)
     execute_bash,
-    # Visualization (async) - Frontend-compatible Recharts
+    # Visualization (async) - Frontend-compatible Chart.js
     create_bar_chart,
     create_line_chart,
     create_pie_chart,
@@ -6123,6 +6326,7 @@ DEEPAGENT_TOOLS = [
     create_funnel_chart,
     create_composed_chart,
     create_sdtm_validation_dashboard,
+    generate_chart_image,
     # Web Scraping & Crawling (Firecrawl - async)
     scrape_webpage,
     crawl_website,

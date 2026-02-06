@@ -416,7 +416,7 @@ def convert_domain(domain: str) -> str:
 
                 # Show unmapped columns
                 if intelligent_mapping_spec.unmapped_source_columns:
-                    output += f"\n**⚠️ Unmapped Source Columns:** {', '.join(intelligent_mapping_spec.unmapped_source_columns[:10])}"
+                    output += f"\n**WARNING - Unmapped Source Columns:** {', '.join(intelligent_mapping_spec.unmapped_source_columns[:10])}"
                     if len(intelligent_mapping_spec.unmapped_source_columns) > 10:
                         output += f"... (+{len(intelligent_mapping_spec.unmapped_source_columns) - 10} more)"
                     output += "\n"
@@ -646,7 +646,7 @@ def convert_all_domains() -> str:
                 result = validator.validate_domain(sdtm_df, domain)
 
                 # Record results
-                status = "✓" if result.is_valid else f"⚠️ ({result.error_count}E/{result.warning_count}W)"
+                status = "PASS" if result.is_valid else f"WARNING ({result.error_count}E/{result.warning_count}W)"
                 output += f"**Records:** {len(sdtm_df)} | **Variables:** {len(sdtm_df.columns)} | **Status:** {status}\n\n"
 
                 successful.append({
@@ -673,7 +673,7 @@ def convert_all_domains() -> str:
             output += "| Domain | Records | Variables | Status |\n"
             output += "|--------|---------|-----------|--------|\n"
             for s in successful:
-                status = "✓ Valid" if s["errors"] == 0 else f"⚠️ {s['errors']}E/{s['warnings']}W"
+                status = "PASS" if s["errors"] == 0 else f"WARNING {s['errors']}E/{s['warnings']}W"
                 output += f"| {s['domain']} | {s['records']:,} | {s['variables']} | {status} |\n"
 
         if failed:
@@ -1248,7 +1248,7 @@ def transform_with_specification(
             validator = SDTMValidator(study_id=_study_id, use_knowledge_tools=True)
             result = validator.validate_domain(sdtm_df, domain)
 
-            status = "✓ VALID" if result.is_valid else "⚠️ ISSUES FOUND"
+            status = "VALID" if result.is_valid else "ISSUES FOUND"
             output += f"**Status:** {status}\n"
             output += f"**Errors:** {result.error_count}\n"
             output += f"**Warnings:** {result.warning_count}\n"
@@ -1570,7 +1570,7 @@ def fetch_sdtmig_specification(domain: str) -> str:
         if not spec:
             return f"No specification found for domain: {domain}. Try: {', '.join(ref.get_all_domains())}"
 
-        output = f"## 📋 SDTM-IG 3.4 Specification: {domain} Domain\n\n"
+        output = f"## SDTM-IG 3.4 Specification: {domain} Domain\n\n"
         output += f"**Description:** {spec.get('description', 'N/A')}\n"
         output += f"**Class:** {spec.get('class', 'N/A')}\n"
         output += f"**Structure:** {spec.get('structure', 'N/A')}\n\n"
@@ -1712,7 +1712,7 @@ def get_mapping_guidance_from_web(source_column: str, domain: str) -> str:
         ref = get_sdtm_web_reference()
         guidance = ref.get_mapping_guidance(source_column, domain)
 
-        output = f"## 🎯 Mapping Guidance: {source_column} → {domain}\n\n"
+        output = f"## Mapping Guidance: {source_column} -> {domain}\n\n"
 
         suggestions = guidance.get("suggestions", [])
         if suggestions:
@@ -2721,7 +2721,7 @@ def validate_against_dta(domain: str) -> str:
         output += f"\n**Summary:** {pass_count} PASS | {flag_count} FLAG | {na_count} N/A (of {total} requirements)\n"
 
         if flag_count > 0:
-            output += f"\n⚠️ **{flag_count} DTA discrepancies found.** Review flagged items and resolve before submission.\n"
+            output += f"\nWARNING: **{flag_count} DTA discrepancies found.** Review flagged items and resolve before submission.\n"
         else:
             output += f"\n✓ **No DTA discrepancies detected.** Data appears compliant with DTA requirements.\n"
 
@@ -2799,6 +2799,98 @@ def upload_dta_to_knowledge_base(file_path: str) -> str:
         return f"Error indexing DTA document: {str(e)}\n\n{traceback.format_exc()}"
 
 
+# =============================================================================
+# MERMAID DIAGRAM TOOL
+# =============================================================================
+
+@tool
+def generate_mermaid_diagram(
+    diagram_type: str,
+    description: str,
+) -> str:
+    """
+    Generate a Mermaid diagram that renders as an interactive visual in the chat.
+
+    Use this for: pipeline flows, domain relationships, data lineage, validation workflows,
+    architecture diagrams, transformation steps, and any process visualization.
+
+    Args:
+        diagram_type: Type of diagram. One of: "flowchart", "pipeline", "domain_relationships",
+                      "validation", "transformation", "sequence", "er", "state"
+        description: Description of what the diagram should show
+
+    Returns:
+        Mermaid diagram code to include in a ```mermaid code block in your response
+    """
+    templates = {
+        "pipeline": """graph TD
+    P1[Phase 1: Data Ingestion] --> P2[Phase 2: Raw Data Validation]
+    P2 --> P3[Phase 3: Mapping Specification]
+    P3 --> P4[Phase 4: SDTM Transformation]
+    P4 --> P5[Phase 5: Target Data Generation]
+    P5 --> P6[Phase 6: Compliance Validation]
+    P6 --> P7[Phase 7: Data Warehouse Loading]""",
+
+        "domain_relationships": "erDiagram\n"
+            "    DM ||--o{ AE : \"has adverse events\"\n"
+            "    DM ||--o{ VS : \"has vital signs\"\n"
+            "    DM ||--o{ LB : \"has lab results\"\n"
+            "    DM ||--o{ CM : \"takes medications\"\n"
+            "    DM ||--o{ MH : \"has medical history\"\n"
+            "    DM ||--o{ DS : \"has disposition\"\n"
+            "    DM ||--o{ EX : \"receives exposure\"\n"
+            "    DM ||--o{ EG : \"has ECG results\"\n"
+            "    DM ||--o{ PE : \"has physical exams\"",
+
+        "validation": """graph TD
+    V[Validation Engine] --> S[Structural Checks]
+    V --> C[CDISC Conformance]
+    V --> X[Cross-Domain Checks]
+    V --> F[FDA Business Rules]
+    S --> S1[Required Variables]
+    S --> S2[Data Types]
+    S --> S3[Controlled Terminology]
+    C --> C1[Variable Metadata]
+    C --> C2[Domain Structure]
+    X --> X1[USUBJID Consistency]
+    X --> X2[Date Ranges]
+    F --> F1[Pinnacle 21 Rules]
+    F --> F2[Submission Readiness]""",
+
+        "transformation": """graph LR
+    A[Source EDC Data] --> B[Analyze Structure]
+    B --> C[Generate Mapping Spec]
+    C --> D[Apply Transformations]
+    D --> E[Derive Variables]
+    E --> F[Apply CT Values]
+    F --> G[Validate SDTM]
+    G --> H[Output Dataset]""",
+    }
+
+    # Match template by type or description keywords
+    desc_lower = description.lower()
+    diagram_key = diagram_type.lower().replace(" ", "_")
+
+    if diagram_key in templates:
+        mermaid_code = templates[diagram_key]
+    elif any(k in desc_lower for k in ("pipeline", "etl", "7-phase", "7 phase")):
+        mermaid_code = templates["pipeline"]
+    elif any(k in desc_lower for k in ("domain relationship", "er diagram", "entity")):
+        mermaid_code = templates["domain_relationships"]
+    elif any(k in desc_lower for k in ("validation", "compliance", "pinnacle")):
+        mermaid_code = templates["validation"]
+    elif any(k in desc_lower for k in ("transformation", "conversion", "mapping flow")):
+        mermaid_code = templates["transformation"]
+    else:
+        mermaid_code = "graph TD\n    A[Start] --> B[Process]\n    B --> C[End]"
+
+    return (
+        f"Here is the Mermaid diagram template. Include it in your response as a "
+        f"```mermaid code block. Customize it based on the specific context:\n\n"
+        f"{mermaid_code}"
+    )
+
+
 # Export all tools
 SDTM_TOOLS = [
     # Task Progress Tracking
@@ -2838,6 +2930,8 @@ SDTM_TOOLS = [
     upload_dta_to_knowledge_base,
     # Internet search (Tavily)
     search_internet,
+    # Mermaid diagrams
+    generate_mermaid_diagram,
 ]
 
 # ── Deferred import: Document generation tools ──────────────────────
@@ -2854,6 +2948,8 @@ from sdtm_pipeline.deepagents.document_tools import (
     generate_markdown_file,
     generate_text_file,
 )
+from sdtm_pipeline.deepagents.tools import generate_chart_image
+
 SDTM_TOOLS.extend([
     generate_presentation,
     generate_excel,
@@ -2862,4 +2958,6 @@ SDTM_TOOLS.extend([
     generate_pdf,
     generate_markdown_file,
     generate_text_file,
+    # Chart image generation
+    generate_chart_image,
 ])

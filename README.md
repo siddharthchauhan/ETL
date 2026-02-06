@@ -71,7 +71,7 @@ The pipeline uses a DeepAgents architecture with specialized subagents and progr
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        Main Orchestrator Agent                               │
-│                    (Claude claude-sonnet-4-5-20250929)                       │
+│                    (Claude claude-opus-4-6)                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────────────── SKILLS (Progressive Disclosure) ─────────────────┐│
@@ -373,7 +373,7 @@ Create a `.env` file in the project root:
 # ANTHROPIC API (Required)
 # =============================================================================
 ANTHROPIC_API_KEY=sk-ant-api03-...
-ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+ANTHROPIC_MODEL=claude-opus-4-6
 ANTHROPIC_MAX_TOKENS=64000
 ANTHROPIC_TEMPERATURE=0
 
@@ -986,7 +986,7 @@ langgraph dev
 | Component | Technology | Version |
 |-----------|------------|---------|
 | **Orchestration** | LangGraph | 1.0.6+ |
-| **LLM** | Claude (Anthropic) | claude-sonnet-4-5-20250929 |
+| **LLM** | Claude (Anthropic) | claude-opus-4-6 |
 | **Observability** | LangSmith | Latest |
 | **Graph Database** | Neo4j | 5.27 |
 | **Vector Database** | Pinecone | 3.0+ |

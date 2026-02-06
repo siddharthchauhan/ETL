@@ -11,7 +11,7 @@ This skill provides comprehensive guidance on validating SDTM datasets for FDA s
 
 **Source**: FDA Technical Conformance Guide, Pinnacle 21 validation rules, CDISC CORE, PharmaSUG papers
 
-⚠️ **IMPORTANT**: Always verify current FDA requirements at FDA.gov before submission. Requirements and deadlines evolve.
+**IMPORTANT**: Always verify current FDA requirements at FDA.gov before submission. Requirements and deadlines evolve.
 
 ## FDA Validation Requirements
 

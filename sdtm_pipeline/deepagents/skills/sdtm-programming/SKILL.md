@@ -1696,7 +1696,7 @@ def create_suppqual(
 
 When the agent receives a programming task:
 
-### ⚠️ CRITICAL: Mapping Specification Requirement
+### CRITICAL: Mapping Specification Requirement
 
 **BEFORE any transformation, you MUST have a mapping specification that defines:**
 - How source columns map to SDTM variables

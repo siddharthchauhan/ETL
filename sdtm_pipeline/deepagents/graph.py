@@ -109,7 +109,7 @@ def create_graph() -> CompiledStateGraph:
     ]
 
     # Get model from environment
-    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-sonnet-4-5-20250929")
+    model = os.getenv("ANTHROPIC_MODEL", "anthropic:claude-opus-4-6")
 
     # Setup skills - provides progressive disclosure of domain expertise
     # Skills are only loaded when relevant to the current task
