@@ -45,6 +45,12 @@ mimetypes.add_type(
 
 PORT = int(os.getenv("FILE_SERVER_PORT", "8090"))
 HOST = os.getenv("FILE_SERVER_HOST", "0.0.0.0")
+
+# LangGraph API URL — supports both local (HTTP) and cloud (HTTPS) deployments
+# Set LANGGRAPH_API_URL in your .env to point to the cloud deployment endpoint,
+# or leave default for local docker-compose usage.
+LANGGRAPH_API_URL = os.getenv("LANGGRAPH_API_URL", "http://localhost:2024")
+
 DOCS_DIR = os.getenv(
     "GENERATED_DOCS_DIR",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_documents"),
@@ -85,6 +91,7 @@ except ImportError:
 
 try:
     from aiohttp import web
+    import aiohttp
 except ImportError:
     print("aiohttp is required. Install with: pip install aiohttp")
     sys.exit(1)
@@ -93,8 +100,10 @@ except ImportError:
 def _cors_headers():
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-api-key, X-Api-Key, Accept, X-Request-Id",
+        "Access-Control-Expose-Headers": "X-Request-Id",
+        "Access-Control-Max-Age": "86400",
     }
 
 
@@ -608,6 +617,81 @@ async def handle_get_connector_tools(request: web.Request) -> web.Response:
     }, headers=_cors_headers())
 
 
+# ---------- LangGraph API Proxy ----------
+# Allows the frontend to connect to a single origin (file_server) and have
+# requests forwarded to the LangGraph API — works with both HTTP (local) and
+# HTTPS (LangGraph Cloud) backends transparently.
+
+
+async def handle_proxy_config(request: web.Request) -> web.Response:
+    """GET /api/config - Return current LangGraph API URL so the frontend knows where the agent lives."""
+    return web.json_response({
+        "langgraph_api_url": LANGGRAPH_API_URL,
+        "proxy_enabled": True,
+        "proxy_base": "/api/langgraph",
+    }, headers=_cors_headers())
+
+
+async def handle_langgraph_proxy(request: web.Request) -> web.Response:
+    """Proxy requests to the LangGraph API (HTTP or HTTPS).
+
+    Routes:
+        ANY /api/langgraph/{path} → LANGGRAPH_API_URL/{path}
+
+    The proxy:
+    - Forwards all headers (including x-api-key for cloud auth)
+    - Forwards the request body
+    - Returns the upstream response with CORS headers
+    - Works identically for http://localhost:2024 and https://*.langgraph.app
+    """
+    # Build the upstream URL
+    sub_path = request.match_info.get("path", "")
+    query_string = request.query_string
+    upstream_url = f"{LANGGRAPH_API_URL.rstrip('/')}/{sub_path}"
+    if query_string:
+        upstream_url += f"?{query_string}"
+
+    # Forward relevant headers
+    forward_headers = {}
+    for hdr in ("Authorization", "x-api-key", "Content-Type", "Accept", "X-Request-Id"):
+        val = request.headers.get(hdr)
+        if val:
+            forward_headers[hdr] = val
+
+    # Read request body (if any)
+    body = await request.read() if request.can_read_body else None
+
+    try:
+        timeout = aiohttp.ClientTimeout(total=300)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.request(
+                method=request.method,
+                url=upstream_url,
+                headers=forward_headers,
+                data=body,
+                ssl=None,  # Use default SSL for HTTPS
+            ) as upstream_resp:
+                resp_body = await upstream_resp.read()
+                resp_headers = {**_cors_headers()}
+
+                # Preserve content-type from upstream
+                ct = upstream_resp.headers.get("Content-Type")
+                if ct:
+                    resp_headers["Content-Type"] = ct
+
+                return web.Response(
+                    status=upstream_resp.status,
+                    body=resp_body,
+                    headers=resp_headers,
+                )
+    except aiohttp.ClientError as e:
+        return web.json_response(
+            {"error": f"Proxy connection failed: {e}", "upstream_url": LANGGRAPH_API_URL},
+            status=502,
+            headers=_cors_headers(),
+        )
+
+
 def create_app() -> web.Application:
     """Create the aiohttp application."""
     app = web.Application()
@@ -640,13 +724,19 @@ def create_app() -> web.Application:
     app.router.add_put("/connectors", handle_put_connectors)
     app.router.add_get("/connectors/tools", handle_get_connector_tools)
 
+    # LangGraph API proxy (must be LAST — catch-all under /api/langgraph/)
+    app.router.add_get("/api/config", handle_proxy_config)
+    app.router.add_route("*", "/api/langgraph/{path:.*}", handle_langgraph_proxy)
+
     return app
 
 
 if __name__ == "__main__":
     os.makedirs(DOCS_DIR, exist_ok=True)
     print(f"[File Server] Serving generated documents from: {DOCS_DIR}")
+    print(f"[File Server] LangGraph API proxy → {LANGGRAPH_API_URL}")
     print(f"[File Server] Listening on {HOST}:{PORT}")
     print(f"[File Server] Download URL: http://{HOST}:{PORT}/download/{{filename}}")
+    print(f"[File Server] Proxy URL:    http://{HOST}:{PORT}/api/langgraph/{{path}}")
     app = create_app()
     web.run_app(app, host=HOST, port=PORT, print=None)
