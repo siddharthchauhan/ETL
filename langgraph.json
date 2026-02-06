@@ -29,5 +29,5 @@
       }
     }
   },
-  "env": ".env.example"
+  "env": ".env"
 }
