@@ -619,12 +619,10 @@ FULL_SYSTEM_PROMPT = SYSTEM_PROMPT + SKILLS_PROMPT
 
 def create_agent():
     """Create the SDTM chat agent."""
-    # Get API key from environment
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-
     # Initialize the LLM with environment variables
+    # NOTE: Do NOT raise at import time if ANTHROPIC_API_KEY is missing.
+    # LangGraph Cloud injects env vars at runtime; ChatAnthropic reads
+    # ANTHROPIC_API_KEY automatically when making API calls.
     model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-6")
     temperature = float(os.getenv("ANTHROPIC_TEMPERATURE", "0"))
     max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "16000"))
@@ -633,7 +631,6 @@ def create_agent():
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
-        api_key=api_key,
         timeout=7200,
         max_retries=3,
     )
