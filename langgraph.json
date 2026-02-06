@@ -1,5 +1,5 @@
 {
-  "dependencies": [".", "./requirements.txt"],
+  "dependencies": ["."],
   "graphs": {
     "sdtm_agent": {
       "path": "sdtm_pipeline.langgraph_chat.graph:agent",

@@ -1,0 +1,53 @@
+services:
+  sdtm-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdtm-langgraph
+    ports:
+      - "8123:8123"  # LangGraph API
+      - "8090:8090"  # File server
+    environment:
+      # LangGraph settings
+      - LANGGRAPH_DEFAULT_RECURSION_LIMIT=250
+      - LANGGRAPH_RECURSION_LIMIT=250
+      # Add your API keys and settings below or use env_file
+    env_file:
+      - .env
+    volumes:
+      # Persist generated documents
+      - ./generated_documents:/app/generated_documents
+      # Persist workspace data
+      - ./sdtm_workspace:/app/sdtm_workspace
+      # Persist LangGraph state (optional)
+      - langgraph_data:/app/.langgraph_api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123/ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Neo4j database (uncomment if needed)
+  # neo4j:
+  #   image: neo4j:5.15.0
+  #   container_name: sdtm-neo4j
+  #   ports:
+  #     - "7474:7474"  # HTTP
+  #     - "7687:7687"  # Bolt
+  #   environment:
+  #     - NEO4J_AUTH=neo4j/your-password-here
+  #     - NEO4J_PLUGINS=["apoc"]
+  #   volumes:
+  #     - neo4j_data:/data
+  #     - neo4j_logs:/logs
+
+volumes:
+  langgraph_data:
+  # neo4j_data:
+  # neo4j_logs:
+
+networks:
+  default:
+    name: sdtm-network
